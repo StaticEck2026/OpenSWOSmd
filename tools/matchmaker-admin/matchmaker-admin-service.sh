@@ -64,8 +64,11 @@ EOF
 
     echo "Reloading systemd and enabling service ..."
     sudo systemctl daemon-reload
-    sudo systemctl enable --now "$SERVICE_NAME"
-    echo "Installed and started."
+    sudo systemctl enable "$SERVICE_NAME"
+    # restart, not "enable --now": a reinstall is how a changed unit (ReadWritePaths) or
+    # main.py goes live, and "--now" leaves an already-running gateway as it was.
+    sudo systemctl restart "$SERVICE_NAME"
+    echo "Installed and (re)started."
     systemctl status "$SERVICE_NAME" --no-pager || true
 }
 

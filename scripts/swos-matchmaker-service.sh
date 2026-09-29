@@ -31,9 +31,13 @@ deploy_binary() {
         exit 1
     fi
     echo "Copying ${BUILT_BINARY} -> ${BINARY} ..."
-    sudo cp "$BUILT_BINARY" "$BINARY"
-    sudo chown "${RUN_USER}:${RUN_USER}" "$BINARY"
-    sudo chmod 755 "$BINARY"
+    # Copy beside it, then rename over it. Copying straight onto the binary the running
+    # server is executing fails with "Text file busy"; a rename is allowed, and the
+    # running server keeps the old file until the restart below replaces the process.
+    sudo cp "$BUILT_BINARY" "${BINARY}.new"
+    sudo chown "${RUN_USER}:${RUN_USER}" "${BINARY}.new"
+    sudo chmod 755 "${BINARY}.new"
+    sudo mv -f "${BINARY}.new" "$BINARY"
 }
 
 install_service() {
@@ -84,8 +88,12 @@ EOF
 
     echo "Reloading systemd and enabling service ..."
     sudo systemctl daemon-reload
-    sudo systemctl enable --now "$SERVICE_NAME"
-    echo "Installed and started."
+    sudo systemctl enable "$SERVICE_NAME"
+    # restart, not start: install is also how a changed unit or a new binary goes live,
+    # and "enable --now" leaves an already-running server as it was. restart starts a
+    # stopped one too, so install works whether or not the service exists yet.
+    sudo systemctl restart "$SERVICE_NAME"
+    echo "Installed and (re)started."
     systemctl status "$SERVICE_NAME" --no-pager || true
 }
 
