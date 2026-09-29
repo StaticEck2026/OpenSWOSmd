@@ -182,6 +182,44 @@ static int sdl_to_amiga(SDL_Keycode k)
 
 /* ---- Tracked keyboard state for joystick/fire synthesis ---- */
 static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
+/* The arrows as they physically are, beside the four above, which are what the game
+ * is told. A keyboard, unlike a stick, can hold LEFT and RIGHT at once -- and does,
+ * for a few frames, every time a player rolls from one arrow to the other. DOS SWOS
+ * never lets that through: its keyboard handler (SetKeyboardControlFlags, swos.asm)
+ * sets a direction and CLEARS ITS OPPOSITE on every press, so the arrow pressed last
+ * wins. Passing both on instead let Player1StatusProc's fixed order decide -- Right
+ * over Left, Up over Down -- so a roll from RIGHT to LEFT, or from UP to DOWN, kept
+ * the player going the old way until the old key came up: about a hundred frames a
+ * match of a keyboard player turning late, always mid-turn and in two of the four
+ * directions, so worse attacking one way than the other (ReportBot 0014: "ball
+ * control ... second half"). And as SWOS 2020 does for its online players ("improved
+ * keyboard control", controls.cpp), letting go of the newer arrow with the older one
+ * still held goes back to the older one, where DOS would leave the player stopped. */
+static int s_kbd_held_up, s_kbd_held_down, s_kbd_held_left, s_kbd_held_right;
+
+static void kbd_arrow(SDL_Keycode k, int down)
+{
+    switch (k) {
+    case SDLK_UP:    s_kbd_held_up    = down; break;
+    case SDLK_DOWN:  s_kbd_held_down  = down; break;
+    case SDLK_LEFT:  s_kbd_held_left  = down; break;
+    case SDLK_RIGHT: s_kbd_held_right = down; break;
+    default: return;
+    }
+    if (down) {
+        /* The press wins over its opposite. */
+        if (k == SDLK_UP)    { s_kbd_up = 1;    s_kbd_down  = 0; }
+        if (k == SDLK_DOWN)  { s_kbd_down = 1;  s_kbd_up    = 0; }
+        if (k == SDLK_LEFT)  { s_kbd_left = 1;  s_kbd_right = 0; }
+        if (k == SDLK_RIGHT) { s_kbd_right = 1; s_kbd_left  = 0; }
+    } else {
+        /* The release goes, and an opposite still held takes over. */
+        if (k == SDLK_UP)    { s_kbd_up = 0;    s_kbd_down  = s_kbd_held_down; }
+        if (k == SDLK_DOWN)  { s_kbd_down = 0;  s_kbd_up    = s_kbd_held_up; }
+        if (k == SDLK_LEFT)  { s_kbd_left = 0;  s_kbd_right = s_kbd_held_right; }
+        if (k == SDLK_RIGHT) { s_kbd_right = 0; s_kbd_left  = s_kbd_held_left; }
+    }
+}
 /* Fire is bound to THREE keys (Right-Ctrl / Left-Ctrl / Enter) but the Amiga
  * has ONE button, so the three have to behave as one: held while ANY of them
  * is down. A single shared s_kbd_fire flag got that wrong — releasing one key
@@ -507,10 +545,10 @@ void InputSDL_HandleEvent(const SDL_Event *e)
             _keyState[a] = 1;
         }
         switch (e->key.keysym.sym) {
-        case SDLK_UP:    s_kbd_up    = 1; break;
-        case SDLK_DOWN:  s_kbd_down  = 1; break;
-        case SDLK_LEFT:  s_kbd_left  = 1; break;
-        case SDLK_RIGHT: s_kbd_right = 1; break;
+        case SDLK_UP: case SDLK_DOWN: case SDLK_LEFT: case SDLK_RIGHT:
+            if (e->key.repeat == 0)
+                kbd_arrow(e->key.keysym.sym, 1);
+            break;
         case SDLK_RCTRL:  s_kbd_fire_keys |= KBD_FIRE_RCTRL;  s_kbd_fire = 1; break;
         case SDLK_LCTRL:  s_kbd_fire_keys |= KBD_FIRE_LCTRL;  s_kbd_fire = 1; break;
         case SDLK_RETURN: s_kbd_fire_keys |= KBD_FIRE_RETURN; s_kbd_fire = 1; break;
@@ -552,10 +590,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
                       e->key.keysym.sym == SDLK_RALT);
         if (!is_alt && a >= 0) _keyState[a] = 0;
         switch (e->key.keysym.sym) {
-        case SDLK_UP:    s_kbd_up    = 0; break;
-        case SDLK_DOWN:  s_kbd_down  = 0; break;
-        case SDLK_LEFT:  s_kbd_left  = 0; break;
-        case SDLK_RIGHT: s_kbd_right = 0; break;
+        case SDLK_UP: case SDLK_DOWN: case SDLK_LEFT: case SDLK_RIGHT:
+            kbd_arrow(e->key.keysym.sym, 0);
+            break;
         /* Clear only THIS key's bit — fire stays down while another
          * fire key is still held (see s_kbd_fire_keys). */
         case SDLK_RCTRL:  s_kbd_fire_keys &= ~KBD_FIRE_RCTRL;
@@ -815,6 +852,7 @@ void InputSDL_ClearKeyState(void)
     memset((void *)_keyBuffer, 0, sizeof(_keyBuffer));
     _keyCount = 0;
     s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
+    s_kbd_held_up = s_kbd_held_down = s_kbd_held_left = s_kbd_held_right = 0;
     s_kbd_fire_keys = 0;
     s_kbd_skip = 0;
     _pauseSkipRequested = 0;
