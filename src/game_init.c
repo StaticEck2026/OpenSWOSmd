@@ -960,6 +960,13 @@ void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     _secondLeg = 0;
     _playing2ndGame = 0;
     _isGameFriendly = 1;
+#ifdef SWOS_SDL_BUILD
+    {
+        /* An online match's cup rules (the lobby's), put back after the clear. */
+        extern void NetplaySetup_TakeTieRules(void);
+        NetplaySetup_TakeTieRules();
+    }
+#endif
 
     /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
     InitializeInGameTeamsAndStartGame(1, (int16_t)_minSubstitutes,

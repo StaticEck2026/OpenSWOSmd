@@ -64,6 +64,8 @@ extern uint8_t    _teamTacticsUSERD[], _teamTacticsUSERE[], _teamTacticsUSERF[];
 extern uint16_t   _gameLength, _minSubstitutes, _maxSubstitutes;
 extern uint16_t   _pitchTypeOrSeason, _friendlyPitchType, _pitchType;
 extern uint16_t   _gameType, _trainingGame, _isCareer;
+extern uint16_t   _extraTimeState, _penaltiesState, _secondLeg, _playing2ndGame;
+extern uint16_t   _team1GoalsFirstLeg, _team2GoalsFirstLeg;
 
 enum { CH_STATE = 0, CH_START = 1, CH_ANSWER = 2 };
 
@@ -76,11 +78,14 @@ enum {
 #define STATE_MAGIC   0x53554C42u       /* "SULB" */
 #define START_MAGIC   0x53555354u       /* "SUST" */
 #define ANSWER_MAGIC  0x5355414Eu       /* "SUAN" */
-#define LOBBY_VERSION 3     /* 2: START carries the match's packet key; 3: and the kick-off state */
+#define LOBBY_VERSION 4     /* 2: START carries the match's packet key; 3: and the kick-off state;
+                               4: the cup rules */
 
-/* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the four
+/* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the nine
  * rules, the name, the team, the USER tactic. */
-enum { STATE_BYTES = 4 + 2 + 4 + 2 + 2 + 8 + LOBBY_NAME_MAX + NETPLAY_TEAM_BYTES + TACTIC_BYTES };
+enum { RULE_WORDS = 9 };
+enum { STATE_BYTES = 4 + 2 + 4 + 2 + 2 + RULE_WORDS * 2 + LOBBY_NAME_MAX + NETPLAY_TEAM_BYTES +
+                     TACTIC_BYTES };
 /* START: magic, version, the joiner STATE generation it was built on, rulesGen, the
  * packet key; then the setup's length and the setup; then the host's state to kick off
  * from (a state_wire packet, the rest of the message -- see NetplayLobby_ApplyMatch). */
@@ -152,6 +157,20 @@ static void clamp_rules(LobbyRules *r)
         r->minSubs = 0;
     else if (r->minSubs < 1 || r->minSubs > r->maxSubs)
         r->minSubs = 1;
+    if (r->legs > 2)
+        r->legs = 0;
+    if (r->legs == 0)
+        r->tieBreak = 0;
+    else if (r->tieBreak != LOBBY_TIE_ET_PEN && r->tieBreak != LOBBY_TIE_PEN_ONLY)
+        r->tieBreak = LOBBY_TIE_ET_PEN;
+    if (r->legs != 2 || r->leg != 2) {
+        r->leg = 1;
+        r->firstLeg1 = r->firstLeg2 = 0;
+    }
+    if (r->firstLeg1 > 99)
+        r->firstLeg1 = 99;
+    if (r->firstLeg2 > 99)
+        r->firstLeg2 = 99;
 }
 
 /* ---- the STATE message ---- */
@@ -178,6 +197,11 @@ static int32_t encode_state(uint8_t *out)
     BE_WRITE_U16(q, s_lobby.rules.pitchType);     q += 2;
     BE_WRITE_U16(q, s_lobby.rules.minSubs);       q += 2;
     BE_WRITE_U16(q, s_lobby.rules.maxSubs);       q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.legs);          q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.tieBreak);      q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.leg);           q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.firstLeg1);     q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.firstLeg2);     q += 2;
     memset(q, 0, LOBBY_NAME_MAX);
     memcpy(q, p->name, strnlen(p->name, LOBBY_NAME_MAX)); q += LOBBY_NAME_MAX;
     NetplaySetup_WriteTeam(q, &p->team);          q += NETPLAY_TEAM_BYTES;
@@ -243,6 +267,11 @@ static void read_peer_state(void)
     rules.pitchType  = BE_READ_U16(q);            q += 2;
     rules.minSubs    = BE_READ_U16(q);            q += 2;
     rules.maxSubs    = BE_READ_U16(q);            q += 2;
+    rules.legs       = BE_READ_U16(q);            q += 2;
+    rules.tieBreak   = BE_READ_U16(q);            q += 2;
+    rules.leg        = BE_READ_U16(q);            q += 2;
+    rules.firstLeg1  = BE_READ_U16(q);            q += 2;
+    rules.firstLeg2  = BE_READ_U16(q);            q += 2;
     memcpy(got.name, q, LOBBY_NAME_MAX);          q += LOBBY_NAME_MAX;
     got.name[LOBBY_NAME_MAX] = '\0';
     NetplaySetup_ReadTeam(&got.team, q);          q += NETPLAY_TEAM_BYTES;
@@ -258,9 +287,9 @@ static void read_peer_state(void)
         /* The host's rules. A change after the first sighting means the joiner has
          * not agreed to these yet. */
         if (rulesGen != s_lobby.rulesGen) {
-            if (s_lobby.rulesGen != 0)
-                drop_my_ready();
             clamp_rules(&rules);
+            if (s_lobby.rulesGen != 0 && memcmp(&rules, &s_lobby.rules, sizeof rules) != 0)
+                drop_my_ready();
             s_lobby.rules    = rules;
             s_lobby.rulesGen = rulesGen;
             s_lobby.dirty    = 1;               /* echo the generation we now have */
@@ -348,6 +377,24 @@ static void assemble_match(void)
     _gameType          = 0;                     /* a friendly */
     _trainingGame      = 0;
     _isCareer          = 0;
+
+    /* The cup rules, as SWOS 2020 plays them: a single leg, or a second one, is
+     * settled by extra time and penalties or by penalties alone; a first leg of two
+     * may end in a draw. The two players keep their sides for both legs -- nobody is
+     * ever the away team -- so a second leg goes to the aggregate and then straight
+     * to the tie-break, with no away goals (_playing2ndGame 0; game_state.c). The
+     * friendly init clears these: the setup carries them back (NetplaySetup_TakeTieRules). */
+    {
+        const LobbyRules *r = &s_lobby.rules;
+        int32_t second = r->legs == 2 && r->leg == 2;
+        int32_t decide = r->legs == 1 || second;
+        _extraTimeState     = (uint16_t)(decide && r->tieBreak == LOBBY_TIE_ET_PEN);
+        _penaltiesState     = (uint16_t)decide;
+        _secondLeg          = (uint16_t)second;
+        _playing2ndGame     = 0;
+        _team1GoalsFirstLeg = second ? r->firstLeg1 : 0;
+        _team2GoalsFirstLeg = second ? r->firstLeg2 : 0;
+    }
 }
 
 static void keep_setup(const uint8_t *setup, uint32_t len)
@@ -686,12 +733,41 @@ void NetplayLobby_SetActivity(int32_t activity)
     s_lobby.dirty = 1;
 }
 
+void NetplayLobby_MatchPlayed(int32_t completed, int32_t goals1, int32_t goals2)
+{
+    LobbyRules *r = &s_lobby.rules;
+    /* Both machines, each on its copy: they played the same match, so the joiner has
+     * the host's next rules before they arrive, and a GO pressed meanwhile stands
+     * (read_peer_state takes ready down only for rules that differ). */
+    if (r->legs != 2 || !completed)
+        return;
+    if (r->leg == 1) {
+        r->leg = 2;
+        r->firstLeg1 = (uint16_t)(goals1 < 0 ? 0 : goals1);
+        r->firstLeg2 = (uint16_t)(goals2 < 0 ? 0 : goals2);
+    } else {
+        r->leg = 1;
+    }
+    clamp_rules(r);
+    if (s_lobby.me == 1)
+        s_lobby.rulesGen++;
+    s_lobby.dirty = 1;
+    if (r->leg == 2)
+        fprintf(stderr, "[lobby] cup: the second leg is next; the first ended %u-%u\n",
+                (unsigned)r->firstLeg1, (unsigned)r->firstLeg2);
+    else
+        fprintf(stderr, "[lobby] cup: the tie is over; the next match is a first leg\n");
+}
+
 void NetplayLobby_SetRules(const LobbyRules *rules)
 {
     LobbyRules r;
     if (s_lobby.state != LOBBY_OPEN || s_lobby.me != 1 || !rules)
         return;
     r = *rules;
+    /* Another cup format is another tie: it starts at its first leg. */
+    if (r.legs != s_lobby.rules.legs || r.tieBreak != s_lobby.rules.tieBreak)
+        r.leg = 1;
     clamp_rules(&r);
     if (memcmp(&r, &s_lobby.rules, sizeof r) == 0)
         return;
@@ -806,6 +882,7 @@ int32_t NetplayLobby_ApplyMatch(void)
         return rc;
     NetplayMatch_SetPacketKey(s_lobby.packetKey);
     InitTeams();            /* as the friendly menu does before PlayFriendly (ChooseTeamsMenu) */
+    NetplaySetup_ArmTieRules(1);    /* the friendly init clears them; it takes these back */
     return 0;
 }
 
@@ -838,6 +915,8 @@ void               NetplayLobby_SetTactic(int32_t tactic) { (void)tactic; }
 void               NetplayLobby_SetReady(int32_t ready) { (void)ready; }
 void               NetplayLobby_SetActivity(int32_t activity) { (void)activity; }
 void               NetplayLobby_SetRules(const LobbyRules *rules) { (void)rules; }
+void               NetplayLobby_MatchPlayed(int32_t completed, int32_t goals1, int32_t goals2)
+{ (void)completed; (void)goals1; (void)goals2; }
 int32_t            NetplayLobby_IsHost(void) { return 0; }
 int32_t            NetplayLobby_CanStart(void) { return 0; }
 int32_t            NetplayLobby_Start(void) { return 1; }

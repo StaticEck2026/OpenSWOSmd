@@ -32,6 +32,14 @@ int32_t  NetplaySetup_Encode(uint8_t *out, uint32_t cap);
 /* Adopt a peer's. 0 on success; non-zero leaves this machine's setup alone. */
 int32_t  NetplaySetup_Apply(const uint8_t *in, uint32_t len);
 
+/* The setup carries how a draw is settled -- extra time, penalties, a second leg and
+ * the first leg's score (the lobby's cup rules). The friendly init clears those, so
+ * the setup's are put back from inside it: Arm(1) just before InitAndPlayGame and the
+ * init Takes them, once (Arm(0) if the match then does not start). Unarmed, Take does
+ * nothing, so a friendly from the menus is never a cup tie left over from online. */
+void     NetplaySetup_ArmTieRules(int32_t armed);
+void     NetplaySetup_TakeTieRules(void);
+
 /* Round-trip check: encode, scribble over every global it covers, apply, and
  * require equality. Part of --netplay-selftest. 0 on success. */
 int32_t  NetplaySetup_SelfTest(void);

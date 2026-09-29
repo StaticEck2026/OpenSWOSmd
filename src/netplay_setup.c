@@ -95,16 +95,25 @@ extern uint8_t _seed2, _randXorIndex2, _randXorKey2;
 extern uint16_t _randomSeed, _currentSeasonShowing;
 extern uint8_t  _newRandomSeedCopy, _viewRandomPhase;
 
+/* How a draw is settled: the lobby's cup rules (LobbyRules, netplay_lobby.h). The
+ * friendly init clears all six (InitAndPlayGame), so Apply keeps a copy and the init
+ * puts it back (NetplaySetup_TakeTieRules) -- once, for the match it was armed for. */
+extern uint16_t _extraTimeState, _penaltiesState, _secondLeg, _playing2ndGame;
+extern uint16_t _team1GoalsFirstLeg, _team2GoalsFirstLeg;
+
 #define TACTIC_BYTES  370
 #define NUM_TACTICS   6
 
 #define SETUP_MAGIC   0x53555020u    /* "SUP " */
-#define SETUP_VERSION 2     /* 2: the match-init seeds (_randomSeed and friends) */
+#define SETUP_VERSION 3     /* 2: the match-init seeds (_randomSeed and friends); 3: the tie rules */
 
-/* magic, version, then the scalars, then the teams, then the tactics. */
+/* magic, version, then the scalars, then (version 3) the tie rules, then the teams,
+ * then the tactics. A version-2 setup -- a recording made before the cup rules --
+ * has no tie rules and is played as the friendly it was. */
 #define SCALAR_COUNT  27
+#define TIE_WORDS     6
 #define HEADER_BYTES  (4 + 2 + 2)
-#define SCALAR_BYTES  (SCALAR_COUNT * 2)
+#define SCALAR_BYTES  (SCALAR_COUNT * 2 + TIE_WORDS * 2)
 #define TEAM_BYTES    ((uint32_t)sizeof(TeamFileEx) * 2)
 #define TACTIC_TOTAL  (TACTIC_BYTES * NUM_TACTICS)
 
@@ -193,6 +202,13 @@ int32_t NetplaySetup_Encode(uint8_t *out, uint32_t cap)
     BE_WRITE_U16(p, _currentSeasonShowing);                            p += 2;
     BE_WRITE_U16(p, ((uint16_t)_newRandomSeedCopy << 8) | _viewRandomPhase); p += 2;
 
+    BE_WRITE_U16(p, _extraTimeState);     p += 2;
+    BE_WRITE_U16(p, _penaltiesState);     p += 2;
+    BE_WRITE_U16(p, _secondLeg);          p += 2;
+    BE_WRITE_U16(p, _playing2ndGame);     p += 2;
+    BE_WRITE_U16(p, _team1GoalsFirstLeg); p += 2;
+    BE_WRITE_U16(p, _team2GoalsFirstLeg); p += 2;
+
     /* The two teams (NetplaySetup_WriteTeam says why bytes are right here). */
     NetplaySetup_WriteTeam(p, &_selectedTeams[0]);
     p += sizeof(TeamFileEx);
@@ -205,6 +221,39 @@ int32_t NetplaySetup_Encode(uint8_t *out, uint32_t cap)
     }
 
     return (int32_t)(p - out);
+}
+
+/* The last setup applied's tie rules, and whether the next match init takes them. */
+static uint16_t s_tie[TIE_WORDS];
+static int32_t  s_tieArmed;
+
+static void put_tie_rules(void)
+{
+    _extraTimeState     = s_tie[0];
+    _penaltiesState     = s_tie[1];
+    _secondLeg          = s_tie[2];
+    _playing2ndGame     = s_tie[3];
+    _team1GoalsFirstLeg = s_tie[4];
+    _team2GoalsFirstLeg = s_tie[5];
+}
+
+void NetplaySetup_ArmTieRules(int32_t armed)
+{
+    s_tieArmed = armed != 0;
+}
+
+void NetplaySetup_TakeTieRules(void)
+{
+    if (!s_tieArmed)
+        return;
+    s_tieArmed = 0;
+    put_tie_rules();
+    if (s_tie[0] || s_tie[1] || s_tie[2])
+        fprintf(stderr, "[match] cup rules: extra time %s, penalties %s%s\n",
+                s_tie[0] ? "yes" : "no", s_tie[1] ? "yes" : "no",
+                s_tie[2] ? ", second leg" : "");
+    if (s_tie[2])
+        fprintf(stderr, "[match] the first leg ended %u-%u\n", (unsigned)s_tie[4], (unsigned)s_tie[5]);
 }
 
 int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
@@ -220,9 +269,9 @@ int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
     p += 4;
     version = BE_READ_U16(p); p += 2;
     scalars = BE_READ_U16(p); p += 2;
-    if (version != SETUP_VERSION || scalars != SCALAR_COUNT)
+    if ((version != SETUP_VERSION && version != 2) || scalars != SCALAR_COUNT)
         return 1;
-    if (len < NetplaySetup_MaxBytes() - 8)
+    if (len < NetplaySetup_MaxBytes() - 8 - (version == 2 ? TIE_WORDS * 2 : 0))
         return 1;
 
 #define GET() (p += 2, BE_READ_U16(p - 2))
@@ -262,6 +311,12 @@ int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
     _currentSeasonShowing = BE_READ_U16(p); p += 2;
     _newRandomSeedCopy    = p[0];
     _viewRandomPhase      = p[1];           p += 2;
+    memset(s_tie, 0, sizeof s_tie);
+    if (version >= 3) {
+        for (i = 0; i < TIE_WORDS; i++)
+            s_tie[i] = GET();
+    }
+    put_tie_rules();
 #undef GET
 
     NetplaySetup_ReadTeam(&_selectedTeams[0], p);
@@ -310,6 +365,7 @@ int32_t NetplaySetup_SelfTest(void)
     /* Something recognisable to send. */
     _gameLength = 2; _pitchType = 3; _maxSubstitutes = 5; _pl1Tactics = 4;
     _seed = 0xA5; _randXorKey2 = 0x3C; _randomSeed = 0xBEEF; _newRandomSeedCopy = 0x5D;
+    _penaltiesState = 1; _secondLeg = 1; _team2GoalsFirstLeg = 3;
     memset(&_selectedTeams[0].team.teamName, 'Q', 4);
     memset(_teamTacticsUSERA, 0x5A, 16);
 
@@ -330,6 +386,7 @@ int32_t NetplaySetup_SelfTest(void)
     /* Now make every one of them wrong. */
     _gameLength = 0; _pitchType = 0; _maxSubstitutes = 0; _pl1Tactics = 0;
     _seed = 0; _randXorKey2 = 0; _randomSeed = 0; _newRandomSeedCopy = 0;
+    _penaltiesState = 0; _secondLeg = 0; _team2GoalsFirstLeg = 0;
     memset(&_selectedTeams[0], 0, sizeof _selectedTeams[0]);
     memset(_teamTacticsUSERA, 0, TACTIC_BYTES);
 
@@ -351,6 +408,7 @@ int32_t NetplaySetup_SelfTest(void)
     CHECK(_randXorKey2 == savedKey2,          "secondary random key");
     CHECK(_randomSeed == savedRandomSeed,     "the seed match init reseeds from");
     CHECK(_newRandomSeedCopy == savedSeedCopy, "the seed player skill rolls mix in");
+    CHECK(_penaltiesState == 1 && _secondLeg == 1 && _team2GoalsFirstLeg == 3, "the tie rules");
     CHECK(memcmp(&_selectedTeams[0], &savedTeam0, sizeof savedTeam0) == 0, "team 1, every byte");
     CHECK(memcmp(_teamTacticsUSERA, savedTacticA, TACTIC_BYTES) == 0,      "user tactics A");
 #undef CHECK
@@ -375,6 +433,8 @@ void     NetplaySetup_ReadTeam(TeamFileEx *team, const uint8_t *in) { (void)team
 int32_t  NetplaySetup_Encode(uint8_t *out, uint32_t cap) { (void)out; (void)cap; return -1; }
 int32_t  NetplaySetup_Apply(const uint8_t *in, uint32_t len) { (void)in; (void)len; return 1; }
 int32_t  NetplaySetup_SelfTest(void) { return 0; }
+void     NetplaySetup_ArmTieRules(int32_t armed) { (void)armed; }
+void     NetplaySetup_TakeTieRules(void) {}
 
 #endif /* SWOS_NETPLAY */
 #endif /* SWOS_SDL_BUILD */

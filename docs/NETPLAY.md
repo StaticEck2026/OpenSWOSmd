@@ -768,14 +768,15 @@ both — fine for a one-shot setup, fatal for a lobby where a player changes the
 
 Once the link is up and the delay agreed, both players land in SWOS 2020's lobby screen.
 SWOS 2020's model: **each player publishes their own side** — a team, a tactic, ready or
-not — and **the host owns the rules** (game length, pitch, substitutes). Player 1 is the
-host and the top team.
+not — and **the host owns the rules** (cup, game length, pitch, substitutes). Player 1 is
+the host and the top team.
 
 | Row / button | Who | What it does |
 |---|---|---|
 | TEAMS | your row | the game's own team list — clubs, national sides, custom teams (`ChooseTeamsDialog`, as IMPORT TEAM uses it) — and then straight on to the team screen (TACTICS, below), as in SWOS 2020 |
 | TACTICS | your row | opens the game's own team screen, the one a friendly shows before kick-off: the line-up (FIRE on two players swaps them, a starter for a substitute too), the formation, VIEW OPPO and EDIT TACTICS. Its PLAY button reads **CONFIRM** here: CONFIRM sends the arranged team to the other player and makes you ready (green); EXIT sends it and leaves you not ready. The other player sees YOUR OPPONENT IS ARRANGING THEIR TEAM meanwhile. The confirmed side is kept for the rematch -- the lobby holds it, not the match, so substitutions made during a match do not carry over. It matters: SWOS scales each human player's skills by how well he suits his slot, down to 75% (ReportBot 0014), and a team played in its file's order can have a quarter of its players misplaced |
 | GO | your row | ready, or not |
+| CUP | host | how a draw is settled, SWOS 2020's row: **OFF** (a friendly: a draw stands), **1 LEG** or **2 LEGS**, then **ET + PEN** or **PEN ONLY**. Details below |
 | GAME LENGTH, PITCH TYPE, SUBSTITUTES | host | the friendly menu's own cycles; the joiner sees them change |
 | START | host | lit when both are ready on the current rules |
 | FRAME DELAY | — | the delay the link agreed; shown, not chosen |
@@ -875,11 +876,31 @@ stood, the bench and crowd are whatever the machine last had. After a normal mat
 machines had the same, so rematches agreed — but after one that ended out of step, or at
 different frames on the two machines, every rematch started out of step at frame 0. So
 START carries the host's SIM-tier state as it stood when it pressed START (a `state_wire`
-packet after the setup; `LOBBY_VERSION` 3), and at kick-off BOTH peers — the host too —
+packet after the setup; `LOBBY_VERSION` 3; 4 added the CUP rules to STATE), and at kick-off BOTH peers — the host too —
 load it, then apply the setup, then run the init (`NetplayLobby_ApplyMatch`). Each keeps
 its own LOCAL fields (`SimState_RestoreLocal`): the HUD is placed for its own display.
 Checked with `SWOS_LIVE_DESYNC_FRAME=150` on the joiner for three matches in a row: every
 one now agrees up to 151; before, matches 2 and 3 parted at frame 0.
+
+**The CUP row** is the game's own tie-break, not an imitation: the setup carries
+`_extraTimeState`, `_penaltiesState`, `_secondLeg`, `_playing2ndGame` and the first leg's
+score (`SETUP_VERSION` 3), and `game_state.c` settles the draw as it does in a DIY cup. The
+friendly init clears all six, so `NetplaySetup_TakeTieRules` puts them back from inside it,
+armed only for the match about to start (`--srp-resim` arms them too, so a cup tie replays
+as it was played). A 1-LEG match goes to extra time and penalties, or straight to penalties.
+Of 2 LEGS, the first may end in a draw; when it is played to the end (`NetplayLobby_MatchPlayed`,
+on both machines) the next match is the second leg — the lobby says `FIRST LEG 1-0 - GO FOR
+THE SECOND LEG`, the CUP button `2ND LEG` — which starts from that score (the HUD shows the
+aggregate) and is settled by the tie-break if the aggregate is level; then the next is a new
+tie. A first leg cut short is played again. Changing the CUP row starts a new tie.
+
+As in SWOS 2020 the two players keep their sides for both legs — nobody is ever the away
+team — so there are **no away goals** (`_playing2ndGame` 0). The joiner advances its own
+copy of the tie from the same match, and only rules that DIFFER from its copy take its ready
+down, so a GO pressed before the host's new rules arrive stands. Test knob:
+`SWOS_LOBBY_CUP=<legs>:<1 ET+PEN|2 PEN ONLY>` on the host; `MATCHES=3 FRAMES=400
+HOST_ENV=SWOS_LOBBY_CUP=2:2 RELAY=0 REPORTS=1 scripts/relay_test.sh` plays a tie and the
+first leg of the next.
 
 ### When a match ends, and rematch
 

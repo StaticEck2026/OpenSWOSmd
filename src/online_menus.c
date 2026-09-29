@@ -31,6 +31,7 @@
 #include "p2p_link.h"         /* the peer connection the handoff makes */
 #include "netplay_lobby.h"    /* where the two players set the match up */
 #include "netplay_match.h"    /* the live GGPO session */
+#include "netplay_setup.h"    /* the cup rules a match takes at kick-off */
 #include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
 #include "platform_sdl.h"     /* Platform_SetFrameHook: the link outlives a modal menu */
 #include "swos_settings.h"    /* Settings_Save: the SERVER row keeps what was typed */
@@ -699,7 +700,15 @@ static void lobby_test_knobs(void)
 {
     extern uint8_t _teamFileBuffer[];
     const char *team = getenv("SWOS_LOBBY_TEAM");
-    unsigned file, ordinal;
+    const char *cup = getenv("SWOS_LOBBY_CUP");     /* host: <legs>:<1 ET+PEN | 2 PEN ONLY> */
+    unsigned file, ordinal, legs, tie;
+
+    if (cup && NetplayLobby_IsHost() && sscanf(cup, "%u:%u", &legs, &tie) == 2) {
+        LobbyRules r = *NetplayLobby_Rules();
+        r.legs = (uint16_t)legs;
+        r.tieBreak = (uint16_t)tie;
+        NetplayLobby_SetRules(&r);
+    }
 
     if (team && sscanf(team, "%x:%x", &file, &ordinal) == 2 && LoadTeamFile((uint16_t)file) == 0) {
         uint16_t count = *(uint16_t *)_teamFileBuffer, i;     /* host-native count, then records */
@@ -807,6 +816,23 @@ static const char *pitch_name(uint16_t pitch)
     return pitch < 7 ? names[pitch] : _aRandom;
 }
 
+/* The CUP row: SWOS 2020's legOptStr / etPenStr, with the leg a two-leg tie is on. */
+static const char *legs_name(const LobbyRules *r)
+{
+    if (r->legs == 1)
+        return "1 LEG";
+    if (r->legs == 2)
+        return r->leg == 2 ? "2ND LEG" : "2 LEGS";
+    return "OFF";
+}
+
+static const char *tie_name(const LobbyRules *r)
+{
+    if (r->legs == 0)
+        return "-";
+    return r->tieBreak == LOBBY_TIE_PEN_ONLY ? "PEN ONLY" : "ET + PEN";
+}
+
 static const char *length_name(uint16_t length)
 {
     extern const char _a3Mins[], _a5Mins[], _a7Mins[], _a10Mins[];
@@ -841,10 +867,12 @@ static void lobby_layout(void)
     int32_t tactics = MpGameSetupMenu_tactics_00 + row;
     int32_t go = MpGameSetupMenu_go_00 + row;
 
-    lobby_nav(teams,   -1,      tactics, -1, MpGameSetupMenu_gameLength1);
-    lobby_nav(tactics, teams,   go,      -1, MpGameSetupMenu_gameLength1);
-    lobby_nav(go,      tactics, -1,      -1, MpGameSetupMenu_gameLength1);
-    lobby_nav(MpGameSetupMenu_gameLength1, -1, -1, teams, MpGameSetupMenu_pitchType1);
+    lobby_nav(teams,   -1,      tactics, -1, MpGameSetupMenu_legOpt1);
+    lobby_nav(tactics, teams,   go,      -1, MpGameSetupMenu_etPen1);
+    lobby_nav(go,      tactics, -1,      -1, MpGameSetupMenu_etPen1);
+    lobby_nav(MpGameSetupMenu_legOpt1, -1, MpGameSetupMenu_etPen1, teams, MpGameSetupMenu_gameLength1);
+    lobby_nav(MpGameSetupMenu_etPen1, MpGameSetupMenu_legOpt1, -1, tactics, MpGameSetupMenu_gameLength1);
+    lobby_nav(MpGameSetupMenu_gameLength1, -1, -1, MpGameSetupMenu_etPen1, MpGameSetupMenu_pitchType1);
     lobby_nav(MpGameSetupMenu_pitchType1,  -1, -1, MpGameSetupMenu_gameLength1, MpGameSetupMenu_minSubs1);
     lobby_nav(MpGameSetupMenu_minSubs1, -1, MpGameSetupMenu_maxSubs1,
               MpGameSetupMenu_pitchType1, MpGameSetupMenu_cancel);
@@ -862,9 +890,6 @@ static void lobby_layout(void)
     lobby_hide(MpGameSetupMenu_rankedModeOption1);
     lobby_hide(MpGameSetupMenu_teamDB1Label);
     lobby_hide(MpGameSetupMenu_teamDB1);
-    lobby_hide(MpGameSetupMenu_etPen1Label);
-    lobby_hide(MpGameSetupMenu_legOpt1);
-    lobby_hide(MpGameSetupMenu_etPen1);
     lobby_hide(MpGameSetupMenu_ggpoFrameDelayDec);
     lobby_hide(MpGameSetupMenu_ggpoFrameDelayInc);
     lobby_hide(MpGameSetupMenu_matchInfo);
@@ -968,6 +993,9 @@ static void mpGameSetupMenu_OnDraw(void)
     }
 
     /* The rules: the host's to change, everyone's to read. */
+    set_entry(MpGameSetupMenu_legOpt1, legs_name(rules), host && open, host && open ? kLightBlue : kGray);
+    set_entry(MpGameSetupMenu_etPen1, tie_name(rules), host && open && rules->legs > 0,
+              host && open && rules->legs > 0 ? kLightBlue : kGray);
     set_entry(MpGameSetupMenu_gameLength1, length_name(rules->gameLength), host && open,
               host && open ? kLightBlue : kGray);
     set_entry(MpGameSetupMenu_pitchType1, pitch_name(rules->pitchType), host && open,
@@ -1259,6 +1287,22 @@ static void next_max_subs(LobbyRules *r)
         r->minSubs = 1;
 }
 
+/* OFF, 1 LEG, 2 LEGS; a cup starts with extra time and penalties. */
+static void next_legs(LobbyRules *r)
+{
+    r->legs = (uint16_t)((r->legs + 1) % 3);
+    if (r->legs && !r->tieBreak)
+        r->tieBreak = LOBBY_TIE_ET_PEN;
+}
+
+static void next_tie_break(LobbyRules *r)
+{
+    if (r->legs)
+        r->tieBreak = r->tieBreak == LOBBY_TIE_ET_PEN ? LOBBY_TIE_PEN_ONLY : LOBBY_TIE_ET_PEN;
+}
+
+static void selectLegOpt1(void)     { change_rules(next_legs); }
+static void selectEtPen1(void)      { change_rules(next_tie_break); }
 static void selectGameLength1(void) { change_rules(next_length); }
 static void selectPitchType1(void)  { change_rules(next_pitch); }
 static void selectMinSubs1(void)    { change_rules(next_min_subs); }
@@ -1437,6 +1481,7 @@ static void run_live_match(void)
         NetplayMatch_StartLive(NetplayLobby_LocalPlayer(), ip, peerPort, localPort, delay,
                                simWidth) != 0) {
         snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT START THE MATCH");
+        NetplaySetup_ArmTieRules(0);
         NetplayLobby_RestoreTactics();
         SetExitMenuFlag();
         return;
@@ -1451,14 +1496,21 @@ static void run_live_match(void)
      * is in SWOS 2020. The menu is shown afresh (OnlineMenus_EnterLobby) rather than
      * carried on with, since the match has had the screen. */
     {
+        extern uint16_t _statsTeam1Goals, _statsTeam2Goals;
         const char *why;
         int32_t outcome = NetplayMatch_LiveOutcome(&why);
+        const LobbyRules *rules = NetplayLobby_Rules();
         char notice[64];
         s_matchEndedEarly = outcome == NETPLAY_LIVE_ENDED_EARLY;
         if (s_matchEndedEarly && why[0])
             snprintf(notice, sizeof notice, "%s", why);
+        else if (!s_matchEndedEarly && rules->legs == 2 && rules->leg == 1)
+            snprintf(notice, sizeof notice, "FIRST LEG %u-%u - GO FOR THE SECOND LEG",
+                     (unsigned)_statsTeam1Goals, (unsigned)_statsTeam2Goals);
         else
             snprintf(notice, sizeof notice, "FULL TIME - PRESS GO FOR A REMATCH");
+        /* A two-leg tie moves on (the host's rules; the joiner hears of it). */
+        NetplayLobby_MatchPlayed(!s_matchEndedEarly, _statsTeam1Goals, _statsTeam2Goals);
         NetplayMatch_Finish();
         (void)NetplayLobby_Rematch(notice);     /* on failure the lobby says why */
         /* HOW WAS THE MATCH? -- with the link to the other player kept polled, so a
@@ -1891,6 +1943,8 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(mpGameSetup_teams_onSelect),
     HANDLER(mpGameSetup_tactics_onSelect),
     HANDLER(mpGameSetup_go_onSelect),
+    HANDLER(selectLegOpt1),
+    HANDLER(selectEtPen1),
     HANDLER(selectGameLength1),
     HANDLER(selectPitchType1),
     HANDLER(selectMinSubs1),

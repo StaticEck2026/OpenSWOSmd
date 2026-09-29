@@ -47,7 +47,14 @@ typedef struct {
     uint16_t gameLength;            /* _gameLength: 0..3 = 3, 5, 7, 10 minutes */
     uint16_t pitchType;             /* _friendlyPitchType: 0..6, or 0xFFFF for random */
     uint16_t minSubs, maxSubs;      /* 0..5, min <= max, min >= 1 when max > 0 */
+    /* A cup tie, SWOS 2020's CUP row: */
+    uint16_t legs;                  /* 0 a friendly (a draw stands), 1 or 2 legs */
+    uint16_t tieBreak;              /* legs > 0: LOBBY_TIE_ET_PEN or LOBBY_TIE_PEN_ONLY */
+    uint16_t leg;                   /* 2 legs: the one to play next, 1 or 2 */
+    uint16_t firstLeg1, firstLeg2;  /* leg 2: how the first ended, top team first */
 } LobbyRules;
+
+enum { LOBBY_TIE_ET_PEN = 1, LOBBY_TIE_PEN_ONLY = 2 };
 
 typedef enum {
     LOBBY_CLOSED,                   /* not begun */
@@ -77,7 +84,7 @@ void               NetplayLobby_SetTactic(int32_t tactic);
 void               NetplayLobby_SetReady(int32_t ready);
 void               NetplayLobby_SetActivity(int32_t activity);
 
-/* The host's. A change takes the joiner's ready flag down on the joiner's side, so
+/* The host's. Changing the number of legs or the tie-break starts a new tie. A change takes the joiner's ready flag down on the joiner's side, so
  * the joiner agrees to the rules they will play. */
 void               NetplayLobby_SetRules(const LobbyRules *rules);
 int32_t            NetplayLobby_IsHost(void);
@@ -116,6 +123,14 @@ void               NetplayLobby_RestoreTactics(void);
  * is two GOs and a START. `notice` is the line to show meanwhile ("" for none).
  * 0 if reconnecting; otherwise the lobby is FAILED and says why. */
 int32_t            NetplayLobby_Rematch(const char *notice);
+
+/* After a match, before Rematch, on both machines: how it ended, top team first, and
+ * whether it was played to the end. A two-leg tie moves on -- a first leg played out
+ * makes the next match the second, with this score to make up; a second leg makes the
+ * next the first of a new tie. The host's rules are still the ones that count; the
+ * joiner's copy only means a GO pressed before they arrive is not taken down by them.
+ * A match that ended early is played again. */
+void               NetplayLobby_MatchPlayed(int32_t completed, int32_t goals1, int32_t goals2);
 
 #endif /* SWOS_SDL_BUILD */
 #endif /* NETPLAY_LOBBY_H */

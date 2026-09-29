@@ -132,6 +132,7 @@ void SrpResim_Run(void)
     ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
     InitTeams();
     ReplayRec_Suppress(1);          /* a re-simulation is not a match to keep */
+    NetplaySetup_ArmTieRules(1);    /* a cup tie is settled as it was live */
 
     if (NetplayMatch_StartResim(s_rec.kickoff, s_rec.kickoffLen, s_rec.inputs, s_rec.hashes,
                                 s_rec.frames, s_rec.simWidth) != 0) {
