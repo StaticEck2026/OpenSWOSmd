@@ -878,9 +878,12 @@ check_game_end:
         /* Tied at 90 minutes */
         if (_secondLeg && _playing2ndGame == 1)
         {
-            /* Away goals rule: 2*thisLeg + firstLeg */
+            /* Away goals: each side's goals on the other's ground count twice --
+             * team 2's this leg, team 1's in the first (SWOS2.s loc_10B552:
+             * d0 = 2*statsTeam2Goals + team2GoalsFirstLeg,
+             * d1 = 2*team1GoalsFirstLeg + statsTeam1Goals). */
             uint16_t team2adj = (uint16_t)(_statsTeam2Goals * 2 + _team2GoalsFirstLeg);
-            uint16_t team1adj = (uint16_t)(_statsTeam1Goals * 2 + _team1GoalsFirstLeg);
+            uint16_t team1adj = (uint16_t)(_team1GoalsFirstLeg * 2 + _statsTeam1Goals);
             if (team1adj != team2adj)
             {
                 /* Away goals decide */
@@ -939,7 +942,7 @@ check_game_end:
         if (_secondLeg && _playing2ndGame)
         {
             uint16_t team2adj = (uint16_t)(_statsTeam2Goals * 2 + _team2GoalsFirstLeg);
-            uint16_t team1adj = (uint16_t)(_statsTeam1Goals * 2 + _team1GoalsFirstLeg);
+            uint16_t team1adj = (uint16_t)(_team1GoalsFirstLeg * 2 + _statsTeam1Goals);
             if (team1adj != team2adj)
             {
                 if (team1adj > team2adj)
