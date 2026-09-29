@@ -693,6 +693,7 @@ static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobb
 static int32_t s_matchEndedEarly;   /* the last match was cut short: its notice says why */
 
 static void lineup_test_swap(void);    /* SWOS_LOBBY_LINEUP_SWAP, beside the TACTICS screen */
+static void lineup_screen(void);       /* the team screen, from TEAMS and TACTICS */
 
 static void lobby_test_knobs(void)
 {
@@ -1049,8 +1050,10 @@ static void mpGameSetup_teams_onSelect(void)
 
     ChooseTeamsDialog(1, 1, 1, (uint8_t *)title, (void *)0);
 
-    if ((int16_t)_selectedTeamCountryNumber != -1 && _selectedTeamPtr)
+    if ((int16_t)_selectedTeamCountryNumber != -1 && _selectedTeamPtr) {
         NetplayLobby_SetTeam(_selectedTeamPtr);
+        lineup_screen();                /* straight on to the line-up, then CONFIRM = ready */
+    }
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
 }
 
@@ -1153,26 +1156,46 @@ static void lineup_end(void)
     NetplayLobby_SetTeam(&arranged);
 }
 
-static void mpGameSetup_tactics_onSelect(void)
+/* The team screen, from the lobby: straight after TEAMS picks a team, and from TACTICS
+ * whenever a player wants to change their mind. Its PLAY button reads CONFIRM there, and
+ * CONFIRM means ready -- the player's row goes green -- as in SWOS 2020's lobby. EXIT
+ * keeps what was changed but leaves them not ready. The confirmed side is the lobby's to
+ * keep: a rematch starts from it (netplay_lobby.c keeps each side across a match). */
+static void lineup_screen(void)
 {
     extern int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes, int16_t excludeFlags,
                                      int16_t isFirstPlayer, int16_t squadChanges,
                                      TeamFileEx *team1, TeamFileEx *team2);
+    extern const char *g_playMatchStartLabel;
     extern TeamFileEx _selectedTeams[100];
     extern uint16_t   _exitGameFlag;
-    const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+    static char confirm[] = "CONFIRM";
+    int32_t confirmed;
 
-    if (!on_my_row(MpGameSetupMenu_tactics_00) || !p->hasTeam)
-        return;
     NetplayLobby_SetReady(0);
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_ARRANGING_TEAM);
     NetplayLobby_Poll();
     lineup_begin();
+    _exitGameFlag = 0;
+    g_playMatchStartLabel = confirm;
     ShowPlayMatchMenu(1, (int16_t)NetplayLobby_Rules()->maxSubs, 0, 1, 1,
                       &_selectedTeams[0], &_selectedTeams[1]);
-    _exitGameFlag = 0;                  /* PLAY or EXIT: either way, back to the lobby */
+    g_playMatchStartLabel = NULL;
+    confirmed = _exitGameFlag == 0;     /* EXIT sets it; CONFIRM (the PLAY button) does not */
+    _exitGameFlag = 0;
     lineup_end();
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
+    if (confirmed)
+        NetplayLobby_SetReady(1);
+    fprintf(stderr, "[lobby] team screen: %s\n", confirmed ? "confirmed, ready" : "left with EXIT, not ready");
+}
+
+static void mpGameSetup_tactics_onSelect(void)
+{
+    const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+    if (!on_my_row(MpGameSetupMenu_tactics_00) || !p->hasTeam)
+        return;
+    lineup_screen();
 }
 
 /* SWOS_LOBBY_LINEUP_SWAP=a:b -- for a test, the same arranging with one swap made by the

@@ -216,6 +216,12 @@ void SavePositionsAndUpdateLittleCheckmark(void) {
 
 /* ================================================================ */
 __attribute__((used, externally_visible))
+#ifdef SWOS_SDL_BUILD
+/* Set while the online lobby shows this screen (online_menus.c): the PLAY button's
+ * label -- "CONFIRM", since there it confirms the side rather than starting a match. */
+const char *g_playMatchStartLabel;
+#endif
+
 void SetGameStartButtonText(void) {
     MenuEntry *e = &_menuEntries[9];
     e->bgColor = (e->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
@@ -232,6 +238,10 @@ void SetGameStartButtonText(void) {
         if (t1->team.teamControls != TEAM_PLAYER_COACH)
             e->fg = (uintptr_t)_aCoachMatch;
     }
+#ifdef SWOS_SDL_BUILD
+    if (g_playMatchStartLabel)
+        e->fg = (uintptr_t)g_playMatchStartLabel;
+#endif
     e->bgColor = (e->bgColor & 0xFFF0) | RED_10;
 }
 
