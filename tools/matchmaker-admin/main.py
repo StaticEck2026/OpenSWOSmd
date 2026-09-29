@@ -94,12 +94,15 @@ button{{background:#222;color:#ddd;border:1px solid #444;border-radius:4px;paddi
 button:hover{{background:#2a2a2a;}}
 button:disabled{{opacity:.45;cursor:default;}}
 #pending{{color:#8ecbff;font-size:12px;margin:8px 0;}}
+#copy{{float:right;margin:0;}}
+#copied{{color:#8ecb8e;font-size:12px;margin-left:8px;}}
 pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto;}}
 </style></head>
 <body>
 <h1>swos-matchmaker admin</h1>
 <div>{"".join(buttons)}</div>
 <div id="pending"></div>
+<div><button id="copy">Copy to clipboard</button><span id="copied"></span></div>
 <pre id="log">(loading...)</pre>
 <script>
 var allButtons = document.querySelectorAll('button[data-action]');
@@ -128,6 +131,36 @@ allButtons.forEach(function(btn){{
       .finally(function(){{ allButtons.forEach(function(b){{ b.disabled = false; }}); }});
   }});
 }});
+// Copy the output pane. navigator.clipboard needs a secure page (it is: nginx serves
+// this over HTTPS); the textarea fallback covers anything that refuses it.
+function showCopied(msg){{
+  var el = document.getElementById('copied');
+  el.textContent = msg;
+  setTimeout(function(){{ el.textContent = ''; }}, 2000);
+}}
+document.getElementById('copy').addEventListener('click', function(){{
+  var text = document.getElementById('log').textContent;
+  function fallback(){{
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try {{ ok = document.execCommand('copy'); }} catch (e) {{}}
+    document.body.removeChild(ta);
+    showCopied(ok ? 'copied' : 'copy failed - select the text by hand');
+  }}
+  if (navigator.clipboard && window.isSecureContext) {{
+    navigator.clipboard.writeText(text).then(function(){{ showCopied('copied'); }}, fallback);
+  }} else {{
+    fallback();
+  }}
+}});
+// Only touch the pane when its text changes: rewriting it every poll (2 s) wiped any
+// selection in progress, which is what made the output nearly impossible to copy by hand.
+function setLog(text){{
+  var logEl = document.getElementById('log');
+  if (logEl.textContent !== text) logEl.textContent = text;
+}}
 function poll(){{
   fetch('status').then(function(r){{return r.json();}}).then(function(s){{
     document.getElementById('pending').textContent = s.pending>0 ? ('pending: '+s.pending+' ('+s.pendingNames+')') : '';
@@ -140,7 +173,7 @@ function poll(){{
       // rather than flashing that stale old entry back up.
       if(logEl.textContent==='(loading...)') logEl.textContent = '(an action is currently running, please wait...)';
     }} else {{
-      logEl.textContent = s.log;
+      setLog(s.log);
     }}
   }}).catch(function(e){{ document.getElementById('log').textContent = 'poll error: '+e; }});
 }}
