@@ -562,6 +562,24 @@ subtracted our own input delay where it meant the remote's; OpenSWOS always agre
 delay, so that never bit), and `ggpo_start_session` now takes the frame rate -- 50 or 70 here --
 instead of assuming 60. Both came with catching the submodule up to upstream `master`.
 
+**Compared with Fightcade** (2026-09-28, `fightcade-snes9x/src/win32/ggpo/ggpo.cpp`, its
+snes9x glue; the engine itself is a closed `ggponet.dll`). Fightcade reaches the same
+conclusion -- "GGPO timesync is bad", so it ignores `GGPO_EVENTCODE_TIMESYNC` and never
+stalls -- and paces from its own measurement instead: a 90-frame average of
+`local_frames_behind - remote_frames_behind` from `ggpo_get_stats`, acted on at most once a
+second with a bounded frame delay (`ProcessFrameDelay`) once it passes about two frames.
+
+The one difference worth taking: **both sides meet in the middle.** Fightcade's delay is
+signed -- the peer that is ahead runs slightly slower AND the peer that is behind slightly
+faster -- where ours only ever slows the one ahead (the learned slowdown never goes below
+zero, and the peer behind does nothing). Meeting in the middle closes a gap in about half
+the time, and keeps the match at its nominal 50 (or 70) frames a second on average instead
+of settling slightly slow, at the speed of the slower machine. It is a small change here: let
+the behind peer shorten its frames by the mirror of the ahead peer's lengthening, with the
+same bounds, and let the learned bias go negative. The lobby test's slow-joiner run above
+measures it. Not done yet -- the pacing we have already holds a 2% clock difference to 0.08
+of a frame, so it is a refinement, not a fix.
+
 ### One simulation width
 
 Two players on a 4:3 and a 16:9 screen used to be refused by the link, because the match
