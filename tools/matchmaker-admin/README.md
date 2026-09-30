@@ -1,5 +1,8 @@
 # matchmaker-admin
 
+> Using it -- which buttons to press after which change: `docs/NETPLAY_ADMIN.md`. This
+> README is how it works and how it is set up.
+
 A tiny password-protected web page with ten buttons (`git pull`, rebuild, update the
 recordings player, the four `swos-matchmaker-service.sh` actions, restarting the page itself,
 and clearing the reports and the recordings) plus a live output pane, for maintaining the matchmaker server without

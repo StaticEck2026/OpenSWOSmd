@@ -1,5 +1,8 @@
 # NETPLAY_SETUP.md — running a server and playing online
 
+> Day-to-day updates of a running server go through the admin panel (`/cc/`):
+> [NETPLAY_ADMIN.md](NETPLAY_ADMIN.md). This runbook is setting one up, and what the panel cannot do.
+
 How to deploy the matchmaking/relay server, point games at it, and get two players into
 a match — natively and in a web browser. This is the operator's runbook.
 **docs/NETPLAY.md is the design**: why each piece works the way it does, and what every

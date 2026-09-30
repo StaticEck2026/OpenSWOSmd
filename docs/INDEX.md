@@ -25,6 +25,7 @@ docs drift: search by function name.
 | a tester bug report, a drop, publishing | [TRIAGE.md](TRIAGE.md) |
 | changing the match simulation | [GAMEPLAY.md](GAMEPLAY.md), then [TESTS.md](TESTS.md) (the replay rig proves it) |
 | online play | [NETPLAY.md](NETPLAY.md) (design), [NETPLAY_SETUP.md](NETPLAY_SETUP.md) (server runbook) |
+| updating the server (the admin panel) | [NETPLAY_ADMIN.md](NETPLAY_ADMIN.md) |
 | replays / the playback page | [REPLAY_FORMAT_V2.md](REPLAY_FORMAT_V2.md), [PLAYBACK.md](PLAYBACK.md) |
 | saves | [SAVE.md](SAVE.md) (where), [SAVE_DATA.md](SAVE_DATA.md) (what, and the read-support policy) |
 | editing game data (teams, competitions, menus, tactics) | [DATA_PIPELINE.md](DATA_PIPELINE.md) |
@@ -56,6 +57,7 @@ docs drift: search by function name.
 |---|---|---|---|
 | [NETPLAY.md](NETPLAY.md) | The design of rollback netplay: GGPO-X, the frame step, netem, the handshake and lobby, matchmaking, the relay and recorder, the browser gate, measured results. | current | the netplay step, `p2p_link`, the lobby, matchmaker/relay/recorder, WASM netplay |
 | [NETPLAY_SETUP.md](NETPLAY_SETUP.md) | Operator's runbook: build/run the matchmaker, the systemd unit, ports, certificates and `wss://`, pointing games at a server, troubleshooting, reading logs. | current | deploying or updating the server, a match that will not connect |
+| [NETPLAY_ADMIN.md](NETPLAY_ADMIN.md) | Updating us.swos.eu from the admin panel (`/cc/`): every button, what to press after which kind of change, what still needs ssh, troubleshooting. | current | deploying a server, player or admin-page change |
 | [NETPLAY_GHOSTING.md](NETPLAY_GHOSTING.md) | "Players run through each other online": the two candidate causes (not rollback — shown), what every match records, reproducing it without testers. | current | a ghosting or walk-through report |
 | [NETPLAY_REPORT.md](NETPLAY_REPORT.md) | Match reports: both players' `SWOS.log` and ratings swapped over the link, zipped, uploaded after each online match. | current | match reports, the rating screen, a "it lagged" report |
 | [REPLAY_FORMAT_V2.md](REPLAY_FORMAT_V2.md) | The `.SRP` whole-match replay spec: header, META/FRMS/AUDI/SEEK/CHAP, the resumable SIMV/SETP/STAT/INPT/HASH, PRED/SEEN (what each player saw), `--srp-resim`. | current | `src/replay_v2.c`, `srp_writer.c`, `srp_resim.c`, reading or writing `.SRP` |
