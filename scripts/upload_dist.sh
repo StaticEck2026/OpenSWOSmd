@@ -132,6 +132,7 @@ USE_TLS=1
 INSECURE_TLS=0
 FORCE=0
 VERIFY_ONLY=0
+SKIP_CHANGELOG=0
 
 usage() {
     awk 'NR >= 3 { if ($0 !~ /^#/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
@@ -151,6 +152,8 @@ Options:
                       PROVIDER, not to your domain — see TLS ON SHARED HOSTING)
       --no-tls        plain FTP instead of AUTH TLS (cleartext password)
       --force         upload even from a -dirty tree
+      --skip-changelog  publish a build that has no entry in $CHANGELOG_FILE
+                      (normally refused: every published build gets one)
   -h, --help          this text
 
 Environment:
@@ -176,6 +179,7 @@ while [ $# -gt 0 ]; do
         --insecure-tls) INSECURE_TLS=1; shift ;;
         --verify-only)  VERIFY_ONLY=1; shift ;;
         --force)    FORCE=1; shift ;;
+        --skip-changelog) SKIP_CHANGELOG=1; shift ;;
         -h|--help)  usage; exit 0 ;;
         *) echo "upload_dist: unknown option '$1' (try --help)" >&2; exit 2 ;;
     esac
@@ -241,6 +245,20 @@ if [ "$DO_PAGE" = 1 ]; then
     if [ -z "$MISSING" ] && ! scripts/gen_downloads_page.sh; then
         echo "upload_dist: the downloads page could not be generated — not uploading" >&2
         exit 1
+    fi
+    # EVERY PUBLISHED BUILD IS IN THE CHANGELOG. The page embeds it, so a drop without
+    # its entry tells players nothing about what they are downloading. The entry names
+    # the build the binaries carry (the page's), so it is written AFTER the drop is
+    # built -- docs/TRIAGE.md, "Build the drop". --skip-changelog when it is meant.
+    if [ -z "$MISSING" ] && [ "$SKIP_CHANGELOG" = 0 ]; then
+        PAGE_BUILD=$(sed -n 's|.*Build <code>\([^<]*\)</code>.*|\1|p' "$BIN_SRC/$PAGE_FILE" | head -1)
+        if [ -n "$PAGE_BUILD" ] &&
+           ! grep -q "<code>$PAGE_BUILD</code>" "$CHANGELOG_SRC/$CHANGELOG_FILE"; then
+            echo "upload_dist: build $PAGE_BUILD is not in $CHANGELOG_SRC/$CHANGELOG_FILE." >&2
+            echo "  Add an entry for it at the top (the header comment there says how)," >&2
+            echo "  commit it, and run this again -- or --skip-changelog if it is meant." >&2
+            exit 1
+        fi
     fi
     queue_add "dist" "$PAGE_DIR" "$PAGE_FILE"
     queue_add "$CHANGELOG_SRC" "$PAGE_DIR" "$CHANGELOG_FILE"
