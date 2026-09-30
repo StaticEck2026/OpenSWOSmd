@@ -577,6 +577,28 @@ static int s_pinned_w, s_pinned_h;
 
 static PlatformFullscreenMode s_fullscreen_mode   = PLATFORM_FULLSCREEN_NONE;
 
+/* [video] widescreen = stretch: the original picture -- 336 wide the Amiga way, 320 the
+ * DOS way -- pulled out to fill the display, instead of letterboxed (false) or widened to
+ * show more pitch (true). SDL's logical size keeps the picture's shape, so for stretch it
+ * is replaced by a per-axis scale from the picture to the window, worked out every frame:
+ * SDL re-applies a logical size across window changes by itself, but not a scale. */
+static int s_stretch;
+
+static void apply_picture_scaling(void)
+{
+    int ow = 0, oh = 0;
+    if (!s_renderer)
+        return;
+    if (!s_stretch) {
+        SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
+        return;
+    }
+    SDL_RenderSetLogicalSize(s_renderer, 0, 0);
+    if (SDL_GetRendererOutputSize(s_renderer, &ow, &oh) == 0 && ow > 0 && oh > 0)
+        SDL_RenderSetScale(s_renderer, (float)ow / (float)_screen_width,
+                                       (float)oh / (float)_screen_height);
+}
+
 int Platform_Init(const PlatformInitOptions *opts)
 {
     int win_scale = opts ? opts->win_scale : 1;
@@ -969,8 +991,9 @@ int Platform_Init(const PlatformInitOptions *opts)
     fprintf(stderr, "[render] hud_layer=%s\n", s_hud_layer ? "on" : "off (no buffer)");
 
     /* The picture's own size, both runtime (display.h): what gets letterboxed
-     * into whatever client area the window has. */
-    SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
+     * into whatever client area the window has -- or stretched over it. */
+    s_stretch = opts && opts->widescreen == 2;
+    apply_picture_scaling();
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_EventState(SDL_MOUSEMOTION, SDL_DISABLE);
 
@@ -1145,7 +1168,7 @@ PlatformFullscreenMode Platform_GetFullscreenMode(void)
 void Platform_ViewChanged(void)
 {
     if (!s_renderer) return;
-    SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
+    apply_picture_scaling();
 
     /* And the WINDOW follows the view, so the picture keeps its whole-pixel
      * scale instead of being letterboxed inside a window sized for the other
@@ -2044,6 +2067,8 @@ shots_done:
         SDL_UpdateTexture(tex, &up, fb, _screen_width * 4);
     }
 
+    if (s_stretch)
+        apply_picture_scaling();       /* the window may have changed size */
     SDL_RenderClear(s_renderer);
     /* SWOS_PRESENT_STATS=1 reports what the present path costs. The draw calls
      * are what changed here (two-pass scaling adds a blit); RenderPresent is

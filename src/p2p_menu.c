@@ -302,6 +302,8 @@ static void p2pMenu_start_OnSelect(void)
 
 static void p2pMenu_exit_OnSelect(void)
 {
+    extern void GameplayStyle_GiveBack(void);
+    GameplayStyle_GiveBack();       /* joined a host of the other style, then left */
     P2PLink_Close();
     SetExitMenuFlag();
 }

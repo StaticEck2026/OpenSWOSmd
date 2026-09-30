@@ -457,9 +457,22 @@ static void matchMakingMenu_OnDraw(void)
  * somebody else. Either way the lobby is what we return to.
  * ====================================================================== */
 static char s_joinPrompt[64];
+/* The same two-button prompt asks the host's question too: which style the game it is
+ * about to OPEN plays (matchMaking_openGame_onSelect). */
+static int32_t s_askStyle;
 
 static void hostGameMessageMenu_OnInit(void)
 {
+    if (s_askStyle) {
+        set_text(HostGameMessageMenu_header,   "HOST A GAME");
+        set_text(HostGameMessageMenu_message1, "WHICH GAMEPLAY?");
+        set_text(HostGameMessageMenu_message2, "WHOEVER JOINS PLAYS IT TOO");
+        set_text(HostGameMessageMenu_message3, "");
+        set_entry(HostGameMessageMenu_button1, "AMIGA (50FPS)", 1, kLightBrownWithRedFrame);
+        set_entry(HostGameMessageMenu_button2, "PC (70FPS)", 1, kLightBrownWithRedFrame);
+        set_text(HostGameMessageMenu_exit,     "EXIT");
+        return;
+    }
     snprintf(s_joinPrompt, sizeof s_joinPrompt, "%s WANTS TO PLAY", s_joinAsker);
     set_text(HostGameMessageMenu_header,   "A CHALLENGER");
     set_text(HostGameMessageMenu_message1, s_joinPrompt);
@@ -480,8 +493,23 @@ static void hostGameMessageMenu_OnDraw(void)
         SetExitMenuFlag();          /* nothing left to accept */
 }
 
+/* OPEN's question answered: the style, as OPTIONS would set it (saved), then the game. */
+static void host_in_style(int dos)
+{
+    extern void GameplayStyle_Set(int dos, int persist);
+    s_askStyle = 0;
+    GameplayStyle_Set(dos, 1);
+    fprintf(stderr, "[mm] hosting a %s game\n", dos ? "DOS" : "AMIGA");
+    MmClient_CreateGame();
+    SetExitMenuFlag();
+}
+
 static void hostGameMessageMenu_button1_OnSelect(void)   /* ACCEPT */
 {
+    if (s_askStyle) {
+        host_in_style(0);                                    /* AMIGA */
+        return;
+    }
     if (s_joinAsker[0])
         MmClient_Approve(s_joinAsker);
     s_joinAsker[0] = '\0';
@@ -490,6 +518,10 @@ static void hostGameMessageMenu_button1_OnSelect(void)   /* ACCEPT */
 
 static void hostGameMessageMenu_button2_OnSelect(void)   /* REFUSE */
 {
+    if (s_askStyle) {
+        host_in_style(1);                                    /* DOS */
+        return;
+    }
     if (s_joinAsker[0])
         MmClient_Eject(s_joinAsker);
     s_joinAsker[0] = '\0';
@@ -771,6 +803,14 @@ void OnlineMenus_EnterLobby(int32_t player, const char *name)
     NetplayLobby_End();
     P2PLink_Close();
     Platform_SetFrameHook(NULL);
+    {
+        /* Back to this player's own style, if the game was the other player's
+         * (p2p_link.c link_connected). Only here, where the lobby is left: the link
+         * also closes before every match, and switching back then would play the
+         * match in a different style from the host's. */
+        extern void GameplayStyle_GiveBack(void);
+        GameplayStyle_GiveBack();
+    }
 }
 
 static char s_lobbyHeader[40], s_lobbyStyle[24], s_lobbyConn[24], s_lobbyPing[16];
@@ -1526,10 +1566,13 @@ static void run_live_match(void)
     SetExitMenuFlag();
 }
 
-/* OPEN: advertise a game and wait. */
+/* OPEN: which style (hostGameMessageMenu), then advertise a game and wait. The game is
+ * played in the HOST's style: whoever joins takes it for that game (p2p_link.c). */
 static void matchMaking_openGame_onSelect(void)
 {
-    MmClient_CreateGame();
+    s_askStyle = 1;
+    OnlineMenus_Show(SWOS2020_MENU(hostGameMessageMenu));
+    s_askStyle = 0;                 /* EXIT, or the answer (which cleared it already) */
 }
 
 /* LEAVE: stop advertising, or withdraw a join request. */
@@ -1579,6 +1622,8 @@ static void matchMaking_users_onSelect(void)
  * the server keeps advertising a game nobody is behind until the ENET timeout. */
 static void matchMaking_exit_onSelect(void)
 {
+    extern void GameplayStyle_GiveBack(void);
+    GameplayStyle_GiveBack();       /* a game joined and left before its lobby */
     MmClient_Disconnect();
     SetExitMenuFlag();
 }

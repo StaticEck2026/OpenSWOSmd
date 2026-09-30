@@ -108,7 +108,8 @@ static int handler(void *user, const char *section,
             if (n >= 1 && n <= 4) opts->win_scale = n;
         } else if (eqi(name, "widescreen")) {
             int b;
-            if (parse_bool(value, &b)) opts->widescreen = b;
+            if (eqi(value, "stretch"))       opts->widescreen = 2;
+            else if (parse_bool(value, &b))  opts->widescreen = b;
         } else if (eqi(name, "resolution")) {
             /* "WxH" (e.g. 2560x1080) drives the render aspect, for testing other
              * resolutions without changing the desktop. "auto"/"desktop"/blank
@@ -138,14 +139,11 @@ static int handler(void *user, const char *section,
             if      (eqi(value, "amiga")) opts->dos_gameplay = 0;
             else if (eqi(value, "dos"))   opts->dos_gameplay = 1;
         }
-        else if (eqi(name, "view")) {
-            /* Here and not under [video], because it is not a display setting:
-             * the view size feeds the onScreen cull, so it decides which players
-             * auto-selection may pick. It changes the GAME. */
-            if      (eqi(value, "auto"))  opts->view_style = VIEW_STYLE_AUTO;
-            else if (eqi(value, "amiga")) opts->view_style = VIEW_STYLE_AMIGA;
-            else if (eqi(value, "dos"))   opts->view_style = VIEW_STYLE_DOS;
-        }
+        /* `view` is gone (2026-09-29): the view is part of the style, one setting.
+         * An old line is ignored rather than honoured -- a view that differs from the
+         * style was a hybrid matching neither original, and online it was a second
+         * rule two players had to agree on. --view on the command line still pins it,
+         * for replaying a recording made that way (docs/PLAYBACK.md). */
     } else if (eqi(section, "replays")) {
         int b;
         if (eqi(name, "auto_save") && parse_bool(value, &b))
@@ -328,11 +326,12 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
     items[n++] = (IniEntry){ "video",  "widescreen",
-        "; widescreen: true | false. true fills the display's shape, showing more of the\n"
-        "; pitch at the sides; false draws the view's own width -- 336 the Amiga way,\n"
-        "; 320 the DOS way -- with bars. It does NOT change the game either way: the\n"
+        "; widescreen: true | false | stretch. true fills the display's shape, showing\n"
+        "; more of the pitch at the sides; false draws the view's own width -- 336 the\n"
+        "; Amiga way, 320 the DOS way -- with bars; stretch draws that same picture\n"
+        "; pulled out to fill the display. It does NOT change the game either way: the\n"
         "; simulation sees a fixed view, so the extra columns are margin it cannot use.\n",
-        opts->widescreen ? "true" : "false" };
+        opts->widescreen == 2 ? "stretch" : opts->widescreen ? "true" : "false" };
 
     items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render ASPECT, or 'auto' for the desktop.\n; It is not the render SIZE: the picture is always 272 lines tall and 336..672 wide,\n; so a wider shape shows more pitch and a small one (320x200) just clamps to 336x272", vbuf[0] };
     items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
@@ -350,19 +349,10 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "gameplay", "style",
         "; style: amiga | dos. The Amiga release is the definitive one and what this\n"
         "; port is reverse engineered from; dos is the PC release's 70 FPS physics,\n"
-        "; timers and formations -- and its 320x200 view, since that is part of how\n"
-        "; it plays (see view below).\n",
+        "; timers and formations, and its 320x200 view -- the view is part of how it\n"
+        "; plays (what is on screen decides which players the game picks), so the\n"
+        "; style sets both. Online, the game plays the HOST's style.\n",
         opts->dos_gameplay ? "dos" : "amiga" };
-
-
-    items[n++] = (IniEntry){ "gameplay", "view",
-        "; view: auto | amiga | dos. How much of the pitch is on screen: 336x272 the\n"
-        "; Amiga way, 320x200 the DOS way. This is NOT a display setting -- the view\n"
-        "; size feeds the cull that decides which players the computer may pick, so it\n"
-        "; changes the game. auto follows style, which is what you want; naming one\n"
-        "; explicitly gives a hybrid that matches neither original.\n",
-        opts->view_style == VIEW_STYLE_AMIGA ? "amiga" :
-        opts->view_style == VIEW_STYLE_DOS   ? "dos" : "auto" };
     items[n++] = (IniEntry){ "replays", "auto_save",
         "; auto_save: true | false — every match is recorded to LATEST.SRP in the save\n"
         "; folder and can be watched from HIGHLIGHTS -> LOAD. true also keeps a dated\n"

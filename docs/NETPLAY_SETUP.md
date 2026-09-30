@@ -606,7 +606,7 @@ accepted for that key only (§13).
 | **THE HOST DID NOT ANSWER** / CHECK THE ADDRESS, PORT AND FIREWALL | the other player was never reached | usually NATs that will not punch -- one player forwarding UDP 19602 on their router often fixes it; a private server with `--relay` always does, at the cost of latency (§4). Otherwise the firewall and forward (§5) |
 | **THE OTHER PLAYER HAS ANOTHER VERSION** / BOTH OF YOU NEED THE SAME BUILD | different commits | both download the same build; compare the version line |
 | **YOUR BUILDS PLAY BY DIFFERENT RULES** / ONE OF YOU HAS A TEST BUILD | tester build v release build | both use tester, or both release (§8) |
-| **YOUR GAMEPLAY STYLES ARE DIFFERENT** / SET THE SAME ONE IN OPTIONS | AMIGA v DOS | OPTIONS → GAMEPLAY, the same on both |
+| **YOU PLAY BY DIFFERENT RULES** / CHECK FIRE_HOLD_LOCKOUT IN SWOS.INI | one has the original's fire-hold lockout on | `[gameplay] fire_hold_lockout`, the same on both. (AMIGA v DOS is NOT refused: the joiner plays the host's style) |
 | **YOUR SCREEN WIDTHS ARE DIFFERENT** / BOTH OF YOU NEED THE SAME ONE | different widths | set the same `[video]` width |
 | **THE HOST ALREADY HAS A PLAYER** | someone else joined first | host another game |
 | **THE SERVER'S RELAY HAS CLOSED** / FIND EACH OTHER AGAIN | a relay session closes after about a minute with no traffic | go back to the lobby and join again |

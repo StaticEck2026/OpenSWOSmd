@@ -270,12 +270,18 @@ static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
     /* The build's rules first: nothing in OPTIONS can make those agree. */
     if ((mine->gameplay ^ theirs->gameplay) & P2P_RULES_BUILD)
         return P2P_FAIL_BUILD;
-    if ((mine->gameplay ^ theirs->gameplay) & ~(P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN | P2P_RULE_ONE_TICK))
+    /* NOT the gameplay style: an online game plays its host's, and the player who
+     * joins takes it when the link connects (link_connected, GameplayStyle_Borrow) --
+     * a style mismatch used to send the joiner back to OPTIONS. Everything else in
+     * the rules still has to match. */
+    if ((mine->gameplay ^ theirs->gameplay) &
+        ~(P2P_RULE_DOS | P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN | P2P_RULE_ONE_TICK))
         return P2P_FAIL_GAMEPLAY;
-    if ((mine->gameplay ^ theirs->gameplay) & (P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN))
+    /* The view follows the style unless --view pinned it: a pinned view that differs
+     * from the other side's, on the SAME style, cannot be followed. */
+    if (!((mine->gameplay ^ theirs->gameplay) & P2P_RULE_DOS) &&
+        ((mine->gameplay ^ theirs->gameplay) & (P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN)))
         return P2P_FAIL_VIEW;
-    if (mine->gameplay != theirs->gameplay)
-        return P2P_FAIL_GAMEPLAY;
     /* Not the screen width. It used to be refused, because the simulation read it; the
      * match now reads one width both peers agree instead (display.h, _sim_draw_width).
      * P2P_FAIL_WIDTH stays in the enum for a peer of an older protocol to report. */
@@ -971,6 +977,22 @@ static void punch_send(P2PLink *l)
 static void link_connected(P2PLink *l, const struct sockaddr_in *from, const Setup *theirs,
                            uint32_t now)
 {
+    /* THE HOST'S STYLE. Player 2 -- the joiner: the punch says which it is, and in the
+     * direct-IP menu it is the side that joined -- plays the host's gameplay style
+     * for as long as this game lasts; the menus give their own back when they leave
+     * it (GameplayStyle_GiveBack). Before any of the link's state changes, so what
+     * is compared from here on is the style actually played. */
+    {
+        extern void GameplayStyle_Borrow(int dos);
+        int follower = l->punchPlayer ? l->punchPlayer == 2 : l->state == P2P_JOINING;
+        if (follower && ((theirs->gameplay ^ l->local.gameplay) & P2P_RULE_DOS)) {
+            int dos = (theirs->gameplay & P2P_RULE_DOS) != 0;
+            GameplayStyle_Borrow(dos);
+            l->local.gameplay = P2PLink_GameplayFlags();
+            fprintf(stderr, "[p2p] the host plays %s: this game is played that way\n",
+                    dos ? "DOS" : "AMIGA");
+        }
+    }
     blob_free(l);   /* nothing carries over from a previous peer */
     l->peerScreenWidth = theirs->screenWidth;
     l->delayLocal = l->delayPeer = -1;
@@ -1800,14 +1822,34 @@ int32_t P2PLink_SelfTest(void)
     {
         Setup theirs;
         setup_local(&theirs);
-        theirs.gameplay ^= 1;           /* the other gameplay style */
+        theirs.gameplay ^= P2P_RULE_ARCADE;     /* arcade mode: a different game */
         check(link_join(&mismatched, "127.0.0.1", host.localPort, &theirs) == 0, "a mismatched build joins");
         P2PLink *two[2] = { &host, &mismatched };
         pump(two, 2, 1500, link_settled, &mismatched);
         check(mismatched.state == P2P_FAILED && mismatched.failure == P2P_FAIL_GAMEPLAY,
-              "it is refused: a different gameplay style");
+              "it is refused: different rules");
         check(host.state == P2P_HOSTING && host.notice == P2P_FAIL_GAMEPLAY, "the host says who bounced off");
         link_close(&mismatched);
+    }
+    /* 4c. The other gameplay STYLE is not refused: the joiner plays the host's. */
+    {
+        extern void GameplayStyle_GiveBack(void);
+        extern int _gDosGameplay;
+        Setup theirs;
+        int before = _gDosGameplay;
+        setup_local(&theirs);
+        theirs.gameplay ^= P2P_RULE_DOS | P2P_RULE_DOS_VIEW;   /* the other style, view with it */
+        memset(&mismatched, 0, sizeof mismatched); mismatched.sock = -1; mismatched.pingMs = -1;
+        mismatched.joinTimeoutMs = 1000;
+        check(link_join(&mismatched, "127.0.0.1", host.localPort, &theirs) == 0, "a player on the other style joins");
+        P2PLink *two[2] = { &host, &mismatched };
+        pump(two, 2, 1500, link_settled, &mismatched);
+        check(mismatched.state == P2P_CONNECTED, "it is let in");
+        check(_gDosGameplay == before && (mismatched.local.gameplay & P2P_RULE_DOS) == (host.local.gameplay & P2P_RULE_DOS),
+              "and plays the host's style");
+        link_close(&mismatched);
+        pump(two, 1, 1500, host_waiting_again, &host);
+        GameplayStyle_GiveBack();
     }
     /* 4a. The other view: a different simulation camera, so a different match. */
     {
@@ -1955,9 +1997,12 @@ void P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char 
     case P2P_FAIL_VERSION:
         *line1 = "THE OTHER PLAYER HAS ANOTHER VERSION"; *line2 = "BOTH OF YOU NEED THE SAME BUILD"; break;
     case P2P_FAIL_GAMEPLAY:
-        *line1 = "YOUR GAMEPLAY STYLES ARE DIFFERENT"; *line2 = "SET THE SAME ONE IN OPTIONS"; break;
+        /* Not the style any more -- the joiner plays the host's -- but arcade mode or
+         * the original's fire-hold lockout ([gameplay] fire_hold_lockout). */
+        *line1 = "YOU PLAY BY DIFFERENT RULES"; *line2 = "CHECK FIRE_HOLD_LOCKOUT IN SWOS.INI"; break;
     case P2P_FAIL_VIEW:
-        *line1 = "ONE OF YOU PLAYS THE DOS VIEW"; *line2 = "SET THE SAME VIEW IN SWOS.INI"; break;
+        /* Only a view pinned with --view: SWOS.ini has no view setting any more. */
+        *line1 = "ONE OF YOU PINNED THE VIEW"; *line2 = "RUN WITHOUT --VIEW"; break;
     case P2P_FAIL_WIDTH:
         *line1 = "YOUR SCREEN WIDTHS ARE DIFFERENT"; *line2 = "BOTH OF YOU NEED THE SAME ONE"; break;
     case P2P_FAIL_RELAY:

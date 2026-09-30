@@ -100,10 +100,11 @@ typedef struct {
      * AUTO follows the gameplay style, so one switch gives one authentic
      * experience and the hybrids have to be asked for by name. */
     int                    view_style;
-    /* 1 = stretch the render to the display's shape, showing more margin at the
-     * sides; 0 = the view's own width (336 Amiga, 320 DOS), pillarboxed. Unlike
-     * view_style this does NOT change the game: the simulation view is pinned
-     * either way, so the extra columns are margin the simulation cannot see. */
+    /* 1 = widen the render to the display's shape, showing more margin at the
+     * sides; 0 = the view's own width (336 Amiga, 320 DOS), pillarboxed; 2 =
+     * that own width STRETCHED to fill the display. Unlike view_style this does
+     * NOT change the game: the simulation view is pinned either way, so the
+     * extra columns are margin the simulation cannot see. */
     int                    widescreen;
     int                    outfit_shading;   /* 1 = shade the kit, 0 = flat team colour */
     int                    shadow_shading;   /* 1 = shade the drop shadow, 0 = SWOS's colour 8 */

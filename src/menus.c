@@ -2087,25 +2087,30 @@ void ChangeMenuMusic(MenuEntry *entry)
  *      this menu does. g_arcadeOpts/g_arcadeIniPath are the live options and
  *      the resolved ini path, published by main.c.
  * ================================================================ */
-void ChangeGameplayStyle(MenuEntry *entry)
+#ifdef SWOS_SDL_BUILD
+/* The switch itself, for this menu row and for the online lobby (GameplayStyle_Borrow).
+ * `persist` writes it to SWOS.ini, as the OPTIONS row does; a borrowed style does not. */
+void GameplayStyle_Set(int dos, int persist)
 {
     extern int _gDosGameplay;
     extern uint16_t _gameplayStyleOption;
     extern void ApplyGameStyle(void);
+    extern int _gDosView;
+    extern PlatformInitOptions *g_arcadeOpts;
+    extern const char *g_arcadeIniPath;
 
-    _gameplayStyleOption ^= 1;
-    _gDosGameplay = (int)_gameplayStyleOption;
+    _gameplayStyleOption = (uint16_t)(dos ? 1 : 0);
+    _gDosGameplay = dos ? 1 : 0;
 
     ApplyGameStyle();
 
-#ifdef SWOS_SDL_BUILD
-    /* 4. The VIEW follows the style when the ini leaves it on `auto`, which is
-     *    the same rule main.c applies at startup:
+    /* 4. The VIEW follows the style -- one setting, [gameplay] style, since
+     *    2026-09-29 -- unless a --view on the command line pinned it, which is the
+     *    same rule main.c applies at startup:
      *        dosView = (view == DOS) || (view == AUTO && dos_gameplay)
-     *    An explicit [gameplay] view=amiga|dos is the player's choice and is
-     *    left alone. This is what carries the DOS release's 320x200 screen --
-     *    and with it the camera's vertical range, since SIM_CAMERA_MAX_Y is
-     *    derived from _sim_view_height (display.h).
+     *    This is what carries the DOS release's 320x200 screen -- and with it the
+     *    camera's vertical range, since SIM_CAMERA_MAX_Y is derived from
+     *    _sim_view_height (display.h).
      *
      *    Only the FLAG moves here. The view itself is switched per scene, at
      *    kick-off, by game_loop.c's MatchViewEnter: the menus are 272 lines of
@@ -2119,32 +2124,56 @@ void ChangeGameplayStyle(MenuEntry *entry)
      *    the camera aim through SIM_CAM_AIM_HEIGHT, and the ball physics,
      *    goalkeeper reach, formations and stoppage timers through
      *    ApplyGameStyle above. */
-    {
-        extern int _gDosView;
-        extern PlatformInitOptions *g_arcadeOpts;
-        if (g_arcadeOpts) {
-            _gDosView = (g_arcadeOpts->view_style == VIEW_STYLE_DOS) ||
-                        (g_arcadeOpts->view_style == VIEW_STYLE_AUTO && _gDosGameplay);
-        }
-    }
-#endif
-
-#ifdef SWOS_SDL_BUILD
-    /* Persist, so the choice survives a restart the way every other row on
-     * this menu does. Declared here rather than including swos_settings.h:
-     * that header pulls in platform_sdl.h and therefore SDL.h, which the m68k
-     * build has no idea about — and there is no SWOS.ini on the Amiga anyway.
-     * g_arcadeOpts / g_arcadeIniPath are the live options and the resolved ini
-     * path, published by main.c. */
-    {
-        extern PlatformInitOptions *g_arcadeOpts;
-        extern const char *g_arcadeIniPath;
-        if (g_arcadeOpts) {
+    if (g_arcadeOpts) {
+        _gDosView = (g_arcadeOpts->view_style == VIEW_STYLE_DOS) ||
+                    (g_arcadeOpts->view_style == VIEW_STYLE_AUTO && _gDosGameplay);
+        if (persist) {
             g_arcadeOpts->dos_gameplay = _gDosGameplay;
             if (g_arcadeIniPath)
                 Settings_Save(g_arcadeOpts, g_arcadeIniPath);
         }
     }
+}
+
+/* An online game plays its HOST's style (p2p_link.c): the player who joins takes it
+ * for as long as they are with that player, and GiveBack returns their own when they
+ * leave -- never written to SWOS.ini, so joining a DOS game does not change anyone's
+ * OPTIONS. Borrowing twice keeps the first style to give back. */
+static int s_ownStyle = -1;
+
+void GameplayStyle_Borrow(int dos)
+{
+    extern int _gDosGameplay;
+    if (s_ownStyle < 0)
+        s_ownStyle = _gDosGameplay;
+    GameplayStyle_Set(dos, 0);
+}
+
+void GameplayStyle_GiveBack(void)
+{
+    if (s_ownStyle < 0)
+        return;
+    GameplayStyle_Set(s_ownStyle, 0);
+    fprintf(stderr, "[p2p] back to this player's own style (%s)\n", s_ownStyle ? "DOS" : "AMIGA");
+    s_ownStyle = -1;
+}
+#endif
+
+void ChangeGameplayStyle(MenuEntry *entry)
+{
+#ifdef SWOS_SDL_BUILD
+    /* The switch, the view and SWOS.ini: GameplayStyle_Set. */
+    extern int _gDosGameplay;
+    GameplayStyle_Set(!_gDosGameplay, 1);
+#else
+    extern int _gDosGameplay;
+    extern uint16_t _gameplayStyleOption;
+    extern void ApplyGameStyle(void);
+
+    _gameplayStyleOption ^= 1;
+    _gDosGameplay = (int)_gameplayStyleOption;
+
+    ApplyGameStyle();
 #endif
 
     CallDrawMenuItem(entry);

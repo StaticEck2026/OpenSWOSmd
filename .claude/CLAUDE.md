@@ -81,8 +81,9 @@ a plain run's; run it after touching the game loop, the step, or anything the VB
 does. A loop that waits for input inside a frame (pause, the old statistics overlay) hangs a
 peer holding only a prediction: under `_gFrameStepInput` such a loop makes one pass per frame.
 The main menu's MULTIPLAYER button opens OpenSWOS's own direct-IP menu (`src/p2p_menu.c` over
-`src/p2p_link.c`, docs/NETPLAY.md §6): a UDP handshake that refuses a peer whose build, gameplay style, view
-or screen width would desync the match, and shows the ping. `--netplay-selftest` runs it over
+`src/p2p_link.c`, docs/NETPLAY.md §6): a UDP handshake that refuses a peer whose build, rules
+or screen width would desync the match (not the gameplay STYLE: a game plays its host's, picked at
+OPEN, and the joiner borrows it until they leave -- `GameplayStyle_Borrow`), and shows the ping. `--netplay-selftest` runs it over
 loopback. A live match through the lobby, and a rematch after it, is `scripts/netplay_lobby_test.sh`
 (two instances through the real menus); run it after touching the lobby, the link, or how a live
 match starts or ends. A live match must never `exit()` or leave the frame loop: it ends through

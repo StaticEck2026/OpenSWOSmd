@@ -578,7 +578,8 @@ int main(int argc, char **argv)
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
         } else if ((v = match_kv(a, "widescreen")) != NULL) {
-            opts.widescreen = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
+            opts.widescreen = strcmp(v, "stretch") == 0 ? 2 :
+                              !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
         } else if ((v = match_kv(a, "view")) != NULL) {
             if      (strcmp(v, "auto") == 0)  opts.view_style = VIEW_STYLE_AUTO;
             else if (strcmp(v, "amiga") == 0) opts.view_style = VIEW_STYLE_AMIGA;
@@ -1024,11 +1025,11 @@ int main(int argc, char **argv)
         if (dosView)
             ;   /* reported below, once the display shape is known */
         if (opts.view_style == VIEW_STYLE_AMIGA && opts.dos_gameplay)
-            fprintf(stderr, "[video] DOS gameplay with the Amiga view: a mix that matches "
-                            "neither original -- 'view = auto' follows the gameplay\n");
+            fprintf(stderr, "[video] DOS gameplay with the Amiga view (--view): a mix that "
+                            "matches neither original -- without --view the style sets both\n");
         if (opts.view_style == VIEW_STYLE_DOS && !opts.dos_gameplay)
-            fprintf(stderr, "[video] the DOS view with Amiga gameplay: a mix that matches "
-                            "neither original -- 'view = auto' follows the gameplay\n");
+            fprintf(stderr, "[video] the DOS view with Amiga gameplay (--view): a mix that "
+                            "matches neither original -- without --view the style sets both\n");
     }
 
         int dw, dh;
@@ -1056,7 +1057,7 @@ int main(int argc, char **argv)
             if (dosw > dw)                 dosw = dw & ~1;
             if (dosw < DOS_VIEW_WIDTH)     dosw = DOS_VIEW_WIDTH;
             if (dosw > PITCH_VIEW_MAX_WIDTH) dosw = PITCH_VIEW_MAX_WIDTH;
-            if (!opts.widescreen) dosw = DOS_VIEW_WIDTH;   /* the PC release's own */
+            if (opts.widescreen != 1) dosw = DOS_VIEW_WIDTH;   /* the PC release's own (stretched or not) */
             _dos_view_width = dosw;
             if (dosView)
                 fprintf(stderr, "[video] DOS view: %dx%d in a match%s; the simulation is "
@@ -1079,7 +1080,7 @@ int main(int argc, char **argv)
         if (w > dw) w = dw & ~1;
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
-        if (!opts.widescreen)          w = SCREEN_WIDTH;   /* the Amiga's own width */
+        if (opts.widescreen != 1)      w = SCREEN_WIDTH;   /* the Amiga's own width (stretched or not) */
         _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, _screen_height, opts.screen, nd, dw, dh, (double)dw / dh);

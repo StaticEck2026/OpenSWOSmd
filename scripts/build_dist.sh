@@ -409,7 +409,13 @@ if [ "$DO_CLEAN" = 1 ]; then
     # measured, not theorised: career_status.o survived from a pre-flag build
     # with IsPlayerInjured still 88 bytes while the rest of the tree had it
     # stubbed out.
-    rm -rf build
+    # Everything under build/ EXCEPT what was downloaded into it: the testers'
+    # recordings and match reports (scripts/fetch_recordings.py, fetch_reports.py)
+    # are not build output, and the server may have been cleared of them since --
+    # a wholesale `rm -rf build` deleted both on 2026-09-29.
+    if [ -d build ]; then
+        find build -mindepth 1 -maxdepth 1 ! -name recordings ! -name reports -exec rm -rf {} +
+    fi
     make -f Makefile.amiga clean >/dev/null 2>&1
     # Only OUR objects, which sit at the top of obj-switch/. The SDL fork's live
     # in obj-switch/sdl/ with its own prebuilt libSDL2_nx.a, and EXTRA_CFLAGS is
@@ -418,7 +424,7 @@ if [ "$DO_CLEAN" = 1 ]; then
     # change and rebuilding them would cost minutes for nothing.
     rm -f obj-switch/*.o obj-switch/*.opp obj-switch/*.d
     rm -rf build-switch
-    echo "-- cleaned build/, the Amiga obj/ tree and obj-switch/*.o (SDL fork kept)"
+    echo "-- cleaned build/ (the downloaded recordings and reports kept), the Amiga obj/ tree and obj-switch/*.o (SDL fork kept)"
 fi
 
 # ---- SDL targets ------------------------------------------------------------
