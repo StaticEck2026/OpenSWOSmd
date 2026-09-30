@@ -67,9 +67,23 @@ deploy_playback() {
 NGINX_SNIPPET="/etc/nginx/snippets/swos-playback.conf"
 PLAYBACK_WARNING=""
 
+# nginx almost always lives in /usr/sbin, which a plain (non-root) login shell's
+# PATH often excludes - command -v alone false-negatived here even with nginx
+# installed and running (confirmed live: "nginx is not installed here" on a
+# server that already had /reports/ and /cc/ configured in it). The later sudo
+# calls (nginx -t, systemctl reload) already work regardless, via sudo's own
+# secure_path - only this detection needed the fallback.
+nginx_installed() {
+    command -v nginx >/dev/null 2>&1 && return 0
+    for p in /usr/sbin/nginx /usr/local/sbin/nginx /sbin/nginx; do
+        [ -x "$p" ] && return 0
+    done
+    return 1
+}
+
 nginx_playback() {
     local conf n
-    if ! command -v nginx >/dev/null 2>&1; then
+    if ! nginx_installed; then
         PLAYBACK_WARNING="nginx is not installed here: serve ${DEPLOY_DIR}/playback at /playback/ yourself (docs/PLAYBACK.md)."
         return 0
     fi
