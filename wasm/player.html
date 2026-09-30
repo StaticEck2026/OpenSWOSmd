@@ -129,6 +129,13 @@
         document.getElementById('name').title = srp;
         window.matchTitle = text + ' — SWOS Playback';
         document.title = window.matchTitle;
+        // The players by name wherever the page would say P1 / P2 (the line under the bar,
+        // the view button, the timeline's tooltip).
+        window.playerNames = [0, 1].map(function (i) {
+          var p = c.players[i];
+          return p && p.name ? p.name : '';
+        });
+        if (window.onPlayerNames) window.onPlayerNames();
       }).catch(function () {});
 
     // ---- The controls: the player API in src/replay_v2.c (ReplayV2_Player*) ----
@@ -160,7 +167,24 @@
       // 0x80 "SEEN has it drawn elsewhere". 0xFF: that player's half never arrived.
       var pred = null, timeline = document.getElementById('timeline'), lagEl = document.getElementById('lag');
       var viewBtn = document.getElementById('view');
-      var viewNames = ['off', 'player 1', 'player 2', 'both'];
+      // A player by name when the recording's card has one (typed by players, so escaped
+      // wherever it goes into HTML), else "P1" / "P2".
+      function nameOf(p) {
+        var n = window.playerNames && window.playerNames[p];
+        return n ? n : 'P' + (p + 1);
+      }
+      function esc(t) {
+        return String(t).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function viewName(m) { return ['off', nameOf(0), nameOf(1), 'both'][m]; }
+      window.onPlayerNames = function () {
+        lastShown = -1;                                   /* the line under the bar again */
+        viewBtn.textContent = 'view: ' + viewName(api ? api.overlay(-1) : 3);
+        timeline.title = timeline.title.replace(/top row [^,]*\(yellow\), bottom row [^.]*\(white\)/,
+          'top row ' + nameOf(0) + ' (yellow), bottom row ' + nameOf(1) + ' (white)');
+      };
       // seen: something was drawn somewhere it never was. wrong: a guess was not the input
       // that came, whether or not it moved anything visibly.
       function seen(b)  { return b !== 0xFF && (b & 0x80) !== 0; }
@@ -231,8 +255,8 @@
         var out = [];
         for (var p = 0; p < 2; p++) {
           var v = pred[2 * f + p], cls = 'p' + (p + 1);
-          if (v === 0xFF) { out.push('<span class="' + cls + '">P' + (p + 1) + ' –</span>'); continue; }
-          var t = 'P' + (p + 1) + ' guessed ' + (v & 15);
+          if (v === 0xFF) { out.push('<span class="' + cls + '">' + esc(nameOf(p)) + ' –</span>'); continue; }
+          var t = esc(nameOf(p)) + ' guessed ' + (v & 15);
           if (v & 0x20) t += ', replayed';
           if (v & 0x10) t += ', stalled';
           out.push('<span class="' + cls + '">' + t + '</span>' +
@@ -245,7 +269,7 @@
         if (!bind()) return;
         var m = (api.overlay(-1) + 3) % 4;       // both -> player 2 -> player 1 -> off -> both
         api.overlay(m);
-        viewBtn.textContent = 'view: ' + viewNames[m];
+        viewBtn.textContent = 'view: ' + viewName(m);
       };
       function clock(frame, rate) {
         var s = rate > 0 ? Math.floor(frame / rate) : 0;
