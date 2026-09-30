@@ -10,14 +10,20 @@ recorder wrote cards, from the ledger's `match` lines, and rewrites the index.
     python3 scripts/recordings_index.py                  # the server's own folders
     python3 scripts/recordings_index.py --recordings DIR --ledger FILE
 
-A card the recorder wrote is never replaced. Addresses are never written: the page is
+A card the recorder wrote is never replaced -- except to fill in a player's NAME it lacked.
+A player who does not record ([netplay] record off, or an older build) never streams, so
+older cards have only one side. The name comes from the other player's HELLO (the ledger's
+`peer`, since the recorder keeps it) or from the match report's rating.txt, which names
+both players (reports/<match id>/player<N>.zip). Addresses are never written: the page is
 public, and it says who played whom, not where from. Stdlib only.
 """
 import argparse
 import json
 import os
+import re
 import struct
 import sys
+import zipfile
 
 DEFAULT_DIR = "/srv/swos-matchmaker"
 SRP_META_SCORE_OFF = 2 + 2 + 2 + 2 + 4 + 32     # include/srp_writer.h
@@ -40,6 +46,49 @@ def srp_score(path):
     except OSError:
         pass
     return None
+
+
+def names_from_report(reports, match):
+    """{1: name, 2: name} from a match report's rating.txt, or {}."""
+    folder = os.path.join(reports, match) if reports and match else ""
+    for z in ("player1.zip", "player2.zip"):
+        try:
+            with zipfile.ZipFile(os.path.join(folder, z)) as f:
+                text = f.read("rating.txt").decode("utf-8", "replace")
+        except (OSError, KeyError, zipfile.BadZipFile):
+            continue
+        names = {int(n): v.strip() for n, v in re.findall(r"^player ([12]) +(.+?)(?: \(host\))?\r?$",
+                                                        text, re.M)}
+        names = {k: v for k, v in names.items() if v and v != "?"}
+        if names:
+            return names
+    return {}
+
+
+def fill_names(card, ledger_line, reports):
+    """Give a card's empty player slots a name. True if it changed."""
+    players = card.get("players") or [None, None]
+    while len(players) < 2:
+        players.append(None)
+    missing = [i for i in range(2) if not players[i] or not players[i].get("name")]
+    if not missing:
+        return False
+    found = {}
+    lp = (ledger_line or {}).get("players") or [None, None]
+    for i in range(2):
+        other = lp[1 - i] if len(lp) > 1 - i else None
+        if other and other.get("peer"):
+            found[i + 1] = other["peer"]
+    if len(found) < len(missing):
+        for k, v in names_from_report(reports, card.get("match", "")).items():
+            found.setdefault(k, v)
+    changed = False
+    for i in missing:
+        if found.get(i + 1):
+            players[i] = {"player": i + 1, "name": found[i + 1], "recorded": False}
+            changed = True
+    card["players"] = players
+    return changed
 
 
 def card_from_ledger(m, file):
@@ -66,12 +115,14 @@ def write(path, text):
     os.replace(tmp, path)
 
 
-def backfill(recordings, ledger):
-    """Cards for recordings the ledger names and that have none. Returns how many."""
-    made = 0
+def backfill(recordings, ledger, reports):
+    """Cards for recordings the ledger names and that have none, and names for the cards
+    missing one. Returns (made, named)."""
+    made = named = 0
+    by_file = {}
     if not os.path.isfile(ledger):
-        return 0
-    with open(ledger, encoding="utf-8", errors="replace") as f:
+        ledger = None
+    with open(ledger, encoding="utf-8", errors="replace") if ledger else open(os.devnull) as f:
         for line in f:
             try:
                 m = json.loads(line)
@@ -80,15 +131,30 @@ def backfill(recordings, ledger):
             if m.get("kind") != "match" or not m.get("recording"):
                 continue
             file = os.path.basename(m["recording"])
+            by_file[file] = m
             srp = os.path.join(recordings, file)
             card_path = srp[:-4] + ".json"
             if not file.upper().endswith(".SRP") or not os.path.isfile(srp) or os.path.exists(card_path):
                 continue
             card = card_from_ledger(m, file)
             card["score"] = srp_score(srp)
+            fill_names(card, m, reports)
             write(card_path, json.dumps(card, separators=(",", ":")) + "\n")
             made += 1
-    return made
+    # Cards already there (the recorder's, or an earlier run's) with a player missing.
+    for name in os.listdir(recordings):
+        if not name.endswith(".json") or name == "index.json":
+            continue
+        path = os.path.join(recordings, name)
+        try:
+            with open(path, encoding="utf-8") as f:
+                card = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if fill_names(card, by_file.get(card.get("file", "")), reports):
+            write(path, json.dumps(card, separators=(",", ":")) + "\n")
+            named += 1
+    return made, named
 
 
 def write_index(recordings):
@@ -125,13 +191,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--recordings", default=os.path.join(DEFAULT_DIR, "recordings"))
     ap.add_argument("--ledger", default=os.path.join(DEFAULT_DIR, "matches.jsonl"))
+    ap.add_argument("--reports", default=os.path.join(DEFAULT_DIR, "reports"),
+                    help="match reports, for players' names a card lacks")
     args = ap.parse_args()
     if not os.path.isdir(args.recordings):
         sys.exit("recordings_index: no folder %s" % args.recordings)
     remove_orphans(args.recordings)
-    made = backfill(args.recordings, args.ledger)
+    made, named = backfill(args.recordings, args.ledger, args.reports)
     n = write_index(args.recordings)
-    print("recordings_index: %d new card(s) from the ledger; index.json lists %d match(es)" % (made, n))
+    print("recordings_index: %d new card(s) from the ledger, %d named from reports or the ledger; "
+          "index.json lists %d match(es)" % (made, named, n))
 
 
 if __name__ == "__main__":

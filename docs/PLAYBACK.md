@@ -39,7 +39,10 @@ match ended, whether it was relayed, the desync frame) and `index.json`, every c
 folder newest first (`third_party/matchmaker/Server/Recorder.cpp`, `WriteMatchCard`). The
 page reads `index.json` beside nginx's listing and lists every recording either way; one
 without a card shows its match id as before. Addresses are never on a card -- the page is
-public; it says who, not where from. Recordings made before the recorder wrote cards get
+public; it says who, not where from. A player who does not record (`[netplay] record` is off
+by default) never streams, but still gets a name: the other player's opening message names
+both (`"recorded": false` on the card, `peer` in the ledger), and for matches from before the
+recorder kept that, `recordings_index.py` reads it from the match report's `rating.txt`. Recordings made before the recorder wrote cards get
 theirs from the ledger's `match` lines, and a card whose recording was cleared goes:
 `scripts/recordings_index.py`, which `install`, `restart` and the admin page's
 "Update recordings player" run, and the "Clear" buttons after them.

@@ -599,6 +599,7 @@ void Recorder::Finish(Match& m, const char* why)
             return std::string("null");
         return "{\"player\":" + std::to_string(player)
             + ",\"name\":" + JsonString(s.name)
+            + ",\"peer\":" + JsonString(s.peer)          // the other player, as this one named them
             + ",\"address\":" + JsonString(s.address)
             + ",\"build\":" + JsonString(s.build)
             + ",\"platform\":" + JsonString(s.platform)
@@ -645,9 +646,14 @@ void Recorder::WriteMatchCard(const Match& m, const std::string& why)
     const Side& b = m.side[1];
     const Side& any = a.present ? a : b;
     const Side& scored = a.haveScore ? a : b;
-    auto player = [](int n, const Side& s) {
+    // A player who did not record ([netplay] record off, or an older build) never streams:
+    // their name still comes from the other one's HELLO, which names both.
+    auto player = [](int n, const Side& s, const Side& other) {
         if (!s.present)
-            return std::string("null");
+            return other.present && !other.peer.empty()
+                ? "{\"player\":" + std::to_string(n) + ",\"name\":" + JsonString(other.peer)
+                  + ",\"recorded\":false}"
+                : std::string("null");
         return "{\"player\":" + std::to_string(n) + ",\"name\":" + JsonString(s.name)
             + ",\"build\":" + JsonString(s.build) + ",\"platform\":" + JsonString(s.platform)
             + ",\"outcome\":" + JsonString(!s.ended ? "none" : s.outcome == 0 ? "finished" : "ended early")
@@ -661,7 +667,7 @@ void Recorder::WriteMatchCard(const Match& m, const std::string& why)
         + ",\"score\":" + (scored.haveScore ? "[" + std::to_string(scored.score[0]) + ","
                                                   + std::to_string(scored.score[1]) + "]"
                                                : std::string("null"))
-        + ",\"players\":[" + player(1, a) + "," + player(2, b) + "]"
+        + ",\"players\":[" + player(1, a, b) + "," + player(2, b, a) + "]"
         + ",\"frames\":" + std::to_string(any.offsets.size())
         + ",\"gameplay\":" + std::to_string(any.gameplay)
         + ",\"relayed\":" + (any.relayToken ? "true" : "false")
