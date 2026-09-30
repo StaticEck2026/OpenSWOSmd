@@ -252,7 +252,14 @@ def run_local_action(action):
     # output) to print its untranslated, English messages regardless of the
     # server's own locale - confirmed needed: git pull printed "Bereits
     # aktuell." here otherwise.
+    # EMSDK_DIR: build_playback.sh (run via --with-playback below) defaults to
+    # ~/emsdk, but this server's actual emsdk checkout lives at ~/git/emsdk -
+    # confirmed live: the gateway's own build click silently skipped the
+    # recordings player ("no emsdk") even though it works fine over SSH with
+    # this exact path. setdefault, not a flat overwrite, so an explicit
+    # systemd Environment= (if one is ever added) still wins.
     env = dict(os.environ, LC_ALL="C", LANGUAGE="C")
+    env.setdefault("EMSDK_DIR", os.path.expanduser("~/git/emsdk"))
     try:
         result = subprocess.run(
             LOCAL_ACTIONS[action], cwd=REPO_DIR, env=env,
