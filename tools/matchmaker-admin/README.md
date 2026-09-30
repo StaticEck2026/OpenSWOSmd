@@ -1,9 +1,18 @@
 # matchmaker-admin
 
-A tiny password-protected web page with nine buttons (`git pull`, rebuild, update the
-recordings player, the four `swos-matchmaker-service.sh` actions, and clearing the reports
-and the recordings) plus a live output pane, for maintaining the matchmaker server without
+A tiny password-protected web page with ten buttons (`git pull`, rebuild, update the
+recordings player, the four `swos-matchmaker-service.sh` actions, restarting the page itself,
+and clearing the reports and the recordings) plus a live output pane, for maintaining the matchmaker server without
 an SSH session.
+
+## Restart admin page
+
+How a change to this page goes live -- a new endpoint in `main.py`, or its unit's
+`ReadWritePaths` -- without an ssh session. Queued for the root cron worker like
+install/restart/remove, which runs `matchmaker-admin-service.sh install`: the unit is
+rewritten and the gateway restarted. The page drops for a moment while it restarts; reload
+it. (The very first time, the gateway running the older `main.py` has no such button, so
+that one restart is by hand: `tools/matchmaker-admin/matchmaker-admin-service.sh install`.)
 
 ## Deleting one recording
 

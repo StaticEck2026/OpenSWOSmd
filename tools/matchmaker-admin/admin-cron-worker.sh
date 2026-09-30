@@ -5,7 +5,7 @@
 # runs as root. The gateway itself never does, and never can (see main.py's own
 # header comment for the full split rationale).
 #
-# Only install/remove/restart ever get queued here - pull/build/status need no
+# Only install/remove/restart/admin-restart ever get queued here - pull/build/status need no
 # elevated privilege at all, so main.py runs those itself, immediately, and
 # this script never even sees them (see main.py's own LOCAL_ACTIONS/
 # QUEUED_ACTIONS split).
@@ -56,7 +56,7 @@ for req in "$REQUESTS_DIR"/*.req; do
     # Validated here, in the actual loop - NOT inside the piped block below,
     # since that runs in a subshell where `continue` can't reach this for loop.
     case "$action" in
-        install|remove|restart) ;;
+        install|remove|restart|admin-restart) ;;
         *)
             echo "admin-cron-worker: unrecognized action '$action' in $(basename "$req"), leaving it in place" >&2
             continue
@@ -68,7 +68,15 @@ for req in "$REQUESTS_DIR"/*.req; do
 
     {
         echo "=== $ts  action=$action ==="
-        if "$REPO_DIR/scripts/swos-matchmaker-service.sh" "$action" 2>&1; then
+        # admin-restart is the gateway itself (main.py): its own script's install rewrites
+        # the unit (so a new ReadWritePaths lands too) and restarts it. The page drops its
+        # connection for a moment and picks the log up again when it is back.
+        if [ "$action" = admin-restart ]; then
+            cmd=("$REPO_DIR/tools/matchmaker-admin/matchmaker-admin-service.sh" install)
+        else
+            cmd=("$REPO_DIR/scripts/swos-matchmaker-service.sh" "$action")
+        fi
+        if "${cmd[@]}" 2>&1; then
             echo "--- OK ---"
         else
             echo "--- FAILED (exit $?) ---"

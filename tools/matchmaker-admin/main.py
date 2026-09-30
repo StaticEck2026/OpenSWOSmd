@@ -58,7 +58,7 @@ LOCAL_ACTIONS = {
 # its own copy of this same set; both must agree, or a queued file just sits
 # there unprocessed (the worker only recognizes what's in its own case
 # statement).
-QUEUED_ACTIONS = {"install", "restart", "remove"}
+QUEUED_ACTIONS = {"install", "restart", "remove", "admin-restart"}
 # Run here too, as Python rather than a command: emptying the two folders the
 # matchmaker writes for us. Same user, no root.
 CLEAR_ACTIONS = {"clear-reports", "clear-recordings"}
@@ -71,11 +71,15 @@ ACTIONS = [
     ("install", "Service: install"),
     ("restart", "Service: restart"),
     ("remove", "Service: remove"),
+    # This page itself: how a change to main.py (a new endpoint) or its unit goes live.
+    # Queued like the three above -- restarting a service needs root -- and the worker
+    # runs matchmaker-admin-service.sh install, which rewrites the unit and restarts it.
+    ("admin-restart", "Restart admin page"),
     ("clear-reports", "Clear all reports"),
     ("clear-recordings", "Clear all recordings"),
 ]
 ACTION_NAMES = {name for name, _ in ACTIONS}
-CONFIRM_ACTIONS = {"remove", "restart", "install", "clear-reports", "clear-recordings"}
+CONFIRM_ACTIONS = {"remove", "restart", "install", "admin-restart", "clear-reports", "clear-recordings"}
 assert ACTION_NAMES == set(LOCAL_ACTIONS) | QUEUED_ACTIONS | CLEAR_ACTIONS
 
 # Guards against two local actions (e.g. two clicks on "build") racing in the
