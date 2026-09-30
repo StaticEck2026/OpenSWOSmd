@@ -108,6 +108,10 @@ BIN_DIR="${FTP_BIN_DIR:-/public_html/download/swos}"
 # date and sizes are the ones actually going out.
 PAGE_DIR="${FTP_PAGE_DIR:-/public_html}"
 PAGE_FILE="swos.html"
+# ...and the changelog it embeds (packaging/web/changelog.html, edited by hand), which
+# goes with it -- so `--page-only` publishes a new changelog entry without a drop.
+CHANGELOG_SRC="packaging/web"
+CHANGELOG_FILE="changelog.html"
 
 # The WASM bundle. Built by `make WASM=1` into dist/web and deliberately kept
 # out of every zip (the .data preload alone is ~21 MB) — the web build IS this
@@ -136,8 +140,9 @@ usage() {
 Options:
       --web-only      upload only $WEB_SRC/* -> $WEB_DIR
       --bin-only      upload only the archives -> $BIN_DIR (and the page)
-      --page-only     upload only the downloads page -> $PAGE_DIR/$PAGE_FILE,
-                      describing the archives in dist/ (all must be there)
+      --page-only     upload only the downloads page -> $PAGE_DIR/$PAGE_FILE and
+                      the changelog it embeds ($CHANGELOG_FILE), describing the
+                      archives in dist/ (all must be there)
       --dry-run       show what would be uploaded, transfer nothing
       --verify-only   upload nothing; just compare the sizes already on the
                       server against dist/ (re-runs the check after a fix)
@@ -238,6 +243,7 @@ if [ "$DO_PAGE" = 1 ]; then
         exit 1
     fi
     queue_add "dist" "$PAGE_DIR" "$PAGE_FILE"
+    queue_add "$CHANGELOG_SRC" "$PAGE_DIR" "$CHANGELOG_FILE"
 fi
 
 if [ -n "$MISSING" ]; then

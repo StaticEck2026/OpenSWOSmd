@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+  The changelog on baker76.com/swos.html (embedded there in a scrolling frame) and at
+  baker76.com/changelog.html on its own.
+
+  ADDING A RELEASE: copy the first <article>, put the new build (the short hash the main
+  menu shows) and date in it, and a few short lines a player understands -- what changed
+  for them, not how. Newest at the top. Then publish with
+      scripts/upload_dist.sh --insecure-tls --page-only
+  which sends this page with the downloads page; no new drop is needed.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenSWOS changelog</title>
+<style>
+  :root {
+    --bg: #12160f;
+    --panel: #1b2117;
+    --line: #2f3a27;
+    --text: #e8ece3;
+    --muted: #9aa78e;
+    --accent: #7fd34e;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f6f1;
+      --panel: #ffffff;
+      --line: #d8ded0;
+      --text: #1a1f16;
+      --muted: #5d6a52;
+      --accent: #3d7a1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    padding: .25rem .9rem .75rem;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  article { padding: .7rem 0 .6rem; border-bottom: 1px solid var(--line); }
+  article:last-child { border-bottom: 0; }
+  header { display: flex; gap: .75rem; align-items: baseline; flex-wrap: wrap; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--accent); font-weight: 600; font-size: .95rem;
+  }
+  time { color: var(--muted); font-size: .88rem; }
+  ul { margin: .35rem 0 0; padding-left: 1.2rem; }
+  li { margin: .12rem 0; }
+  li code { font-weight: 400; color: var(--text); background: var(--panel);
+            border: 1px solid var(--line); border-radius: 4px; padding: 0 .25rem; font-size: .85em; }
+</style>
+</head>
+<body>
+
+<article>
+  <header><code>a4f2689</code><time datetime="2026-09-29">29 Sep 2026</time></header>
+  <ul>
+    <li>One gameplay setting: <code>style = amiga | dos</code> now sets the view too.</li>
+    <li>New <code>widescreen = stretch</code>: the original picture stretched to fill the screen.</li>
+    <li>OPEN asks AMIGA or PC. Whoever joins plays the host's style &mdash; no more disconnects over it.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>477bb2b</code><time datetime="2026-09-29">29 Sep 2026</time></header>
+  <ul>
+    <li>Online matches run at the right speed: the game clock ran double, which changed ball control.</li>
+    <li>Keyboard: the arrow pressed last wins, as in DOS SWOS.</li>
+    <li>A keyboard and one joystick are two players on one PC.</li>
+    <li>Replays on wide screens: players line up with the pitch, real pitch colours, animated ad boards.</li>
+    <li>New: watch recorded online matches at us.swos.eu/playback.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>3dc4f7b</code><time datetime="2026-09-29">29 Sep 2026</time></header>
+  <ul>
+    <li>After picking a team the line-up screen opens; CONFIRM makes you ready.</li>
+    <li>Lobby CUP option: 1 or 2 legs, settled by extra time and penalties or penalties only.</li>
+    <li>More controllers than players? Press fire on yours during the intro.</li>
+    <li>Fixed: away goals in two-leg DIY cups.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>82fbf0f</code><time datetime="2026-09-28">28 Sep 2026</time></header>
+  <ul>
+    <li>Fixed: connecting to a player on an unstable line.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>8075bff</code><time datetime="2026-09-28">28 Sep 2026</time></header>
+  <ul>
+    <li>TACTICS in the online lobby opens the team screen: arrange your line-up before kick-off.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>eed437e</code><time datetime="2026-09-28">28 Sep 2026</time></header>
+  <ul>
+    <li>Online matches log "ghosting" (players running through each other) for the report.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>ddf733c</code><time datetime="2026-09-27">27 Sep 2026</time></header>
+  <ul>
+    <li>Match reports: after an online match both players' logs and ratings go to the server.</li>
+  </ul>
+</article>
+
+</body>
+</html>
