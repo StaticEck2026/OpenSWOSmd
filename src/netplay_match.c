@@ -19,6 +19,7 @@
 #include "match_step.h"
 #include "match_record.h"   /* the recorder: SWOS_RECORD, [netplay] record */
 #include "match_report.h"   /* both players' logs, after the match */
+#include "match_prediction.h"   /* both players' PRED and SEEN, after the match */
 #include "netplay_ghost.h"  /* what this peer drew against what finally happened */
 #include "netplay_lobby.h"
 #include "p2p_link.h"
@@ -86,6 +87,12 @@ static struct {
     int32_t          peerGone;            /* p2p: the peer left after the end was known */
     uint32_t         frames;              /* frames played for the first time */
     uint32_t         resimulated;         /* frames GGPO played again after loading a state */
+    /* PRED (netplay_ghost.h Ghost_Lag): the other player's input as each frame was played,
+     * by frame, to check the guess GGPO made was the last input it had. */
+    uint8_t          remoteIn[64][MATCH_INPUT_SIZE];
+    int32_t          stalledPending;      /* held at the prediction limit since the last frame */
+    uint32_t         guessedFrames;       /* frames first played on a guess */
+    uint32_t         guessNotRepeat;      /* ... whose guess was not the last input known */
     uint32_t         saves, loads;
     uint32_t         unidentified;        /* checksums that met a pointer with no identity */
     int32_t          lastConfirmed;       /* p2p */
@@ -691,8 +698,12 @@ static int32_t cbAdvance(void *ctx)
     soundFrameBegin(resimFrame, 1);
     r = step(inputs, -1, 0);
     soundFrameEnd();
-    if (s_np.mode == NETPLAY_MATCH_P2P)
+    if (s_np.mode == NETPLAY_MATCH_P2P) {
         Ghost_Played(resimFrame, 0);        /* the correction replaces what was drawn */
+        if (resimFrame >= 0)
+            memcpy(s_np.remoteIn[resimFrame & 63], inputs + (2 - s_np.player) * MATCH_INPUT_SIZE,
+                   MATCH_INPUT_SIZE);
+    }
     if (r != GAME_FRAME_DONE && !(s_np.mode == NETPLAY_MATCH_P2P && r == GAME_FRAME_MATCH_OVER))
         fail("a re-simulated frame left the match loop (GameFrameResult %d)", (int)r);
     s_np.resimulated++;
@@ -938,6 +949,7 @@ static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
     info.team2      = team2;
     MatchRecord_Begin(&info);
     MatchReport_Begin(&info);           /* both players' logs, zipped, after the match */
+    MatchPrediction_Begin();            /* both players' PRED and SEEN, after it */
 }
 
 /* Every frame up to `confirmed` whose start has been saved. Confirmed is set after
@@ -1454,6 +1466,11 @@ static void liveEnd(int32_t outcome, const char *why)
             s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames, why ? ": " : "", why ? why : "",
             s_np.frames, s_np.resimulated, s_np.loads, s_np.predictionWaits, s_np.timeSyncs,
             (long long)(s_np.pacedUs / 1000), (long long)s_np.paceBiasUs);
+    /* PRED's premise, measured: every guessed frame's guess was the last input known. */
+    fprintf(stderr, "[pred] %u frames first played on a guess of the other player's input; "
+                    "%u of the guesses were not their last known input%s\n",
+            s_np.guessedFrames, s_np.guessNotRepeat,
+            s_np.guessNotRepeat ? " -- PRED's guesses cannot be rebuilt from INPT" : "");
     printf("[live] final state hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_ALL));
     /* The SIM tier alone is what two peers must agree on. The VIEW tier holds the
      * highlight ring, recorded in drawn coordinates, so it differs between peers on
@@ -2008,6 +2025,7 @@ prepared:
             return GAME_FRAME_MATCH_OVER;
         }
         s_np.predictionWaits++;
+        s_np.stalledPending = 1;
         waitForPeer();
         return GAME_FRAME_DONE;
     }
@@ -2018,6 +2036,28 @@ prepared:
         fprintf(stderr, "[netplay] frame %d: synchronize input: %s\n", frame, Netplay_ErrorName(rc));
         liveEnd(NETPLAY_LIVE_ENDED_EARLY, "A NETWORK ERROR ENDED THE MATCH");
         return GAME_FRAME_MATCH_OVER;
+    }
+    if (s_np.mode == NETPLAY_MATCH_P2P && frame >= 0) {
+        /* How far this frame runs on guesses: frames past the last one whose input from
+         * both players is known (GGPO's confirmed frame -- this peer's own is always known
+         * `delay` ahead). Taken BEFORE the frame is played, as the guess is. */
+        int32_t confirmed = -1, lag;
+        const uint8_t *theirs = synced + (2 - s_np.player) * MATCH_INPUT_SIZE;
+        Netplay_ConfirmedFrame(s_np.session, &confirmed);
+        lag = frame > confirmed ? frame - confirmed : 0;
+        Ghost_Lag(frame, lag, s_np.stalledPending);
+        s_np.stalledPending = 0;
+        if (lag > 0 && lag < 64) {
+            /* GGPO-X guesses by repeating the last input it has: the one at `confirmed`,
+             * or nothing before the first. Checked, not assumed -- the whole of PRED
+             * rests on it (docs/REPLAY_FORMAT_V2.md §4). */
+            static const uint8_t none[MATCH_INPUT_SIZE];
+            const uint8_t *want = confirmed >= 0 ? s_np.remoteIn[confirmed & 63] : none;
+            s_np.guessedFrames++;
+            if (memcmp(theirs, want, MATCH_INPUT_SIZE) != 0)
+                s_np.guessNotRepeat++;
+        }
+        memcpy(s_np.remoteIn[frame & 63], theirs, MATCH_INPUT_SIZE);
     }
     soundFrameBegin(frame, 0);
     r = step(synced, frame, 0);

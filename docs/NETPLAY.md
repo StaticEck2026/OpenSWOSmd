@@ -1342,6 +1342,15 @@ That is also the live-stream path: the frames reach the server a few frames behi
 so a viewer served from them (later, and the browser build's) watches the match as it
 happens.
 
+**And what each player saw.** Each player streams its own half of `PRED` and `SEEN`
+(docs/REPLAY_FORMAT_V2.md §4, "What each player saw") beside each batch of replay frames --
+`RECORD_REPLAY_PRED`, which a recorder older than it skips -- and the recorder puts BOTH
+players' halves in its file: the lag and rollbacks of each, and where each one's screen
+drew players somewhere they never were. Back in the lobby the two games swap their halves
+over the link (channel 4, `src/match_prediction.c`) and rewrite their own files with both,
+so the host's `LATEST.SRP` is still the recorder's copy byte for byte. `[netplay]
+prediction = false` keeps neither.
+
 **And what it takes to play it again.** A live match's `.SRP` also carries its setup, the
 state it kicked off in, and every frame's input and SIM hash (docs/REPLAY_FORMAT_V2.md §4,
 "The match itself"). The player streams them too: a RESUME message once the kick-off is

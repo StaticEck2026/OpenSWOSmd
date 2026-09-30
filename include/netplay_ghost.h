@@ -21,6 +21,8 @@
 
 #include <stdint.h>
 
+#include "srp_writer.h"     /* SrpPrediction */
+
 /* A session is starting: forget the last one. `player` names the report (1 or 2). */
 void Ghost_Begin(int32_t player);
 
@@ -38,5 +40,28 @@ void Ghost_Report(int32_t lastFrame);
  * when there are none. Valid until the next Ghost_Begin -- the match report
  * (src/match_report.c) puts both players' in its zip. */
 const char *Ghost_Clips(uint32_t *len);
+
+/* ---- what a .SRP keeps of it (PRED and SEEN, include/srp_writer.h) ---- */
+
+/* Frame `frame` is being played for the first time on `lag` guessed inputs of the other
+ * player's (0: none), and `stalled` if GGPO held this peer at its prediction limit
+ * first. A re-simulation later marks it SRP_PRED_REPLAYED. */
+void Ghost_Lag(int32_t frame, int32_t lag, int32_t stalled);
+
+/* The player this machine is (Ghost_Begin's), 0 before any match. */
+int32_t Ghost_Player(void);
+
+/* A frame's PRED byte, SRP_PRED_UNKNOWN for one never played. */
+uint8_t Ghost_PredByte(uint32_t frame);
+
+/* The frame's SEEN record into `out` (room for SRP_SEEN_REC_HEAD + SRP_SEEN_OBJECTS *
+ * SRP_SEEN_OBJ_BYTES): its length, 0 when it was drawn as finally played. Final once the
+ * frame is confirmed. */
+uint32_t Ghost_SeenRecord(uint32_t frame, uint8_t *out);
+
+/* This player's half for frames 0..frames-1. 0, or 1 out of memory. The buffers stay
+ * valid until the next call or Ghost_Begin. */
+
+int32_t Ghost_Prediction(uint32_t frames, SrpPrediction *out);
 
 #endif /* NETPLAY_GHOST_H */

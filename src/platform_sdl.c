@@ -1218,6 +1218,23 @@ void Platform_SetWindowScale(int scale)
  * either 0x0RGB (OCS, 12-bit) or split high/low across two MOVE pairs (AGA).
  * For now we extract OCS-style. AGA support comes when we wire up the
  * copperlist offsets COP_PAL_B*_C*_OFF. */
+/* The palette entry nearest an RGB colour, in the palette last shown: for a debugging
+ * overlay drawn into the 8bpp frame (the playback page's prediction lines, replay_v2.c).
+ * Entry 0 is left out -- it is the colour nothing is drawn with. */
+uint8_t Platform_NearestColour(uint8_t r, uint8_t g, uint8_t b)
+{
+    int32_t i, best = 1, bestD = 0x7FFFFFFF;
+    for (i = 1; i < 256; i++) {
+        int32_t dr = s_palette[i].r - r, dg = s_palette[i].g - g, db = s_palette[i].b - b;
+        int32_t d = dr * dr + dg * dg + db * db;
+        if (d < bestD) {
+            bestD = d;
+            best = i;
+        }
+    }
+    return (uint8_t)best;
+}
+
 static void refresh_palette_from_copper(void)
 {
     /* DOS graphics use the full 256-colour DOS palette, but ONLY during a

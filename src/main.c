@@ -393,6 +393,7 @@ int main(int argc, char **argv)
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: live matches are not recorded */
+    opts.prediction = 1;          /* default: a live match's replay keeps what each player saw */
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     opts.reports = 1;             /* a tester build: match reports come back to us */
 #else
@@ -887,6 +888,7 @@ int main(int argc, char **argv)
     MatchRecord_SetConfigured(opts.record);
     /* And whether a match report leaves this machine (include/match_report.h). */
     MatchReport_SetEnabled(opts.reports);
+    { extern void ReplayRec_SetPredictionKept(int32_t on); ReplayRec_SetPredictionKept(opts.prediction); }
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;

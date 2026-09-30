@@ -145,6 +145,13 @@ frame. `--replay-player=<file>` is the same natively; `scripts\serve_playback.ba
 over `build/recordings`. It found three viewer bugs that every replay had: sprites drawn
 (W-336)/2 right of the pitch on wide screens, the pitch in left-over colours, the animated ad
 unrolled -- `scripts/replay_v2_test.sh` now traces where sprites actually land on screen.
+A live match's `.SRP` also keeps what each PLAYER saw (`PRED`: per frame per player the lag
+-- how many of the other's inputs were guesses -- and rollbacks; `SEEN`: where each one's
+screen drew players somewhere they never were), both halves in one file: each streams its
+own to the recorder and they swap them in the lobby (`src/match_prediction.c`), so the
+host's file still equals the recorder's. Optional (`[netplay] prediction`); the page draws
+it as a timeline and an overlay. GGPO-X's guess is "repeat the last input", checked on every
+guessed frame (`[pred]` log line) -- so PRED + INPT rebuild each player's predictions.
 
 ### Release builds — `scripts/build_dist.sh`
 

@@ -120,6 +120,7 @@ typedef struct {
     char                   record[80];       /* [netplay] record: stream every live match to a
                                               * recorder -- "server" (the matchmaker), "host[:port]",
                                               * or empty/"off". include/match_record.h */
+    int                    prediction;       /* [netplay] prediction: PRED/SEEN in a live match's .SRP */
     int                    reports;          /* [netplay] reports: SEND MATCH REPORTS -- both players'
                                               * logs and ratings to the server after an online
                                               * match. include/match_report.h */
@@ -174,6 +175,8 @@ int  Platform_VBlank(void);
 /* Platform_VBlank without running the VBlank interrupt: present the finished frame and
  * pace. For a caller that runs the interrupt itself, once per simulated frame. */
 int  Platform_Present(void);
+/* The entry of the palette last shown nearest an RGB colour (not entry 0). */
+uint8_t Platform_NearestColour(uint8_t r, uint8_t g, uint8_t b);
 /* Make the next frame `us` microseconds longer than the frame rate says -- netplay's frame
  * pacing (src/netplay_match.c). The limiter keeps deadlines, so a plain sleep between
  * frames is taken back out of the next one and changes nothing; this moves the deadline.

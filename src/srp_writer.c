@@ -132,11 +132,95 @@ static uint8_t *build_hashes(const SrpContent *c)
     return h;
 }
 
+/* ---- PRED and SEEN: what each player saw (both halves, whichever are known) ---- */
+
+static uint8_t *build_pred(uint32_t frames, const SrpPrediction *const half[2], uint32_t *len)
+{
+    uint8_t *out = (uint8_t *)malloc(SRP_PRED_HEAD + (size_t)frames * 2 + 1);
+    uint32_t f, i;
+    if (!out)
+        return NULL;
+    BE_WRITE_U16(out, SRP_PRED_VERSION);
+    BE_WRITE_U16(out + 2, 0);
+    BE_WRITE_U32(out + 4, frames);
+    for (f = 0; f < frames; f++)
+        for (i = 0; i < 2; i++)
+            out[SRP_PRED_HEAD + f * 2 + i] = half[i] && half[i]->pred && f < half[i]->predFrames
+                                             ? half[i]->pred[f] : SRP_PRED_UNKNOWN;
+    *len = SRP_PRED_HEAD + frames * 2;
+    return out;
+}
+
+/* The size of the SEEN record at `p`, or 0 when it does not fit in `left` bytes. */
+static uint32_t seen_record(const uint8_t *p, uint32_t left)
+{
+    uint32_t n;
+    if (left < SRP_SEEN_REC_HEAD)
+        return 0;
+    n = SRP_SEEN_REC_HEAD + (uint32_t)p[5] * SRP_SEEN_OBJ_BYTES;
+    return n <= left ? n : 0;
+}
+
+/* The two halves' records merged by frame, then player, and only frames the file has --
+ * the same bytes whoever builds it. */
+static uint8_t *build_seen(uint32_t frames, const SrpPrediction *const half[2], uint32_t *len)
+{
+    uint32_t cap = SRP_SEEN_HEAD, at[2] = { 0, 0 }, count = 0, o = SRP_SEEN_HEAD, i;
+    uint8_t *out;
+
+    for (i = 0; i < 2; i++)
+        if (half[i] && half[i]->seen)
+            cap += half[i]->seenLen;
+    out = (uint8_t *)malloc(cap + 1);
+    if (!out)
+        return NULL;
+    for (;;) {
+        uint32_t best = 2, bestFrame = 0, n;
+        for (i = 0; i < 2; i++) {
+            const uint8_t *p;
+            uint32_t f;
+            if (!half[i] || !half[i]->seen)
+                continue;
+            /* Past what the file holds, or damaged: this half is done. */
+            while (at[i] < half[i]->seenLen) {
+                p = half[i]->seen + at[i];
+                if (!seen_record(p, half[i]->seenLen - at[i]))
+                    at[i] = half[i]->seenLen;
+                else if (BE_READ_U32(p) >= frames)
+                    at[i] = half[i]->seenLen;
+                else
+                    break;
+            }
+            if (at[i] >= half[i]->seenLen)
+                continue;
+            f = BE_READ_U32(half[i]->seen + at[i]);
+            if (best == 2 || f < bestFrame) {
+                best = i;
+                bestFrame = f;
+            }
+        }
+        if (best == 2)
+            break;
+        n = seen_record(half[best]->seen + at[best], half[best]->seenLen - at[best]);
+        memcpy(out + o, half[best]->seen + at[best], n);
+        out[o + 4] = (uint8_t)(best + 1);       /* whose it is, by the half it came in */
+        o += n;
+        at[best] += n;
+        count++;
+    }
+    BE_WRITE_U16(out, SRP_SEEN_VERSION);
+    BE_WRITE_U16(out + 2, 0);
+    BE_WRITE_U32(out + 4, count);
+    *len = o;
+    return out;
+}
+
 uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
 {
-    Chunk chunks[10];
-    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0, parts = 5;
-    uint8_t *raw[10], *file, *p;
+    Chunk chunks[12];
+    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0, parts = 5, predLen = 0, seenLen = 0;
+    uint8_t *raw[12], *file, *p;
+    int32_t predicted = c->prediction[0] || c->prediction[1];
     int32_t missing = 0;
     int32_t resumable = c->setup && c->setupLen && c->kickoff && c->kickoffLen &&
                         c->inputs && c->hashes && c->frameCount;
@@ -155,6 +239,11 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
         raw[8] = copy_of(c->inputs, c->frameCount * SRP_INPUT_BYTES);
         raw[9] = build_hashes(c);
         parts = 10;
+    }
+    if (predicted) {
+        raw[parts] = build_pred(c->frameCount, c->prediction, &predLen);
+        raw[parts + 1] = build_seen(c->frameCount, c->prediction, &seenLen);
+        parts += 2;
     }
     memset(chunks, 0, sizeof chunks);
     for (i = 0; i < parts; i++)
@@ -177,6 +266,12 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
         chunk_make(&chunks[n++], CHUNK_STAT, raw[7], c->kickoffLen, 0);
         chunk_make(&chunks[n++], CHUNK_INPT, raw[8], c->frameCount * SRP_INPUT_BYTES, 1);
         chunk_make(&chunks[n++], CHUNK_HASH, raw[9], c->frameCount * SRP_HASH_BYTES, 0);
+    }
+    if (predicted) {
+        chunk_make(&chunks[n], CHUNK_PRED, raw[n], predLen, 1);
+        n++;
+        chunk_make(&chunks[n], CHUNK_SEEN, raw[n], seenLen, 1);
+        n++;
     }
 
     total = SWRP_HEADER_BYTES + n * SWRP_DIR_BYTES;
@@ -212,4 +307,79 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
     for (i = 0; i < n; i++)
         free(chunks[i].data);
     return file;
+}
+
+uint8_t *Srp_WithPrediction(const uint8_t *file, uint32_t fileLen, const SrpPrediction *p1,
+                            const SrpPrediction *p2, uint32_t *outLen)
+{
+    const SrpPrediction *half[2];
+    Chunk added[2];
+    uint32_t count, frames, i, kept = 0, total, off, predLen = 0, seenLen = 0;
+    uint8_t *pred, *seen, *out, *p;
+
+    half[0] = p1;
+    half[1] = p2;
+    if (fileLen < SWRP_HEADER_BYTES || memcmp(file, "SWRP", 4) != 0)
+        return NULL;
+    count = BE_READ_U16(file + 20);
+    frames = BE_READ_U32(file + 16);
+    if (SWRP_HEADER_BYTES + count * SWRP_DIR_BYTES > fileLen)
+        return NULL;
+    total = SWRP_HEADER_BYTES;
+    for (i = 0; i < count; i++) {
+        const uint8_t *d = file + SWRP_HEADER_BYTES + i * SWRP_DIR_BYTES;
+        uint32_t fourcc = BE_READ_U32(d), o = BE_READ_U32(d + 4), stored = BE_READ_U32(d + 8);
+        if (o > fileLen || stored > fileLen - o)
+            return NULL;
+        if (fourcc == CHUNK_PRED || fourcc == CHUNK_SEEN)
+            continue;
+        total += SWRP_DIR_BYTES + stored;
+        kept++;
+    }
+    pred = build_pred(frames, half, &predLen);
+    seen = build_seen(frames, half, &seenLen);
+    if (!pred || !seen) {
+        free(pred);
+        free(seen);
+        return NULL;
+    }
+    /* Made exactly as Srp_Build makes them, so the file is the one it would have built. */
+    chunk_make(&added[0], CHUNK_PRED, pred, predLen, 1);
+    chunk_make(&added[1], CHUNK_SEEN, seen, seenLen, 1);
+    total += 2 * SWRP_DIR_BYTES + added[0].stored + added[1].stored;
+    out = (uint8_t *)malloc(total);
+    if (out) {
+        uint32_t n = 0;
+        memcpy(out, file, SWRP_HEADER_BYTES);
+        BE_WRITE_U16(out + 20, (uint16_t)(kept + 2));
+        off = SWRP_HEADER_BYTES + (kept + 2) * SWRP_DIR_BYTES;
+        for (i = 0; i < count; i++) {
+            const uint8_t *d = file + SWRP_HEADER_BYTES + i * SWRP_DIR_BYTES;
+            uint32_t fourcc = BE_READ_U32(d), stored = BE_READ_U32(d + 8);
+            if (fourcc == CHUNK_PRED || fourcc == CHUNK_SEEN)
+                continue;
+            p = out + SWRP_HEADER_BYTES + n++ * SWRP_DIR_BYTES;
+            BE_WRITE_U32(p, fourcc);
+            BE_WRITE_U32(p + 4, off);
+            BE_WRITE_U32(p + 8, stored);
+            BE_WRITE_U32(p + 12, BE_READ_U32(d + 12));
+            memcpy(out + off, file + BE_READ_U32(d + 4), stored);
+            off += stored;
+        }
+        for (i = 0; i < 2; i++) {
+            p = out + SWRP_HEADER_BYTES + n++ * SWRP_DIR_BYTES;
+            BE_WRITE_U32(p, added[i].fourcc);
+            BE_WRITE_U32(p + 4, off);
+            BE_WRITE_U32(p + 8, added[i].stored);
+            BE_WRITE_U32(p + 12, added[i].raw);
+            memcpy(out + off, added[i].data, added[i].stored);
+            off += added[i].stored;
+        }
+        BE_WRITE_U32(out + 24, (uint32_t)mz_crc32(MZ_CRC32_INIT, out + SWRP_HEADER_BYTES,
+                                                  total - SWRP_HEADER_BYTES));
+        *outLen = total;
+    }
+    free(added[0].data);
+    free(added[1].data);
+    return out;
 }

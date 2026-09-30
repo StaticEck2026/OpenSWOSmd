@@ -39,6 +39,7 @@
 #include "game_loop.h"        /* _gFrameStepInput */
 #include "match_record.h"     /* MatchRecord_SetConfigured: the RECORD MATCHES row */
 #include "match_report.h"     /* the match report: HOW WAS THE MATCH?, SEND MATCH REPORTS */
+#include "match_prediction.h" /* both players' PRED and SEEN cross after the match */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -711,7 +712,8 @@ static void mpWaiting_menuExit_OnSelect(void)
 static void lobby_frame_hook(void)
 {
     P2PLink_Poll();
-    MatchReport_Poll();         /* the last match's report crosses while the lobby is up */
+    MatchReport_Poll();
+    MatchPrediction_Poll();         /* the last match's report crosses while the lobby is up */
 }
 
 /* Test knobs for looking at the lobby without a pad (docs/NETPLAY.md, "The lobby"):
@@ -799,6 +801,7 @@ void OnlineMenus_EnterLobby(int32_t player, const char *name)
         OnlineMenus_Show(SWOS2020_MENU(mpGameSetupMenu));
     } while (s_lobbyAgain);
     MatchReport_Poll();
+    MatchPrediction_Poll();
     MatchReport_Finish();       /* the other player's half, if it came, before the link goes */
     NetplayLobby_End();
     P2PLink_Close();
@@ -1512,6 +1515,7 @@ static void run_live_match(void)
 
     Platform_SetFrameHook(NULL);
     MatchReport_Poll();
+    MatchPrediction_Poll();
     MatchReport_Finish();               /* the last match's, with what there is */
     NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay, &simWidth);
     NetplayLobby_End();

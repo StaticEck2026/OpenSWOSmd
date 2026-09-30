@@ -12,6 +12,8 @@
 #include "game_types.h"
 #include "sprite_data.h"
 #include "dos_gameplay.h"       /* DosGameplay_TargetFps: frames a second, for match times */
+#include "endian_helpers.h"
+#include "srp_writer.h"         /* SRP_PRED_* / SRP_SEEN_*: what a .SRP keeps of all this */
 
 extern TeamGeneralInfo _topTeamData, _bottomTeamData;
 extern Sprite *_teamSpritesTable[];
@@ -71,12 +73,16 @@ static struct {
     uint32_t    eventCount, eventCap;
     char       *clips;              /* Ghost_Clips: the windows, as CSV */
     uint32_t    clipsLen, clipsCap;
+    uint8_t    *pred;               /* PRED: each frame's lag and flags (SRP_PRED_*) */
+    uint8_t    *predOut, *seenOut;  /* Ghost_Prediction's */
+    uint32_t    seenOutLen;
 } s_g;
 
 static int32_t reserve(uint32_t frame)
 {
     uint32_t cap;
     GhostFrame *d, *f;
+    uint8_t *p;
     if (frame < s_g.cap)
         return 0;
     cap = s_g.cap ? s_g.cap : 4096;
@@ -88,10 +94,14 @@ static int32_t reserve(uint32_t frame)
     f = (GhostFrame *)realloc(s_g.final, cap * sizeof *f);
     if (f)
         s_g.final = f;
-    if (!d || !f)
+    p = (uint8_t *)realloc(s_g.pred, cap);
+    if (p)
+        s_g.pred = p;
+    if (!d || !f || !p)
         return 1;
     memset(s_g.drawn + s_g.cap, 0, (cap - s_g.cap) * sizeof *d);
     memset(s_g.final + s_g.cap, 0, (cap - s_g.cap) * sizeof *f);
+    memset(s_g.pred + s_g.cap, SRP_PRED_UNKNOWN, cap - s_g.cap);
     s_g.cap = cap;
     return 0;
 }
@@ -106,6 +116,7 @@ void Ghost_Begin(int32_t player)
     if (s_g.cap) {
         memset(s_g.drawn, 0, s_g.cap * sizeof *s_g.drawn);
         memset(s_g.final, 0, s_g.cap * sizeof *s_g.final);
+        memset(s_g.pred, SRP_PRED_UNKNOWN, s_g.cap);
     }
 }
 
@@ -136,7 +147,115 @@ void Ghost_Played(int32_t frame, int32_t first)
         capture(&s_g.final[frame]);
         s_g.corrections++;
         s_g.changed += memcmp(&before, &s_g.final[frame], sizeof before) != 0;
+        if (s_g.pred[frame] != SRP_PRED_UNKNOWN)
+            s_g.pred[frame] |= SRP_PRED_REPLAYED;
     }
+}
+
+void Ghost_Lag(int32_t frame, int32_t lag, int32_t stalled)
+{
+    if (frame < 0 || reserve((uint32_t)frame))
+        return;
+    if (lag < 0)
+        lag = 0;
+    if (lag > (int32_t)SRP_PRED_LAG)
+        lag = SRP_PRED_LAG;
+    s_g.pred[frame] = (uint8_t)(lag | (stalled ? SRP_PRED_STALLED : 0));
+}
+
+int32_t Ghost_Player(void)
+{
+    return s_g.player;
+}
+
+uint8_t Ghost_PredByte(uint32_t frame)
+{
+    return frame < s_g.cap ? s_g.pred[frame] : SRP_PRED_UNKNOWN;
+}
+
+/* An object's position as the SEEN record keeps it: players where they stand, the ball
+ * where it is seen (its height taken off). */
+static void seen_pos(const GhostFrame *g, int32_t i, int16_t *x, int16_t *y)
+{
+    if (i == SRP_SEEN_BALL) {
+        *x = g->bx;
+        *y = (int16_t)(g->by - g->bz);
+    } else {
+        *x = g->x[i];
+        *y = g->y[i];
+    }
+}
+
+uint32_t Ghost_SeenRecord(uint32_t frame, uint8_t *out)
+{
+    const GhostFrame *d, *f;
+    uint32_t n = 0, i;
+    if (frame >= s_g.cap || !s_g.drawn[frame].have || !s_g.final[frame].have)
+        return 0;
+    d = &s_g.drawn[frame];
+    f = &s_g.final[frame];
+    for (i = 0; i < SRP_SEEN_OBJECTS; i++) {
+        int16_t dx, dy, fx, fy;
+        uint8_t *p = out + SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+        seen_pos(d, (int32_t)i, &dx, &dy);
+        seen_pos(f, (int32_t)i, &fx, &fy);
+        if (dx == fx && dy == fy)
+            continue;
+        p[0] = (uint8_t)i;
+        BE_WRITE_U16(p + 1, (uint16_t)dx);
+        BE_WRITE_U16(p + 3, (uint16_t)dy);
+        BE_WRITE_U16(p + 5, (uint16_t)fx);
+        BE_WRITE_U16(p + 7, (uint16_t)fy);
+        n++;
+    }
+    if (n == 0)
+        return 0;
+    BE_WRITE_U32(out, frame);
+    out[4] = (uint8_t)s_g.player;
+    out[5] = (uint8_t)n;
+    return SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+}
+
+int32_t Ghost_Prediction(uint32_t frames, SrpPrediction *out)
+{
+    uint32_t f, n = 0;
+    uint8_t *seen;
+
+    memset(out, 0, sizeof *out);
+    free(s_g.predOut);
+    free(s_g.seenOut);
+    s_g.predOut = (uint8_t *)malloc(frames + 1);
+    seen = (uint8_t *)malloc((size_t)frames * 8 + 256);     /* grown below as needed */
+    s_g.seenOut = seen;
+    s_g.seenOutLen = 0;
+    if (!s_g.predOut || !seen)
+        return 1;
+    {
+        uint32_t cap = frames * 8 + 256;
+        for (f = 0; f < frames; f++) {
+            uint8_t rec[SRP_SEEN_REC_HEAD + SRP_SEEN_OBJECTS * SRP_SEEN_OBJ_BYTES];
+            uint32_t len;
+            s_g.predOut[f] = Ghost_PredByte(f);
+            len = Ghost_SeenRecord(f, rec);
+            if (!len)
+                continue;
+            if (n + len > cap) {
+                uint8_t *grown = (uint8_t *)realloc(s_g.seenOut, cap * 2 + len);
+                if (!grown)
+                    return 1;
+                s_g.seenOut = grown;
+                cap = cap * 2 + len;
+            }
+            memcpy(s_g.seenOut + n, rec, len);
+            n += len;
+        }
+    }
+    s_g.seenOutLen = n;
+    out->pred = s_g.predOut;
+    out->predFrames = frames;
+    out->seen = s_g.seenOut;
+    out->seenLen = n;
+    return 0;
 }
 
 /* "0:34": frames into the match as minutes and seconds of play. */

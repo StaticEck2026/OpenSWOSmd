@@ -223,6 +223,62 @@ A 600-frame match gains about 5.7 KB: `STAT` 1.9 KB, `SETP` 1.1 KB, `INPT`
 0.2 KB, `HASH` 2.4 KB. `HASH` does not compress, so a full match carries about
 90 KB of it — beside a ~1 MB file.
 
+### What each player SAW: `PRED` and `SEEN`
+
+Everything above is the match as finally PLAYED. Under rollback that is not what either
+player watched: when the other player's input is late a peer guesses it, draws the frame,
+and plays it again when the input arrives (docs/NETPLAY_GHOSTING.md). These two chunks
+keep what each player saw. They are **optional** -- a live match writes them unless
+`[netplay] prediction = false` (or `SWOS_RECORD_PREDICTION=0`), nothing else does, and a
+file plays, resims and seeks exactly the same with or without them.
+
+| Chunk | Stored | Content |
+|---|---|---|
+| `PRED` | deflated | version u16 (1), 0 u16, frame count u32, then 2 bytes a frame: player 1's, player 2's |
+| `SEEN` | deflated | version u16 (1), 0 u16, record count u32, then records sorted by frame, then player |
+
+**A `PRED` byte** is what that player's game knew when it FIRST played the frame:
+
+| bits | meaning |
+|---|---|
+| 0-3 | the **lag**: how many of the other player's inputs up to this frame were guesses (frames past GGPO's confirmed frame; 0 = drawn from real input, capped at 15) |
+| 0x10 | **stalled**: GGPO held this peer at its prediction limit before it played the frame |
+| 0x20 | **replayed**: a rollback played the frame again |
+| `0xFF` | **unknown**: this player's half never reached the file |
+
+GGPO-X guesses by repeating the last input it has (`input_queue.cpp`, `_prediction =
+_inputs[PREVIOUS_FRAME(_head)]`), so the guess a frame was drawn on is the other player's
+`INPT` at `frame - lag`, and every frame after that up to this one was played on it. That is
+**measured, not assumed**: every live match checks it on every guessed frame and logs
+`[pred] N frames first played on a guess ...; 0 of the guesses were not their last known
+input` (2026-09-29: 0 of 5,442 over a `mobile` link). So `PRED` + `INPT` + `STAT` rebuild
+exactly what each player's game simulated, frame by frame -- enough to try another
+prediction rule or another input delay against real matches offline.
+
+**A `SEEN` record** is where one player's screen showed things somewhere other than where
+the match finally had them -- what `src/netplay_ghost.c` measures, per frame:
+
+| Off | Size | Field |
+|---|---|---|
+| 0 | 4 | frame |
+| 4 | 1 | player (1, 2) whose screen it was |
+| 5 | 1 | object count n |
+| 6 | 9n | per object: which (0-10 the top team's players, 11-21 the bottom team's -- `_teamSpritesTable` order -- 22 the ball), then drawn x, drawn y, final x, final y as int16 world pixels. A player's position is where he stands; the ball's y is where it is seen (less its height) |
+
+Only objects drawn at least a pixel off get an entry, only frames with one get a record. A
+90-second match over a mobile link: `PRED` 2.8 KB, `SEEN` 15 KB, in a 290 KB file.
+
+**Where both halves come from.** Each game knows only its own. It writes its half into its
+`LATEST.SRP`, streams it to the recorder (`RECORD_REPLAY_PRED`, include/record_proto.h) and,
+back in the lobby, sends it to the other player over the link (channel 4,
+include/match_prediction.h), which rewrites its files with both (`Srp_WithPrediction`,
+every other chunk kept byte for byte). The recorder builds its copy from both streams with
+the same code, so the host's `LATEST.SRP` is still the recorder's file byte for byte
+(`RECORD=1 scripts/relay_test.sh`). A half that never arrives -- the other player left, a
+stream was cut -- stays `0xFF` / absent; the file is otherwise whole.
+
+The playback page draws it (docs/PLAYBACK.md, "What each player saw").
+
 ### `quirks`
 
 **Which game this was recorded against.** We deliberately depart from the

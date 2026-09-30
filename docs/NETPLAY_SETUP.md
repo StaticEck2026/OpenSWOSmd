@@ -676,17 +676,11 @@ git clone https://github.com/emscripten-core/emsdk.git ~/emsdk     # as the serv
 cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
 ```
 
-and in the HTTPS server block, beside the `/recordings/` one:
-
-```nginx
-location /playback/ {
-    alias /srv/swos-matchmaker/playback/;
-}
-```
-
-(`sudo nginx -t && sudo systemctl reload nginx`). Then the admin page's Rebuild builds it
-with the server (`scripts/run_matchmaker.sh --build-only --with-playback`), and `install`
-or `restart` copies it into place. Without emsdk the build says so and skips it.
+Then the admin page's Rebuild builds it with the server (`scripts/run_matchmaker.sh
+--build-only --with-playback`), and `install` or `restart` copies it into place AND sets up
+nginx: a `location /playback/` snippet, included beside the `/recordings/` block, tested,
+reloaded and checked (docs/PLAYBACK.md, "On the server"). If it cannot, the run ends with a
+WARNING saying what to add by hand. Without emsdk the build says so and skips the player.
 
 ### Lag, delay and stutter: read both players' SWOS.log
 

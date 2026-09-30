@@ -66,6 +66,16 @@ void    ReplayRec_SetKickoff(const uint8_t *packet, uint32_t len, uint64_t layou
 void    ReplayRec_SetInput(uint32_t frame, const uint8_t *input);
 void    ReplayRec_SetHash(uint32_t frame, uint64_t hash);
 
+/* What each player SAW (PRED, SEEN -- include/srp_writer.h), in a live match's .SRP.
+ *   SetPredictionKept   [netplay] prediction; SWOS_RECORD_PREDICTION=0|1 overrides it
+ *   AddPeerPrediction   the other player's half, from the lobby's link after the match:
+ *                       the files this match was written to are written again with both
+ *                       halves. 0, or 1 when there was nothing to add it to. */
+struct SrpPrediction;
+void    ReplayRec_SetPredictionKept(int32_t on);
+int32_t ReplayRec_PredictionKept(void);
+int32_t ReplayRec_AddPeerPrediction(const struct SrpPrediction *peer);
+
 /* A resumable .SRP's parts, read back: what --srp-resim plays the match again from. */
 typedef struct {
     uint8_t  *setup;        /* NetplaySetup_Encode */

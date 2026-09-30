@@ -49,6 +49,15 @@ each cell is the two players' range. A player is about 16 px tall.
 
 ## What every online match records
 
+**In its replay** (since 2026-09-29): the per-frame drawn-vs-played positions below go into
+the `.SRP` as `SEEN`, beside each frame's lag and rollbacks (`PRED`), for BOTH players
+(docs/REPLAY_FORMAT_V2.md §4, "What each player saw"). The playback page draws them over the
+match (docs/PLAYBACK.md): a ghost is a box in a player's colour away from the man, with a
+line back to him. So any frame of any recorded match can be checked for a rollback ghost,
+not only the few windows a report zip keeps.
+
+**In the log:**
+
 `src/netplay_ghost.c` records each frame twice -- as this player drew it, and as finally
 played -- and at the end of the match (an early end too) writes `[ghost]` lines to SWOS.log:
 

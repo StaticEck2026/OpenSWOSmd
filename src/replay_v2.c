@@ -27,6 +27,11 @@
 #include "srp_writer.h"     /* the file's layout, shared with the recorder */
 #include "swos_io.h"
 #include "image_cmd.h"      /* ProcessImageCommandStream */
+#include "platform_sdl.h"   /* Platform_NearestColour: the prediction overlay */
+#ifdef SWOS_NETPLAY
+#include "netplay_ghost.h"  /* Ghost_Prediction: this player's PRED and SEEN */
+#include "match_prediction.h"   /* the other player's, over the lobby's link */
+#endif
 #ifdef SWOS_WASM_BUILD
 #include <emscripten.h>     /* EMSCRIPTEN_KEEPALIVE: the playback page's controls */
 #else
@@ -685,12 +690,95 @@ int32_t ReplayRec_Content(SrpContent *out)
     return 0;
 }
 
+/* ---- what each player SAW: PRED and SEEN (include/srp_writer.h) ------------------------
+ * A live match's .SRP keeps this player's half as it is written, from the ghost recorder
+ * (netplay_ghost.h), and the other player's when it arrives over the lobby's link after
+ * the match (src/match_prediction.c) -- then the files are written again with both, and
+ * are the recorder's copy byte for byte. [netplay] prediction = false keeps neither. */
+static int32_t s_predKept = 1;
+static struct {
+    int32_t       player;           /* this machine's half: 1 or 2; 0 when there is none */
+    SrpPrediction own;
+    uint8_t      *ownBuf;           /* own.pred then own.seen, one allocation */
+    char          written[2][64];   /* the files this match went to */
+    int32_t       nWritten;
+} s_pred;
+
+void ReplayRec_SetPredictionKept(int32_t on) { s_predKept = on != 0; }
+
+int32_t ReplayRec_PredictionKept(void)
+{
+    const char *e = getenv("SWOS_RECORD_PREDICTION");
+    if (e && e[0])
+        return !(e[0] == '0' || strcmp(e, "off") == 0 || strcmp(e, "false") == 0);
+    return s_predKept;
+}
+
+static void pred_clear(void)
+{
+    free(s_pred.ownBuf);
+    memset(&s_pred, 0, sizeof s_pred);
+}
+
+/* This player's half, kept (copied) for the rewrite once the other half arrives. */
+static const SrpPrediction *pred_own(uint32_t frames)
+{
+#ifdef SWOS_NETPLAY
+    SrpPrediction g;
+    int32_t player = Ghost_Player();
+    pred_clear();
+    if (!s_resume.kickoff || !ReplayRec_PredictionKept() || player < 1 || player > 2 ||
+        Ghost_Prediction(frames, &g) != 0)
+        return NULL;
+    s_pred.ownBuf = (uint8_t *)malloc((size_t)g.predFrames + g.seenLen + 1);
+    if (!s_pred.ownBuf)
+        return NULL;
+    memcpy(s_pred.ownBuf, g.pred, g.predFrames);
+    memcpy(s_pred.ownBuf + g.predFrames, g.seen, g.seenLen);
+    s_pred.own.pred = s_pred.ownBuf;
+    s_pred.own.predFrames = g.predFrames;
+    s_pred.own.seen = s_pred.ownBuf + g.predFrames;
+    s_pred.own.seenLen = g.seenLen;
+    s_pred.player = player;
+    return &s_pred.own;
+#else
+    (void)frames;
+    return NULL;
+#endif
+}
+
+static uint8_t *read_file(const char *name, uint32_t *len);
+
+int32_t ReplayRec_AddPeerPrediction(const SrpPrediction *peer)
+{
+    const SrpPrediction *half[2];
+    int32_t i, rc = 0;
+    if (!s_pred.player || !s_pred.nWritten || !peer)
+        return 1;
+    half[s_pred.player - 1] = &s_pred.own;
+    half[2 - s_pred.player] = peer;
+    for (i = 0; i < s_pred.nWritten; i++) {
+        uint32_t len = 0, outLen = 0;
+        uint8_t *file = read_file(s_pred.written[i], &len), *out;
+        out = file ? Srp_WithPrediction(file, len, half[0], half[1], &outLen) : NULL;
+        if (!out || write_file(s_pred.written[i], out, outLen) != 0)
+            rc = 1;
+        free(file);
+        free(out);
+    }
+    if (!rc)
+        fprintf(stderr, "[replay] %s now has both players' prediction data\n", s_pred.written[0]);
+    s_pred.nWritten = 0;            /* once */
+    return rc;
+}
+
 static int32_t write_recording(void)
 {
     SrpContent c;
     uint8_t *file;
     uint32_t total = 0;
     int32_t rc;
+    const SrpPrediction *own;
 
     if (!s_rec.meta) {
         fprintf(stderr, "[replay] out of memory: the match could not be saved\n");
@@ -702,12 +790,22 @@ static int32_t write_recording(void)
                         "resumable\n", s_resume.known, s_rec.frameCount);
         c.setup = NULL;
     }
+    own = pred_own(c.frameCount);
+    if (own) {
+        c.prediction[s_pred.player - 1] = own;
+#ifdef SWOS_NETPLAY
+        c.prediction[2 - s_pred.player] = MatchPrediction_Peer();   /* here already, or NULL */
+#endif
+    }
     file = Srp_Build(&c, &total);
     if (!file) {
         fprintf(stderr, "[replay] out of memory: the match could not be saved\n");
         return 1;
     }
     rc = write_file(s_rec.path ? s_rec.path : REPLAY_V2_LATEST, file, total);
+    if (!rc && own)
+        snprintf(s_pred.written[s_pred.nWritten++], sizeof s_pred.written[0], "%s",
+                 s_rec.path ? s_rec.path : REPLAY_V2_LATEST);
     if (!rc && s_rec.autoSave && !s_rec.path) {
         /* A dated copy: MMDDHHMM.SRP, eight characters as the file menus want. */
         char name[32];
@@ -716,9 +814,19 @@ static int32_t write_recording(void)
         if (tm) {
             snprintf(name, sizeof name, "%02d%02d%02d%02d.SRP", tm->tm_mon + 1,
                      tm->tm_mday, tm->tm_hour, tm->tm_min);
-            write_file(name, file, total);
+            if (write_file(name, file, total) == 0 && own)
+                snprintf(s_pred.written[s_pred.nWritten++], sizeof s_pred.written[0], "%s", name);
         }
     }
+#ifdef SWOS_NETPLAY
+    /* Ours to the other player; theirs, when it comes, is added to these files -- unless
+     * it was here first and they have it already. */
+    if (!rc && own) {
+        MatchPrediction_Offer(s_pred.player, own);
+        if (c.prediction[2 - s_pred.player])
+            s_pred.nWritten = 0;
+    }
+#endif
     free(file);
     if (rc)
         fprintf(stderr, "[replay] the match could not be saved\n");
@@ -761,7 +869,18 @@ static struct {
     AudioEvent *audio;
     uint32_t    audioCount;
     uint32_t    cursor, audioCursor;
+    /* What each player saw (PRED, SEEN), when the recording has it. */
+    uint8_t    *pred;           /* 2 a frame, SRP_PRED_* plus the PLAY_PRED_* found on load */
+    uint8_t    *seen;           /* SEEN's records */
+    uint32_t    seenLen;
+    uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
 } s_play;
+
+/* Worked out on load, never in a file: this frame was DRAWN wrong for that player -- one
+ * of the guesses it was drawn on was not the input that came, or SEEN has it somewhere
+ * else. */
+#define PLAY_PRED_WRONG     0x40u
+#define PLAY_PRED_SEEN      0x80u
 
 void ReplayV2_Unload(void)
 {
@@ -769,6 +888,9 @@ void ReplayV2_Unload(void)
     free(s_play.frms);
     free(s_play.offsets);
     free(s_play.audio);
+    free(s_play.pred);
+    free(s_play.seen);
+    free(s_play.seenAt);
     memset(&s_play, 0, sizeof s_play);
 }
 
@@ -904,6 +1026,69 @@ static void apply_meta(const uint8_t *m)
     _hilNumGoals = 1;
 }
 
+/* PRED and SEEN, if the file has them; a file without plays exactly as before. */
+static void load_prediction(const uint8_t *file, uint32_t fileLen)
+{
+    uint32_t predLen = 0, seenLen = 0, inLen = 0, n = s_play.frameCount, f, at, i;
+    uint8_t *pred = chunk_get(file, fileLen, CHUNK_PRED, &predLen);
+    uint8_t *seen = chunk_get(file, fileLen, CHUNK_SEEN, &seenLen);
+    uint8_t *in = chunk_get(file, fileLen, CHUNK_INPT, &inLen);
+
+    if (pred && predLen >= SRP_PRED_HEAD + 2 * n && BE_READ_U16(pred) == SRP_PRED_VERSION &&
+        BE_READ_U32(pred + 4) == n && (s_play.pred = (uint8_t *)malloc(2 * n + 1)) != NULL) {
+        memcpy(s_play.pred, pred + SRP_PRED_HEAD, 2 * n);
+        /* Drawn wrong: GGPO guessed the other player's input at f - lag for every frame
+         * after it, and INPT has what it really was. */
+        if (in && inLen == n * SRP_INPUT_BYTES) {
+            for (f = 0; f < n; f++) {
+                for (i = 0; i < 2; i++) {
+                    uint8_t *b = &s_play.pred[2 * f + i];
+                    uint32_t lag, k, other = (1 - i) * 2;
+                    const uint8_t *guess;
+                    static const uint8_t none[2];
+                    if (*b == SRP_PRED_UNKNOWN)
+                        continue;
+                    lag = *b & SRP_PRED_LAG;
+                    guess = lag <= f ? in + (f - lag) * SRP_INPUT_BYTES + other : none;
+                    for (k = lag <= f ? f + 1 - lag : 0; lag && k <= f; k++)
+                        if (memcmp(in + k * SRP_INPUT_BYTES + other, guess, 2) != 0) {
+                            *b |= PLAY_PRED_WRONG;
+                            break;
+                        }
+                }
+            }
+        }
+    }
+    if (seen && seenLen >= SRP_SEEN_HEAD && BE_READ_U16(seen) == SRP_SEEN_VERSION &&
+        (s_play.seenAt = (uint32_t *)malloc((size_t)(n + 1) * sizeof(uint32_t))) != NULL) {
+        /* Index it by frame, checking every record fits and they are in order. */
+        s_play.seen = seen;
+        s_play.seenLen = seenLen;
+        seen = NULL;
+        at = SRP_SEEN_HEAD;
+        for (f = 0; f <= n; f++) {
+            s_play.seenAt[f] = at;
+            while (f < n && at + SRP_SEEN_REC_HEAD <= s_play.seenLen &&
+                   BE_READ_U32(s_play.seen + at) == f) {
+                uint32_t len = SRP_SEEN_REC_HEAD + (uint32_t)s_play.seen[at + 5] * SRP_SEEN_OBJ_BYTES;
+                uint8_t who = s_play.seen[at + 4];
+                if (at + len > s_play.seenLen)
+                    break;
+                if (s_play.pred && (who == 1 || who == 2) &&
+                    s_play.pred[2 * f + who - 1] != SRP_PRED_UNKNOWN)
+                    s_play.pred[2 * f + who - 1] |= PLAY_PRED_SEEN;
+                at += len;
+            }
+        }
+    }
+    if (s_play.pred || s_play.seenAt)
+        fprintf(stderr, "[replay] what each player saw: %s%s\n", s_play.pred ? "PRED" : "",
+                s_play.seenAt ? (s_play.pred ? " and SEEN" : "SEEN") : "");
+    free(pred);
+    free(seen);
+    free(in);
+}
+
 int32_t ReplayV2_Load(const uint8_t *name)
 {
     uint32_t fileLen = 0, metaLen = 0, audioLen = 0, i, off;
@@ -966,6 +1151,8 @@ int32_t ReplayV2_Load(const uint8_t *name)
         }
     }
     free(audio);
+    if (!why)
+        load_prediction(file, fileLen);
 
     if (why) {
         fprintf(stderr, "[replay] %s: %s\n", (const char *)name, why);
@@ -1058,6 +1245,145 @@ EMSCRIPTEN_KEEPALIVE void ReplayV2_PlayerStep(int32_t delta)
 {
     s_player.paused = 1;
     ReplayV2_PlayerSeek(ReplayV2_PlayerFrame() + delta);
+}
+
+/* ---- what each player saw, drawn over the recording (PRED and SEEN) ----
+ *
+ * The overlay shows, for the chosen player(s), every object drawn somewhere other than
+ * where the match finally had it: a line from where it really was to where that player's
+ * screen showed it, a box on the drawn spot, and the drawn spot's trail over the frames
+ * before -- so a rollback reads as a ghost that ran off and snapped back. Player 1 (the
+ * host, the top team) in yellow, player 2 in white. Along the bottom-left, a bar per
+ * player: its length the frame's lag, red when it drew something that did not happen. */
+static int32_t s_overlay = 3;       /* bit 0 player 1's view, bit 1 player 2's */
+
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPrediction(void)
+{
+    return (s_play.pred ? 1 : 0) | (s_play.seenAt ? 2 : 0);
+}
+/* The frame's two bytes -- player 1's in the low byte -- or -1 without PRED. */
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPredAt(int32_t frame)
+{
+    if (!s_play.pred || frame < 0 || (uint32_t)frame >= s_play.frameCount)
+        return -1;
+    return s_play.pred[2 * frame] | (s_play.pred[2 * frame + 1] << 8);
+}
+/* All of it, for the page's timeline: 2 bytes a frame, as ReplayV2_PlayerPredAt. */
+EMSCRIPTEN_KEEPALIVE uint8_t *ReplayV2_PlayerPredData(void) { return s_play.pred; }
+/* Which views the overlay draws (bit 0 player 1, bit 1 player 2); -1 only asks. */
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerOverlay(int32_t mode)
+{
+    if (mode >= 0)
+        s_overlay = mode & 3;
+    return s_overlay;
+}
+
+static void plot(int32_t x, int32_t y, uint8_t colour)
+{
+    extern volatile uintptr_t _frontbufferBasePtr;
+    uint8_t *fb = (uint8_t *)(uintptr_t)_frontbufferBasePtr;
+    if (fb && x >= 0 && y >= 0 && x < _screen_width && y < _screen_height)
+        fb[(size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + x] = colour;
+}
+
+static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t colour)
+{
+    int32_t dx = x1 > x0 ? x1 - x0 : x0 - x1, sx = x0 < x1 ? 1 : -1;
+    int32_t dy = y1 > y0 ? y0 - y1 : y1 - y0, sy = y0 < y1 ? 1 : -1;
+    int32_t err = dx + dy, guard = 2048;
+    for (;;) {
+        int32_t e2;
+        plot(x0, y0, colour);
+        if ((x0 == x1 && y0 == y1) || --guard == 0)
+            break;
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+/* Where object `obj` was drawn on frame `f` for player `who`, from SEEN: 1 found. */
+static int32_t seen_drawn(uint32_t f, uint8_t who, uint8_t obj, int16_t *x, int16_t *y)
+{
+    uint32_t at = s_play.seenAt[f], end = s_play.seenAt[f + 1];
+    while (at < end) {
+        const uint8_t *r = s_play.seen + at;
+        uint32_t n = r[5], i;
+        if (r[4] == who)
+            for (i = 0; i < n; i++) {
+                const uint8_t *o = r + SRP_SEEN_REC_HEAD + i * SRP_SEEN_OBJ_BYTES;
+                if (o[0] == obj) {
+                    *x = (int16_t)BE_READ_U16(o + 1);
+                    *y = (int16_t)BE_READ_U16(o + 3);
+                    return 1;
+                }
+            }
+        at += SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+    }
+    return 0;
+}
+
+static void draw_prediction(uint32_t f, int16_t origin, int16_t camY)
+{
+    enum { TRAIL = 8 };
+    uint8_t colour[2], red;
+    uint32_t at, end;
+    int32_t who;
+
+    if (!s_player.on || !s_overlay || (!s_play.pred && !s_play.seenAt))
+        return;
+    colour[0] = Platform_NearestColour(255, 230, 0);
+    colour[1] = Platform_NearestColour(255, 255, 255);  /* the palette has no cyan to speak of */
+    red = Platform_NearestColour(255, 40, 40);
+    if (s_play.seenAt) {
+        at = s_play.seenAt[f];
+        end = s_play.seenAt[f + 1];
+        while (at < end) {
+            const uint8_t *r = s_play.seen + at;
+            uint32_t n = r[5], i;
+            who = r[4];
+            at += SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+            if (who < 1 || who > 2 || !(s_overlay & (1 << (who - 1))))
+                continue;
+            for (i = 0; i < n; i++) {
+                const uint8_t *o = r + SRP_SEEN_REC_HEAD + i * SRP_SEEN_OBJ_BYTES;
+                int32_t dx = (int16_t)BE_READ_U16(o + 1) - origin, dy = (int16_t)BE_READ_U16(o + 3) - camY;
+                int32_t fx = (int16_t)BE_READ_U16(o + 5) - origin, fy = (int16_t)BE_READ_U16(o + 7) - camY;
+                uint8_t c = colour[who - 1];
+                int32_t k, px = dx, py = dy;
+                /* The drawn spot's trail, back through the frames it was also misdrawn. */
+                for (k = 1; k < TRAIL && (uint32_t)k <= f; k++) {
+                    int16_t tx, ty;
+                    if (!seen_drawn(f - (uint32_t)k, (uint8_t)who, o[0], &tx, &ty))
+                        break;
+                    line(px, py, tx - origin, ty - camY, c);
+                    px = tx - origin;
+                    py = ty - camY;
+                }
+                line(fx, fy, dx, dy, c);
+                line(dx - 2, dy - 2, dx + 2, dy - 2, c);
+                line(dx + 2, dy - 2, dx + 2, dy + 2, c);
+                line(dx + 2, dy + 2, dx - 2, dy + 2, c);
+                line(dx - 2, dy + 2, dx - 2, dy - 2, c);
+                plot(fx, fy, red);
+            }
+        }
+    }
+    if (s_play.pred) {
+        for (who = 1; who <= 2; who++) {
+            uint8_t b = s_play.pred[2 * f + who - 1];
+            int32_t y = _screen_height - 10 + (who - 1) * 4, len, x;
+            if (!(s_overlay & (1 << (who - 1))) || b == SRP_PRED_UNKNOWN)
+                continue;
+            len = (b & SRP_PRED_LAG) * 6;
+            for (x = 0; x < len; x++) {
+                plot(4 + x, y, (b & PLAY_PRED_SEEN) ? red : colour[who - 1]);
+                plot(4 + x, y + 1, (b & PLAY_PRED_SEEN) ? red : colour[who - 1]);
+            }
+            plot(2, y, colour[who - 1]);
+            plot(2, y + 1, colour[who - 1]);
+        }
+    }
 }
 
 void ReplayV2_DrawFrame(void)
@@ -1169,6 +1495,8 @@ void ReplayV2_DrawFrame(void)
                 trace_sprite(g->ordinal, (int16_t)(blitX + _menu_draw_x_offset), sy);
         }
     }
+
+    draw_prediction(s_play.cursor, origin, camY);
 
     while (fresh && s_play.audioCursor < s_play.audioCount &&
            s_play.audio[s_play.audioCursor].frame <= s_play.cursor)

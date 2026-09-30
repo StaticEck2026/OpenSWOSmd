@@ -206,6 +206,8 @@ bool Recorder::Handle(Connection& c, uint8_t type, const uint8_t* p, uint32_t le
         OnReplayScore(c, p, len);
     else if (type == RECORD_REPLAY_RESUME)
         OnReplayResume(c, p, len);
+    else if (type == RECORD_REPLAY_PRED)
+        OnReplayPred(c, p, len);
     // Anything newer than us is skipped: a player may be a later build.
     c.match->lastMs = ServerTime::NowMs();
     return true;
@@ -433,6 +435,23 @@ void Recorder::OnReplayResume(Connection& c, const uint8_t* p, uint32_t len)
     s.resume = !s.setup.empty() && !s.kickoff.empty();
 }
 
+// A player's half of PRED and SEEN, batch by batch, in order. A batch that does not
+// follow on is dropped: the file keeps what arrived whole.
+void Recorder::OnReplayPred(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 6)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    uint32_t first = Record_Get32(p), count = Record_Get16(p + 4);
+    if (first != s.pred.size() || 6 + count + 4 > len)
+        return;
+    uint32_t seenLen = Record_Get32(p + 6 + count);
+    if (6 + count + 4 + (uint64_t)seenLen != len)
+        return;
+    s.pred.insert(s.pred.end(), p + 6, p + 6 + count);
+    s.seen.insert(s.seen.end(), p + 10 + count, p + len);
+}
+
 void Recorder::OnReplayScore(Connection& c, const uint8_t* p, uint32_t len)
 {
     if (len < 4)
@@ -490,6 +509,19 @@ void Recorder::WriteReplay(Match& m, bool last)
         c.layout = s->layout;
         c.rules = s->rules;
         c.simWidth = s->resumeSimWidth;
+    }
+    // What each player saw, from each player's own stream: both halves in one file.
+    SrpPrediction halves[2];
+    for (int i = 0; i < 2; i++)
+    {
+        const Side& h = m.side[i];
+        if (h.pred.empty())
+            continue;
+        halves[i].pred = h.pred.data();
+        halves[i].predFrames = (uint32_t)h.pred.size();
+        halves[i].seen = h.seen.data();
+        halves[i].seenLen = (uint32_t)h.seen.size();
+        c.prediction[i] = &halves[i];
     }
     uint32_t len = 0;
     uint8_t* file = Srp_Build(&c, &len);

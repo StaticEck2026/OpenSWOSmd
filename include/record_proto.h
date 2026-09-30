@@ -89,6 +89,15 @@
  *  12  4  the setup's length
  *  16     the setup (NetplaySetup_Encode), then the kick-off state (a state_wire packet)
  * The per-frame hashes HASH holds are RECORD_FRAMES', the low half of each.
+ *
+ * RECORD_REPLAY_PRED, with each RECORD_REPLAY_FRAMES when the player keeps what it SAW
+ * ([netplay] prediction) -- its own half of PRED and SEEN (include/srp_writer.h). The
+ * recorder puts both players' halves in the file; an older recorder skips the message.
+ *   0  4  first frame (the batch's)
+ *   4  2  count
+ *   6     count PRED bytes
+ *         then 4 bytes: the SEEN bytes that follow, and this player's SEEN records for
+ *         those frames, as the chunk holds them
  */
 #ifndef RECORD_PROTO_H
 #define RECORD_PROTO_H
@@ -108,6 +117,7 @@
 #define RECORD_REPLAY_FRAMES 5
 #define RECORD_REPLAY_SCORE  6
 #define RECORD_REPLAY_RESUME 7
+#define RECORD_REPLAY_PRED   8
 
 #define RECORD_MODE_HASHES   0     /* the frames' hashes: enough to find a desync */
 #define RECORD_MODE_FULL     1     /* ... and the match itself, as a .SRP */

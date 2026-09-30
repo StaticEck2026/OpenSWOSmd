@@ -57,6 +57,13 @@
         });
         msg.textContent = items.length ? '' : 'No recordings on the server.';
       }
+      // Bytes, or nginx's own "942K" / "1.2M" when the server lists sizes that way
+      // (autoindex_exact_size off, as us.swos.eu does): shown as they come.
+      function sizeText(s) {
+        if (!s) return '';
+        if (!/^\d+$/.test(s)) return s.replace(/([KMG])$/, ' $1B');
+        return +s > 1e6 ? (s / 1e6).toFixed(1) + ' MB' : Math.round(s / 1e3) + ' KB';
+      }
       document.getElementById('filter').addEventListener('input', render);
       // nginx's autoindex: one <a href="NAME"> per file, then its date and size on the line.
       fetch(base, { cache: 'no-store' }).then(function (r) {
@@ -65,8 +72,7 @@
       }).then(function (html) {
         var re = /<a href="([^"]+\.SRP)">[^<]*<\/a>\s*(\S+\s+\S+)?\s*(\S+)?/gi, m;
         while ((m = re.exec(html)) !== null)
-          items.push({ name: decodeURIComponent(m[1]), size: m[3] ? (+m[3] > 1e6 ? (m[3] / 1e6).toFixed(1) + ' MB' :
-                                                                        Math.round(m[3] / 1e3) + ' KB') : '' });
+          items.push({ name: decodeURIComponent(m[1]), size: sizeText(m[3]) });
         items.sort(function (a, b) { return a.name < b.name ? 1 : -1; });   // names start with the date
         render();
       }).catch(function (e) { msg.textContent = 'Could not read ' + base + ': ' + e.message; });

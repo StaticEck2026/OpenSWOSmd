@@ -42,6 +42,7 @@ void MatchRecord_SetConfigured(const char *spec)
 #include "record_proto.h"
 #include "replay_v2.h"      /* ReplayRec_Content: the .SRP being recorded */
 #include "srp_writer.h"
+#include "netplay_ghost.h"  /* Ghost_PredByte / Ghost_SeenRecord: RECORD_REPLAY_PRED */
 
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0          /* macOS: SO_NOSIGPIPE on the socket instead */
@@ -390,6 +391,45 @@ static void send_replay(const SrpContent *c, uint32_t from, uint32_t to)
     s_rec.replayFrames += to - from + 1;
 }
 
+/* This player's PRED bytes and SEEN records for frames `from`..`to`, confirmed, so final. */
+static void send_pred(uint32_t from, uint32_t to)
+{
+    uint32_t count = to - from + 1, cap = 10 + count + 1024, len, f;
+    uint8_t *buf = (uint8_t *)malloc(cap), *p;
+    uint8_t rec[SRP_SEEN_REC_HEAD + SRP_SEEN_OBJECTS * SRP_SEEN_OBJ_BYTES];
+
+    if (!buf) {
+        drop("out of memory");
+        return;
+    }
+    Record_Put32(buf, from);
+    Record_Put16(buf + 4, count);
+    for (f = from; f <= to; f++)
+        buf[6 + f - from] = Ghost_PredByte(f);
+    len = 10 + count;
+    for (f = from; f <= to; f++) {
+        uint32_t n = Ghost_SeenRecord(f, rec);
+        if (!n)
+            continue;
+        if (len + n > cap) {
+            uint8_t *grown = (uint8_t *)realloc(buf, cap * 2 + n);
+            if (!grown) {
+                free(buf);
+                drop("out of memory");
+                return;
+            }
+            buf = grown;
+            cap = cap * 2 + n;
+        }
+        memcpy(buf + len, rec, n);
+        len += n;
+    }
+    p = buf + 6 + count;
+    Record_Put32(p, len - 10 - count);
+    hold_message(RECORD_REPLAY_PRED, buf, len);
+    free(buf);
+}
+
 void MatchRecord_Replay(uint32_t confirmed)
 {
     SrpContent c;
@@ -442,7 +482,10 @@ void MatchRecord_Replay(uint32_t confirmed)
     last = confirmed < c.frameCount - 1 ? confirmed : c.frameCount - 1;
     while (s_rec.replayNext <= last && s_rec.sock >= 0) {
         uint32_t to = s_rec.replayNext + 255 < last ? s_rec.replayNext + 255 : last;
-        send_replay(&c, s_rec.replayNext, to);
+        uint32_t from = s_rec.replayNext;
+        send_replay(&c, from, to);
+        if (s_rec.sock >= 0 && ReplayRec_PredictionKept())
+            send_pred(from, to);
     }
 }
 

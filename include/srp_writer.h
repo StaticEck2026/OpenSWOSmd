@@ -39,6 +39,10 @@ extern "C" {
 #define CHUNK_STAT          FOURCC('S', 'T', 'A', 'T')     /* the state at frame 0 (state_wire.c) */
 #define CHUNK_INPT          FOURCC('I', 'N', 'P', 'T')     /* both players' input, every frame */
 #define CHUNK_HASH          FOURCC('H', 'A', 'S', 'H')     /* each frame's SIM-tier hash, at its start */
+/* What each player SAW of a netplay match (docs/REPLAY_FORMAT_V2.md §4, "Prediction"):
+ * optional, and a file plays the same without them. */
+#define CHUNK_PRED          FOURCC('P', 'R', 'E', 'D')     /* per frame, per player: the lag, rollbacks */
+#define CHUNK_SEEN          FOURCC('S', 'E', 'E', 'N')     /* where players were drawn, where they were */
 
 #define FRAME_HEAD_BYTES    20      /* count, camera x/y (16.16), goals, crowd, minute, flags */
 #define SPRITE_BYTES        6       /* image, world x, world y */
@@ -49,6 +53,38 @@ extern "C" {
 #define SRP_HASH_BYTES      4       /* the low half of the frame's 64-bit SIM hash */
 #define SRP_SIMV_BYTES      16      /* version, rules, pad, layout hash, sim width, pad */
 #define SRP_SIMV_VERSION    1
+
+/* PRED: a byte per player per frame. The low four bits are the LAG -- how many of the
+ * other player's inputs up to this frame were guesses when this player first played it
+ * (0: it was drawn from real input). GGPO-X guesses by repeating the last input it had,
+ * so the guess for frame f is that player's input at frame f - lag, and INPT says what it
+ * really was. */
+#define SRP_PRED_VERSION    1
+#define SRP_PRED_HEAD       8       /* version, 0, frame count */
+#define SRP_PRED_LAG        0x0Fu
+#define SRP_PRED_STALLED    0x10u   /* held at GGPO's prediction limit before it was played */
+#define SRP_PRED_REPLAYED   0x20u   /* a rollback played it again */
+#define SRP_PRED_UNKNOWN    0xFFu   /* this player's data never reached the file */
+/* SEEN: records sorted by frame, then player -- frame (4), player (1), count (1), then
+ * `count` objects of SRP_SEEN_OBJ_BYTES: which (0-10 the top team's players, 11-21 the
+ * bottom team's, 22 the ball), then drawn x, drawn y, final x, final y (int16, world
+ * pixels; the ball's y is where it is seen, less its height). Only objects drawn
+ * somewhere other than where the match finally had them. */
+#define SRP_SEEN_VERSION    1
+#define SRP_SEEN_HEAD       8       /* version, 0, record count */
+#define SRP_SEEN_REC_HEAD   6
+#define SRP_SEEN_OBJ_BYTES  9
+#define SRP_SEEN_OBJECTS    23
+#define SRP_SEEN_BALL       22
+
+/* One player's half of PRED and SEEN, as that player's game knows it: a byte for each of
+ * frames 0..predFrames-1, and its own SEEN records laid out as in the chunk, by frame. */
+typedef struct SrpPrediction {
+    const uint8_t *pred;
+    uint32_t       predFrames;
+    const uint8_t *seen;
+    uint32_t       seenLen;
+} SrpPrediction;
 
 /* Where in META the final score sits: filled in when the match is over. */
 #define SRP_META_SCORE_OFF  (2 + 2 + 2 + 2 + 4 + 32)
@@ -91,11 +127,23 @@ typedef struct SrpContent {
     uint64_t             layout;        /* SimState_LayoutHash of the recording build */
     uint8_t              rules;         /* P2P_RULE_*: what it was played by */
     uint16_t             simWidth;      /* the simulation draw width it was played at */
+
+    /* What each player saw (PRED, SEEN): [0] player 1's, [1] player 2's, NULL for a half
+     * this file does not have. Both NULL: neither chunk. */
+    const SrpPrediction *prediction[2];
 } SrpContent;
 
 /* The whole file, malloc'd, or NULL when memory ran out. The parts are copied, never
  * taken. */
 uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen);
+
+/* A .SRP built by Srp_Build, with its PRED and SEEN replaced by these halves (either may
+ * be NULL) and every other chunk kept byte for byte: the same file Srp_Build would have
+ * made had it been given them. How a player's game adds the other player's half after the
+ * match (the lobby's link carries it), so its LATEST.SRP stays the recorder's copy. NULL
+ * when `file` is not one, or memory ran out. */
+uint8_t *Srp_WithPrediction(const uint8_t *file, uint32_t fileLen, const SrpPrediction *p1,
+                            const SrpPrediction *p2, uint32_t *outLen);
 
 #ifdef __cplusplus
 }

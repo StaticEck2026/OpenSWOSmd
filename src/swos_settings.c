@@ -157,6 +157,10 @@ static int handler(void *user, const char *section,
             int b;
             if (parse_bool(value, &b))
                 opts->reports = b;
+        } else if (eqi(name, "prediction")) {
+            int b;
+            if (parse_bool(value, &b))
+                opts->prediction = b;
         }
     } else if (eqi(section, "graphics")) {
         int b;
@@ -373,6 +377,12 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; HOW WAS THE MATCH? to the other player and the server, zipped (a copy is kept in\n"
         "; save/netplay either way). false: nothing leaves this machine.",
         opts->reports ? "true" : "false" };
+    items[n++] = (IniEntry){ "netplay", "prediction",
+        "; prediction: true | false -- keep what each player SAW of an online match in its\n"
+        "; replay: how many of the other player's inputs were guesses on each frame, the\n"
+        "; rollbacks, and where players were drawn against where they really were. The\n"
+        "; playback page shows it (docs/PLAYBACK.md). A replay plays the same without it.",
+        opts->prediction ? "true" : "false" };
 
 
     items[n++] = (IniEntry){ "graphics", "style",

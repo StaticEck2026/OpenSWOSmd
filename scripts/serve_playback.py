@@ -38,6 +38,12 @@ def main():
     ap.add_argument("--player", default=os.path.join(ROOT, "dist", "playback"))
     ap.add_argument("--recordings", default=os.path.join(ROOT, "build", "recordings"))
     args = ap.parse_args()
+    # A relative folder is looked for where you are, then in the repository -- the .bat
+    # is usually run from somewhere else, and `build\recordings-pred` means the repo's.
+    for name in ("player", "recordings"):
+        path = getattr(args, name)
+        if not os.path.isabs(path) and not os.path.isdir(path) and os.path.isdir(os.path.join(ROOT, path)):
+            setattr(args, name, os.path.join(ROOT, path))
 
     if not os.path.isfile(os.path.join(args.player, "SWOS.wasm")):
         sys.exit("serve_playback: no player in %s -- build it first:\n"
@@ -124,7 +130,23 @@ def main():
             self.end_headers()
 
     n = sum(1 for f in os.listdir(args.recordings) if f.upper().endswith(".SRP"))
-    srv = http.server.ThreadingHTTPServer((args.bind, args.port), Handler)
+    class Server(http.server.ThreadingHTTPServer):
+        # On Windows SO_REUSEADDR lets a second server bind a port the first still holds,
+        # and the browser then talks to whichever Windows picks -- an old one serving
+        # another folder. Take the port exclusively there, so a busy port is an error.
+        allow_reuse_address = os.name != "nt"
+
+        def server_bind(self):
+            import socket
+            if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            super().server_bind()
+
+    try:
+        srv = Server((args.bind, args.port), Handler)
+    except OSError as e:
+        sys.exit("serve_playback: cannot listen on %s:%d (%s) -- is another one still running? "
+                 "Close it, or pick another port with --port" % (args.bind, args.port, e.strerror or e))
     print("serve_playback: http://%s:%d/playback/  -- %d recording(s) from %s  (Ctrl+C to stop)"
           % ("127.0.0.1" if args.bind in ("0.0.0.0", "") else args.bind, args.port, n, args.recordings))
     try:

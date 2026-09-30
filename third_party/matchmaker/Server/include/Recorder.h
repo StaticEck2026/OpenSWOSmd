@@ -74,6 +74,8 @@ private:
         uint16_t resumeSimWidth = 0;
         std::vector<uint8_t> setup, kickoff, inputs;   // inputs: SRP_INPUT_BYTES a frame
         bool inputsBroken = false;              // a batch came without its inputs
+        // What this player SAW (RECORD_REPLAY_PRED): its half of PRED and SEEN.
+        std::vector<uint8_t> pred, seen;
     };
     struct Match
     {
@@ -104,6 +106,7 @@ private:
     void OnEnd(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayMeta(Connection& c, const uint8_t* p, uint32_t len);
     bool OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len);
+    void OnReplayPred(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayScore(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayResume(Connection& c, const uint8_t* p, uint32_t len);
     void WriteReplay(Match& m, bool last);
