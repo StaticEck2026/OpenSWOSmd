@@ -150,6 +150,63 @@ both peers took turns believing they were ahead and slowing.)
 **Even on average, but not steady**: every 10–20 s the whole lag still swings to one side.
 The balance equalises the long-run split without holding it.
 
+## Prior art: Fightcade (`fightcade-snes9x`)
+
+Fightcade's Snes9x fork (`D:\Projects\GitHub\fightcade-snes9x`, commit `d56c95d`) runs on the
+original, closed GGPO (`ggponet.dll`), and does its own pacing — "rift balancing" — in about
+25 lines of `src/win32/ggpo/ggpo.cpp` (`QuarkIncrementFrame`) and `src/win32/wsnes9x.cpp`
+(`ProcessFrameDelay`, and the frame loop that calls it). What it does:
+
+1. **It ignores GGPO's time sync entirely.** `case GGPO_EVENTCODE_TIMESYNC: // GGPO timesync is
+   bad` — nothing else. Every correction comes from its own loop (our prototype did the same,
+   gating GGPO's corrections while its own reports were fresh).
+2. **It measures after every frame, from GGPO's stats.** `ggpo_get_stats` gives
+   `timesync.local_frames_behind` and `remote_frames_behind` (integers: how many frames this
+   peer, and the other, believes it is behind). A rolling average over the last **90 frames**
+   of `local - remote`, halved, is the "rift" — in thousandths of a frame
+   (`FramesBehind.average * 1000 / 2`). Using the DIFFERENCE of the two peers' own views, halved,
+   cancels any bias the two share — the same formula as GGPO-X's
+   `recommend_frame_wait_duration`.
+3. **It acts at most once a second, and only past a frame.** `if (abs(rift) > 1000)` and one
+   second since the last correction; the rift is clamped to ±5 frames.
+4. **Both peers act — in opposite directions.** "one to go slightly faster, the other slightly
+   slower! win win": `ProcessFrameDelay(-rift)`:
+   - the peer **ahead** delays its next frame once, by the rift in milliseconds
+     (`nFrameLast += ms`, `ms = thousandths / 60`: one frame of rift = ~16.7 ms at 60 fps);
+   - the peer **behind** runs extra frames at once, unshown, to catch up (`nSkipFrames =
+     2 * rift / 1000`, played back to back before the next shown frame).
+5. **Its frame loop** is a plain 60 fps accumulator: `ggpo_idle(ggpo, 1)` on every pass while
+   waiting for the next frame's time, one `ProcessFrame` (input, `S9xMainLoop`,
+   `ggpo_advance_frame`, then the rift check) per 16.7 ms, catching up to 10 frames if late.
+
+What that means for us:
+
+- **Its signal is GGPO's own estimate**, so it corrects a CLOCK drift or a rift between the
+  machines, but would not see the asymmetric-path split this doc is about: original GGPO
+  estimates the remote frame the same way (last input + half the round trip). Fightcade
+  players on a lopsided route would get the same one-sided guessing. For the split, our
+  measured lag (PRED's figure, exchanged) is still the signal to use.
+- **Its structure is what ours lacked, and is the dial-in:**
+  - a **rolling** average over 90 frames, updated every frame — not a 100-frame block
+    compared against the other peer's previous block, which is what made our two peers
+    believe in turn that they were ahead;
+  - a **deadband of a whole frame** (ours acted from half a frame) and **at most one
+    correction a second**, which is what keeps it from hunting;
+  - **both sides move**, so each needs only half the correction. Note that its "behind" side
+    runs `2 * rift` frames and its "ahead" side waits `rift`, so together they correct 1.5x
+    the rift each time — an overshoot its rate limit and long average absorb. Ours should
+    split it evenly: the peer guessing more waits a quarter of the lag difference, the other
+    catches up a quarter.
+  - Catching up by **running frames unshown** is cheap in an emulator. Ours would do it by
+    shortening the frame limiter's next waits (`Platform_DelayNextFrame` with a credit), not by
+    skipping presents, so the picture stays smooth.
+- **So, for the next attempt:** our lag signal, Fightcade's controller. Per frame, each peer
+  keeps a 90-frame rolling average of its own lag; it sends the average every second (chat
+  `SWLAG`, tagged with the frame it ends at); on receiving the other's, it compares it with
+  its OWN average ending at the same frame; if `|mine - theirs| / 2` is over one frame, the
+  one guessing more waits a quarter of the difference, the other speeds up a quarter; at most
+  once a second. Then test against the emulated lopsided link (above) and look for the swing.
+
 ## What to try next
 
 - **Compare like with like.** The two averages are from different windows: ours is fresh,
