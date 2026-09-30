@@ -418,7 +418,18 @@ bool Recorder::OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len)
         s.inputs.insert(s.inputs.end(), p + at, p + at + nInputs * SRP_INPUT_BYTES);
     else if (count)
         s.inputsBroken = true;
-    if (s.offsets.size() - s.writtenFrames >= kCheckpointFrames)
+    // A checkpoint when the stream the file is WRITTEN from has grown enough -- player 1's
+    // when it has one (WriteReplay). Checking the arriving stream instead fired on every
+    // batch of the other one once it passed 3000 frames, since only the writer's count
+    // moves: with both players streaming (recording on by default since 2026-09-30) the
+    // server rebuilt and deflated the whole file many times a second, stopped answering the
+    // matchmaker ("NO ANSWER FROM SERVER"), fell behind the second stream and never closed
+    // the match.
+    const Side* writer = nullptr;
+    for (int i = 0; i < 2 && !writer; i++)
+        if (c.match->side[i].replay && !c.match->side[i].offsets.empty())
+            writer = &c.match->side[i];
+    if (writer == &s && s.offsets.size() - s.writtenFrames >= kCheckpointFrames)
         WriteReplay(*c.match, false);
     return true;
 }
