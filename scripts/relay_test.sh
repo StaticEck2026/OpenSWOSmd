@@ -214,6 +214,14 @@ jn=$(grep -c "live match finished" "$OUT/join.log")
 echo "host: $hn finished, hashes $hh"
 echo "join: $jn finished, hashes $jh"
 
+# One clock tick a frame, as on the Amiga: every online match until 2026-09-29 counted
+# two (NetplayMatch_OwnsClock), and no test could see it -- they all run under the rig's
+# clock. The tick at the end must be the frame, give or take the one being finished.
+clock_ok=1
+while read -r tick frame; do
+    d=$((tick - frame)); [ "${d#-}" -le 2 ] || { echo "!! the match clock ran $tick ticks in $frame frames"; clock_ok=0; }
+done < <(grep -hoE "clock: tick [0-9]+ at frame [0-9]+" "$OUT/host.log" "$OUT/join.log" | awk '{print $3, $6}')
+
 # The ledger. Relayed: one session, linked, packets forwarded each way. Recorded: a
 # "match" line per match with both players' streams -- and either every frame agreeing
 # and the same final hash, or (DESYNC_FRAME) a desync found at exactly the next frame.
@@ -365,7 +373,7 @@ if [ -n "$DESYNC_FRAME" ]; then
         echo "relay-test: PASSED — the desync at frame $DESYNC_FRAME was caught by the recorder at frame $((DESYNC_FRAME + 1)) (logs in $OUT)"
         exit 0
     fi
-elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$resim_ok" = 1 ] && [ "$reports_ok" = 1 ] &&
+elif [ "$fail" = 0 ] && [ "$clock_ok" = 1 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$resim_ok" = 1 ] && [ "$reports_ok" = 1 ] &&
      [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] &&
    [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
     echo "relay-test: PASSED — $what, both peers identical (logs in $OUT)"

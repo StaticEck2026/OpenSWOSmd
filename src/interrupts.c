@@ -240,8 +240,10 @@ void _Int3TimerHandler(void)
      * the ball-control speed bonus in ball_possession.c, currentGameTick gates
      * most of the AI's phase decisions), so a replay would not reproduce. The
      * rig takes both over and advances them itself, once per frame. */
-    { extern int ReplayTest_OwnsGameTick(void);
-      if (!ReplayTest_OwnsGameTick()) _currentTick++; }
+    /* ...and a netplay match's frame step, which advances them itself and then runs
+     * this (NetplayMatch_OwnsClock: until 2026-09-29 an online match counted two). */
+    { extern int ReplayTest_OwnsGameTick(void); extern int32_t NetplayMatch_OwnsClock(void);
+      if (!ReplayTest_OwnsGameTick() && !NetplayMatch_OwnsClock()) _currentTick++; }
 #else
     _currentTick++;
 #endif
@@ -268,8 +270,8 @@ void _Int3TimerHandler(void)
     if (_paused == 0 && (_gDosGameplay || _showingUserStats == 0))
     {
 #ifdef SWOS_SDL_BUILD
-        { extern int ReplayTest_OwnsGameTick(void);
-          if (!ReplayTest_OwnsGameTick()) _currentGameTick++; }
+        { extern int ReplayTest_OwnsGameTick(void); extern int32_t NetplayMatch_OwnsClock(void);
+          if (!ReplayTest_OwnsGameTick() && !NetplayMatch_OwnsClock()) _currentGameTick++; }
 #else
         _currentGameTick++;
 #endif

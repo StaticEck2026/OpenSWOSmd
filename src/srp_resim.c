@@ -139,6 +139,11 @@ void SrpResim_Run(void)
     ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
     InitTeams();
     ReplayRec_Suppress(1);          /* a re-simulation is not a match to keep */
+    /* Played before the netplay step owned the clocks: two ticks a frame, as then. */
+    if (!(s_rec.rules & P2P_RULE_ONE_TICK)) {
+        NetplayMatch_SetLegacyDoubleClock(1);
+        printf("[resim] recorded with the old double clock (two ticks a frame); replayed the same way\n");
+    }
     NetplaySetup_ArmTieRules(1);    /* a cup tie is settled as it was live */
 
     if (NetplayMatch_StartResim(s_rec.kickoff, s_rec.kickoffLen, s_rec.inputs, s_rec.hashes,

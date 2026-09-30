@@ -105,8 +105,8 @@ unless `SWOS_RATE_MATCH=1`, so their reports carry no rating.
 
 Every report also carries each player's ghost windows (`ghost_player1.csv`,
 `ghost_player2.csv`): what that player's screen drew against the match as played, around
-every G-mark and the worst detected ghosts. docs/NETPLAY_GHOSTING.md has what they are,
-the G key, and `scripts/ghost_view.py`, which draws them.
+the worst detected ghosts. docs/NETPLAY_GHOSTING.md has what they are, and
+`scripts/ghost_view.py`, which draws them.
 
 ## Still to do
 

@@ -49,6 +49,12 @@ int32_t     NetplayMatch_ParseArg(const char *arg);
 /* NULL, or what is wrong with the options given together. */
 const char *NetplayMatch_ArgError(void);
 int32_t     NetplayMatch_Enabled(void);
+/* Whether the frame step advances the match clocks (_currentTick, _currentGameTick) --
+ * then the VBlank interrupt's work, which the step also runs, must not (interrupts.c).
+ * A recording from before that was so plays with the old double clock
+ * (NetplayMatch_SetLegacyDoubleClock, from --srp-resim). */
+int32_t     NetplayMatch_OwnsClock(void);
+void        NetplayMatch_SetLegacyDoubleClock(int32_t on);
 int32_t     NetplayMatch_IsP2P(void);
 
 /* ReplayTest_Run, before kick-off: open the session. 0, or non-zero on failure. */

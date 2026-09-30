@@ -240,6 +240,33 @@ int32_t NetplayMatch_Enabled(void)
     return s_np.mode != NETPLAY_MATCH_OFF;
 }
 
+/* ONE TICK A FRAME. The step advances both clocks (MatchStep_AdvanceClock) and then
+ * runs the VBlank interrupt's work (_Int3TimerHandler), which advanced them AGAIN
+ * unless the replay rig owned them -- and the rig is not running in a live match. So
+ * every online match until 2026-09-29 counted two ticks a frame, while the Amiga (and
+ * an offline match, and every netplay test, which run under the rig) count one: frame
+ * 5000 of a live match was tick 10000. Both clocks are read by the rules --
+ * `btst #1,currentTick` sets how often the ball runs away from the man dribbling it
+ * (SWOS2.s CalculateIfPlayerWinsBall), and currentGameTick & mask paces dozens of AI
+ * and physics decisions -- so online SWOS played to a different beat (ReportBot 0014:
+ * "the ball doesn't stick to the feet as it should"). */
+static int32_t s_legacyDoubleClock;
+/* Only THAT call: set around the step's _Int3TimerHandler. Anywhere else the interrupt
+ * is the clock -- the timer thread through the screens before and after a match, whose
+ * `while (_currentTick == d0)` waits would otherwise wait forever (it hung the netplay
+ * corpus test, which is in netplay mode from its command line on). */
+static int32_t s_stepRunsInterrupt;
+
+int32_t NetplayMatch_OwnsClock(void)
+{
+    return s_stepRunsInterrupt && !s_legacyDoubleClock;
+}
+
+void NetplayMatch_SetLegacyDoubleClock(int32_t on)
+{
+    s_legacyDoubleClock = on != 0;
+}
+
 /* ESC during a live match (input_sdl.c): end it cleanly at the next frame. */
 static volatile int32_t s_leaveRequested;
 void NetplayMatch_RequestLeave(void)
@@ -248,11 +275,6 @@ void NetplayMatch_RequestLeave(void)
 }
 
 /* G or the pad's BACK during a live match (input_sdl.c): the player saw a ghost. */
-static volatile int32_t s_markRequested;
-void NetplayMatch_MarkMoment(void)
-{
-    s_markRequested = 1;
-}
 
 /* Where a live match's LOCAL input comes from. NULL = this machine's pad, which
  * is what a real match uses. A test installs its own so the peer has something
@@ -587,8 +609,11 @@ static GameFrameResult step(const uint8_t *inputs, int32_t logFrame, int32_t com
     GameLoop_EndFrame(0);
     /* The VBlank interrupt's work -- the fade ticks among it -- is part of the frame: on the
      * Amiga it runs once after every frame, so it runs once in every step, and from nowhere
-     * else while a netplay match plays (NetplayMatch_Start). */
+     * else while a netplay match plays (NetplayMatch_Start). It does not advance the
+     * clocks: MatchStep_AdvanceClock just did (NetplayMatch_OwnsClock). */
+    s_stepRunsInterrupt = 1;
     _Int3TimerHandler();
+    s_stepRunsInterrupt = 0;
     return GAME_FRAME_DONE;     /* a frame the statistics overlay held is a frame too */
 }
 
@@ -1434,6 +1459,13 @@ static void liveEnd(int32_t outcome, const char *why)
      * highlight ring, recorded in drawn coordinates, so it differs between peers on
      * different screen widths without the match doing so. */
     printf("[live] final sim hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_SIM));
+    {
+        /* One tick a frame, as the Amiga (NetplayMatch_OwnsClock): the clocks start at 0
+         * with the match, so they end at its frame. relay_test.sh holds it to that. */
+        extern volatile uint16_t _currentTick;
+        printf("[live] clock: tick %u at frame %d\n", (unsigned)_currentTick,
+               s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames);
+    }
     fflush(stdout);
     recordConfirmed(s_np.lastConfirmed);
     MatchRecord_End(outcome == NETPLAY_LIVE_FINISHED,
@@ -1855,12 +1887,6 @@ prepared:
                 leave = 1;
         _keyCount = 0;
         s_leaveRequested = 0;
-        if (s_markRequested) {
-            int32_t at = 0;
-            s_markRequested = 0;
-            Netplay_CurrentFrame(s_np.session, &at);
-            Ghost_Mark(at);
-        }
         if (leave) {
             liveEnd(NETPLAY_LIVE_ENDED_EARLY, "YOU LEFT THE MATCH");
             return GAME_FRAME_MATCH_OVER;

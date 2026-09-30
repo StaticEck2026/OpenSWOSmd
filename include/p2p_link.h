@@ -61,6 +61,7 @@ typedef enum {
 #define P2P_RULE_NO_INJURIES    0x10    /* SWOS_TEST_NO_INJURIES_CARDS, as career_status.c was built */
 #define P2P_RULE_DOS_VIEW       0x20    /* the DOS view: the simulation camera sees 320x200 */
 #define P2P_RULE_VIEW_KNOWN     0x40    /* this byte says the view (a .SRP from before it did not) */
+#define P2P_RULE_ONE_TICK       0x80    /* one clock tick a frame (a .SRP without it: two -- NetplayMatch_OwnsClock) */
 #define P2P_RULES_BUILD         (P2P_RULE_NO_BOOKINGS | P2P_RULE_NO_INJURIES)
 
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.

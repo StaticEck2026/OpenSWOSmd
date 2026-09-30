@@ -234,7 +234,7 @@ uint8_t P2PLink_GameplayFlags(void)
      * on screen). Two peers on different views went out of step at frame 0, and a
      * recording replayed only on a machine with the recorder's view (2026-09-29). */
     return (uint8_t)((_gDosGameplay ? P2P_RULE_DOS : 0) |
-                     (_gDosView ? P2P_RULE_DOS_VIEW : 0) | P2P_RULE_VIEW_KNOWN |
+                     (_gDosView ? P2P_RULE_DOS_VIEW : 0) | P2P_RULE_VIEW_KNOWN | P2P_RULE_ONE_TICK |
                      (_gArcadeMode ? P2P_RULE_ARCADE : 0) |
                      (_gOriginalFireHoldLockout ? P2P_RULE_FIRE_LOCKOUT : 0) |
                      (TackleFoul_BookingsEnabled() ? 0 : P2P_RULE_NO_BOOKINGS) |
@@ -270,10 +270,12 @@ static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
     /* The build's rules first: nothing in OPTIONS can make those agree. */
     if ((mine->gameplay ^ theirs->gameplay) & P2P_RULES_BUILD)
         return P2P_FAIL_BUILD;
-    if ((mine->gameplay ^ theirs->gameplay) & ~(P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN))
+    if ((mine->gameplay ^ theirs->gameplay) & ~(P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN | P2P_RULE_ONE_TICK))
         return P2P_FAIL_GAMEPLAY;
-    if (mine->gameplay != theirs->gameplay)
+    if ((mine->gameplay ^ theirs->gameplay) & (P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN))
         return P2P_FAIL_VIEW;
+    if (mine->gameplay != theirs->gameplay)
+        return P2P_FAIL_GAMEPLAY;
     /* Not the screen width. It used to be refused, because the simulation read it; the
      * match now reads one width both peers agree instead (display.h, _sim_draw_width).
      * P2P_FAIL_WIDTH stays in the enum for a peer of an older protocol to report. */

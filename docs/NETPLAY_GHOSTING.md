@@ -32,7 +32,8 @@ Every determinism test we have passes under the first -- both peers agree on eve
 
 So the leading suspect is the game itself -- possibly made more frequent online by the
 2-3 frames of input delay making challenges harder to time -- and the evidence to settle it
-is testers' marks (below).
+is the recordings: a tester names the moment, the recording is scrubbed to its frame, and
+`--srp-resim` replays it exactly.
 
 | link (one way) | ping | delay | frames drawn wrong | worst | possession wrong | rollback ghosts | contacts never drawn |
 |---|---|---|---|---|---|---|---|
@@ -56,20 +57,18 @@ played -- and at the end of the match (an early end too) writes `[ghost]` lines 
 [ghost] player 2: rollback ghosts: 1 drawn touching near the ball and 12+ px apart in the final game ...
 [ghost] player 2: 1 walk-throughs in the final game -- an opponent on top of the man on the ball for 4+ frames who did not win it
 [ghost]   0:31 (frame 1599), 4 frame(s): team 1 #2 and team 2 #8 walked through the man on the ball, won nothing ...
-[ghost] MARK 1 at 0:20 (frame 1001): in the 3 s before it, 16 frame(s) drawn differently ..., players up to 12 px off
-[ghost]   nothing: no rollback ghost and no walk-through near it -- what was seen happened in the match as played
 ```
 
 - **Rollback ghosts**: opponents drawn touching near the ball who were 12+ px apart in the
   real match ("drawn touching, never did"), or the reverse ("touched, never drawn").
 - **Walk-throughs**: in the real match, an opponent on top of the man on the ball for 4+
-  frames who did not win it. Plenty are ordinary SWOS; they matter next to a mark.
+  frames who did not win it. Plenty are ordinary SWOS; they matter at a moment a tester
+  names.
 - **Jumps**: a player drawn 24+ px from where he really was -- he jumps when the
   correction arrives. And `the worst:` names the frame and player of the single largest
   drawing error of the match.
-- **Marks**: see below.
 
-**The windows.** Around every mark, the 3 longest detected events and the 2 biggest jumps,
+**The windows.** Around the 3 longest detected events and the 2 biggest jumps,
 3 s either side, the
 game keeps each frame as played and, where it differed, as drawn. The match report
 (docs/NETPLAY_REPORT.md) carries both players' to the other player and to the server:
@@ -80,29 +79,25 @@ The whole match as played is the `.SRP` (`LATEST.SRP`, and the server's recordin
 RECORD MATCHES on). It holds only what was finally played -- never what a player was shown
 -- which is why the windows exist.
 
-## The G key -- for testers
+## For testers
 
-**Press G (keyboard) or BACK (controller) the moment you see a ghost** in an online match.
-It does nothing to the match -- the other player never knows -- and writes
-`[ghost] MARKED by this player at 0:34`. At the end of the match each mark is broken down
-(the 3 seconds before it), and its window goes into the match report. Times are time since
-kick-off, not the match clock on the screen.
-
-For a test session:
+There used to be a key (G) to mark the moment a ghost was seen. It went on 2026-09-29: the
+recordings now carry every frame, so a tester says where it happened ("the first corner
+kick, the short pass after it") and we find the frame in the recording. What matters is
+that the match is recorded:
 
 1. Both on the same build (bottom line of the main menu), installed with `SWOS-Setup.exe`
    or `SWOS-full.zip`.
 2. Both with RECORD MATCHES on: MULTIPLAYER, log in, SETTINGS, MULTIPLAYER SETTINGS -- or
    `record=server` under `[netplay]` in SWOS.ini.
 3. SEND MATCH REPORTS left on (the default in tester builds).
-4. G / BACK whenever it happens.
-5. After the match answer (or skip) HOW WAS THE MATCH? and stay in the lobby a few seconds:
-   that is when the two halves of the report cross.
+4. After the match answer (or skip) HOW WAS THE MATCH? -- say where it happened -- and
+   stay in the lobby a few seconds: that is when the two halves of the report cross.
 
 ## Reading them -- for us
 
 ```bash
-scripts/fetch_reports.py --grep MARK        # matches where someone pressed G
+scripts/fetch_reports.py --grep CONTROL     # matches whose rating mentions it
 scripts/fetch_recordings.py                 # their recordings, paired with the reports
 scripts/ghost_view.py build/reports/<match id>/player1.zip
 scripts/fetch_reports.py --clear            # then empty the server of what we now hold
@@ -123,8 +118,7 @@ N-th frame (the 200-shot cap otherwise ends in the first minutes of a match).
 `ghost_view.py` draws each window around the ball: a filled dot where a player really was,
 a hollow ring where this player's screen drew him (joined by a line) when that was
 somewhere else, team 1 red, team 2 blue, the ball white -- as a contact sheet
-(`window<N>.png`) and an animation (`window<N>.gif`) under `build/ghost/`. A window with
-nothing drawn differently at the moment of a mark means the player saw the real match.
+(`window<N>.png`) and an animation (`window<N>.gif`) under `build/ghost/`.
 
 `bin/SWOS.x86_64 --srp-resim=<recording>` plays the match again frame by frame from its
 inputs; `--view-replay=<recording>` shows it.
@@ -133,7 +127,7 @@ inputs; `--view-replay=<recording>` shows it.
 
 ```bash
 SWOS_NETEM_LINK=1 SWOS_LIVE_PLAIN_LOBBY=1 DELAY_MS=80 JITTER_MS=20 \
-  HOST_ENV=SWOS_LIVE_CHASE_INPUT=1 JOIN_ENV="SWOS_LIVE_CHASE_INPUT=2 SWOS_KEY_SCRIPT=2600:G" \
+  HOST_ENV=SWOS_LIVE_CHASE_INPUT=1 JOIN_ENV=SWOS_LIVE_CHASE_INPUT=2 \
   scripts/netplay_live_test.sh           # then grep '^\[ghost\]' in the two peer logs
 ```
 
@@ -142,7 +136,6 @@ SWOS_NETEM_LINK=1 SWOS_LIVE_PLAIN_LOBBY=1 DELAY_MS=80 JITTER_MS=20 \
 | `SWOS_LIVE_CHASE_INPUT=<seed>` | a player who chases the ball, re-aims every 2-6 frames, slides in on the man on the ball and weaves when it has it -- reacting to what its own screen shows. A random pad never reaches the ball, and two of them never meet there. |
 | `SWOS_NETEM_LINK=1` | the emulated network (`SWOS_NETEM_*`, include/netplay_netem.h) in front of the lobby's link too, so the input delay is agreed from the emulated ping as in a real match |
 | `SWOS_LIVE_PLAIN_LOBBY=1` | `netplay_live_test.sh` skips its scripted lobby races, which a 100 ms round trip changes the timing of |
-| `SWOS_KEY_SCRIPT=<frame>:G` | a G press at that presented frame |
 | `SWOS_GHOST_TRACE=<file>` | every frame of the match, drawn and final, as CSV |
 
 The same knobs work through the real menus and the match report:

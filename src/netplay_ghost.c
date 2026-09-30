@@ -25,10 +25,8 @@ enum {
     WALK_FRAMES   = 4,          /* on top of the carrier this long without winning it: a walk-through */
     KEPT_FRAMES   = 8,          /* ... and the carrier still has it this long after */
     MAX_PRINTED   = 12,         /* events printed, longest first */
-    MAX_MARKS     = 64,
-    MARK_WINDOW_S = 3,          /* a mark looks back this many seconds */
     CLIP_S        = 3,          /* a saved window: this many seconds either side */
-    CLIP_EVENTS   = 3,          /* ... around the worst events, as well as every mark */
+    CLIP_EVENTS   = 3,          /* ... around the worst events */
     CLIP_JUMPS    = 2,          /* ... and around the biggest jumps */
     JUMP_PX       = 24,         /* a player drawn this far from where he was: a jump */
     CLIP_MAX      = 8,          /* windows kept at most */
@@ -69,8 +67,6 @@ static struct {
     uint32_t    cap;
     uint32_t    corrections, changed;   /* re-simulated plays, and those that moved anything */
     int32_t     reported;               /* Ghost_Report has run for this match */
-    int32_t     marks[MAX_MARKS];
-    int32_t     markCount;
     GhostEvent *events;
     uint32_t    eventCount, eventCap;
     char       *clips;              /* Ghost_Clips: the windows, as CSV */
@@ -105,7 +101,6 @@ void Ghost_Begin(int32_t player)
     s_g.player = player;
     s_g.corrections = s_g.changed = 0;
     s_g.reported = 0;
-    s_g.markCount = 0;
     s_g.eventCount = 0;
     s_g.clipsLen = 0;
     if (s_g.cap) {
@@ -153,16 +148,6 @@ static const char *clock_text(int32_t frame, char *buf, size_t cap)
     s = frame / fps;
     snprintf(buf, cap, "%d:%02d", (int)(s / 60), (int)(s % 60));
     return buf;
-}
-
-void Ghost_Mark(int32_t frame)
-{
-    char t[16];
-    if (s_g.markCount < MAX_MARKS)
-        s_g.marks[s_g.markCount++] = frame;
-    fprintf(stderr, "[ghost] MARKED by this player at %s (frame %d): the report at the end "
-                    "of the match looks at the %d seconds before it\n",
-            clock_text(frame, t, sizeof t), (int)frame, MARK_WINDOW_S);
 }
 
 static int32_t dist(const GhostFrame *g, int32_t a, int32_t b)
@@ -228,12 +213,6 @@ static int compareEvents(const void *p, const void *q)
 {
     const GhostEvent *a = (const GhostEvent *)p, *b = (const GhostEvent *)q;
     return b->frames != a->frames ? b->frames - a->frames : a->frame - b->frame;
-}
-
-static int compareFrames(const void *p, const void *q)
-{
-    const GhostEvent *a = (const GhostEvent *)p, *b = (const GhostEvent *)q;
-    return a->frame - b->frame;
 }
 
 static void printEvent(const GhostEvent *e)
@@ -317,7 +296,7 @@ static void findRollbackGhosts(int32_t lastFrame)
 /* Walk-throughs in the FINAL game: an opponent on top of the man on the ball for
  * WALK_FRAMES and more, and the man still on the ball KEPT_FRAMES later. Plenty of
  * these are ordinary SWOS -- there are no bodies, only the ball -- so the count means
- * most beside a player's mark, or against a match played offline. */
+ * most at a moment a player complained of, or against a match played offline. */
 static void findWalkThroughs(int32_t lastFrame)
 {
     int32_t fr = 0;
@@ -402,7 +381,7 @@ static void clipRow(int32_t window, const char *why, int32_t fr, const char *ver
     clipPrintf("\n");
 }
 
-/* Windows of CLIP_S either side of every mark and of the CLIP_EVENTS longest events,
+/* Windows of CLIP_S either side of the CLIP_EVENTS longest events,
  * overlapping ones merged: every frame as finally played, and as this player drew it
  * wherever that differed -- what the viewer (scripts/ghost_view.py) sets side by side. */
 static void buildClips(int32_t lastFrame, int32_t fps, const GhostEvent *longest, int32_t nLongest)
@@ -411,11 +390,6 @@ static void buildClips(int32_t lastFrame, int32_t fps, const GhostEvent *longest
     char why[CLIP_MAX + 64][48];
 
     s_g.clipsLen = 0;
-    for (i = 0; i < s_g.markCount && n < CLIP_MAX; i++, n++) {
-        from[n] = s_g.marks[i] - CLIP_S * fps;
-        to[n] = s_g.marks[i] + CLIP_S * fps;
-        snprintf(why[n], sizeof why[n], "mark %d", (int)i + 1);
-    }
     for (i = 0, j = 0; i < nLongest && j < CLIP_EVENTS && n < CLIP_MAX; i++) {
         static const char *const k_short[EV_KINDS] = { "drawn-not-real", "real-not-drawn", "walk-through", "jump" };
         if (longest[i].kind == EV_JUMP)
@@ -636,46 +610,8 @@ void Ghost_Report(int32_t lastFrame)
         for (k = 0; k < (int32_t)s_g.eventCount && k < MAX_PRINTED; k++)
             printEvent(&sorted[k]);
     }
-    /* The windows the match report carries: every mark, and the longest events. */
+    /* The windows the match report carries: the longest events. */
     buildClips(lastFrame, fps, sorted, sorted ? (int32_t)s_g.eventCount : 0);
-    if (sorted && s_g.eventCount)
-        qsort(sorted, s_g.eventCount, sizeof *sorted, compareFrames);
-
-    /* Each mark: what this player drew against what happened, in the seconds before. */
-    for (m = 0; m < s_g.markCount; m++) {
-        char t[16];
-        int32_t at = s_g.marks[m], from = at - MARK_WINDOW_S * fps, wrong = 0, worst = 0, n = 0;
-        if (from < 0)
-            from = 0;
-        for (fr = from; fr <= at && fr <= lastFrame; fr++) {
-            const GhostFrame *d = &s_g.drawn[fr], *tf = &s_g.final[fr];
-            int32_t off = 0;
-            if (!d->have || !tf->have)
-                continue;
-            for (i = 0; i < GHOST_PLAYERS; i++) {
-                int32_t dx = d->x[i] - tf->x[i], dy = d->y[i] - tf->y[i], o;
-                dx = dx < 0 ? -dx : dx;
-                dy = dy < 0 ? -dy : dy;
-                o = dx > dy ? dx : dy;
-                if (o > off)
-                    off = o;
-            }
-            wrong += off > 0;
-            if (off > worst)
-                worst = off;
-        }
-        fprintf(stderr, "[ghost] MARK %d at %s (frame %d): in the %d s before it, %d frame(s) drawn "
-                        "differently from the final game, players up to %d px off\n",
-                (int)m + 1, clock_text(at, t, sizeof t), (int)at, MARK_WINDOW_S, (int)wrong, (int)worst);
-        for (k = 0; sorted && k < (int32_t)s_g.eventCount; k++)
-            if (sorted[k].frame + sorted[k].frames >= from && sorted[k].frame <= at) {
-                printEvent(&sorted[k]);
-                n++;
-            }
-        if (!n)
-            fprintf(stderr, "[ghost]   nothing: no rollback ghost and no walk-through near it -- "
-                            "what was seen happened in the match as played\n");
-    }
     free(sorted);
     writeTrace(lastFrame);
 }

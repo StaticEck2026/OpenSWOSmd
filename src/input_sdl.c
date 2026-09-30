@@ -518,11 +518,6 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int in_match = NetplayMatch_Enabled();
         if (in_match && e->key.keysym.sym == SDLK_ESCAPE && e->key.repeat == 0)
             NetplayMatch_RequestLeave();
-        /* G: "that was a ghost" -- the moment goes in SWOS.log (netplay_ghost.h). */
-        if (in_match && e->key.keysym.sym == SDLK_g && e->key.repeat == 0) {
-            extern void NetplayMatch_MarkMoment(void);
-            NetplayMatch_MarkMoment();
-        }
         if (is_alt || in_match) {
             /* Don't record keyState, don't push to keyBuffer, don't
              * trigger fire. Alt is purely a modifier on this build. */
@@ -610,16 +605,6 @@ void InputSDL_HandleEvent(const SDL_Event *e)
          * joystick path has no button NAMES to key off, so a gameport adapter
          * keeps working exactly as before and simply has no key buttons. */
         size_t i;
-        /* An online match takes no keys from the pad (they are emptied every frame),
-         * so BACK -- statistics offline -- is "that was a ghost" there, as G is. */
-        {
-            extern int32_t NetplayMatch_Enabled(void);
-            extern void    NetplayMatch_MarkMoment(void);
-            if (e->cbutton.button == SDL_CONTROLLER_BUTTON_BACK && NetplayMatch_Enabled()) {
-                NetplayMatch_MarkMoment();
-                break;
-            }
-        }
         for (i = 0; i < sizeof k_padKeys / sizeof k_padKeys[0]; i++) {
             if (e->cbutton.button == k_padKeys[i].button) {
                 push_amiga_key(k_padKeys[i].akey);
@@ -949,17 +934,43 @@ void InputSDL_PostFrame(void)
     if (s_intro_claim)
         intro_claim_poll();
 
-    /* Player 1: keyboard + pad 0 (combined). */
+    /* A KEYBOARD AND ONE PAD ARE TWO PLAYERS. Player 1 is the keyboard plus the first
+     * pad, player 2 a second pad -- so with one pad there is no player 2, and a local
+     * two-player friendly cannot start: the second team's PLAY MATCH screen listens to
+     * player 2 alone (PlayMatchMenuInit clears player 1's input by playMatchControlFlags,
+     * as SWOS2.s does), and neither CTRL nor the stick's fire -- both player 1's -- can
+     * press it (a tester, 2026-09-29). So when both teams are human here (_twoPlayers)
+     * and player 2 has no pad of their own, player 1's pad goes to player 2 and the
+     * keyboard stays player 1's. One player, two pads, or an online match (which reads
+     * InputSDL_LocalMatchControls, not these registers): as before. */
+    extern uint16_t _twoPlayers;
+    extern int32_t  NetplayMatch_Enabled(void);
+    int split = _twoPlayers != 0 && s_player_dev[1] < 0 && s_player_dev[0] >= 0 &&
+                !NetplayMatch_Enabled();
+    {
+        static int s_wasSplit;
+        if (split != s_wasSplit) {
+            s_wasSplit = split;
+            if (split)
+                fprintf(stderr, "[input] two players, one pad: \"%s\" is player 2, the keyboard "
+                                "player 1\n", dev_name(s_player_dev[0]));
+            else
+                fprintf(stderr, "[input] the pad is player 1's again\n");
+        }
+    }
+
+    /* Player 1: keyboard + pad 0 (combined), or the keyboard alone when split. */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
     int p1_fire = s_kbd_fire;
     int skip = s_kbd_skip;
-    read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire, &skip);
+    if (!split)
+        read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire, &skip);
 
-    /* Player 2: pad 1 only. No keyboard binding — keeping the keyboard
-     * single-player avoids hijacking arrow / fire keys when a P2 pad is
+    /* Player 2: pad 1 only -- or pad 0 when split. No keyboard binding — keeping the
+     * keyboard single-player avoids hijacking arrow / fire keys when a P2 pad is
      * plugged in but unused. */
     int p2_up = 0, p2_down = 0, p2_left = 0, p2_right = 0, p2_fire = 0;
-    read_pad_state(1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire, &skip);
+    read_pad_state(split ? 0 : 1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire, &skip);
 
     _pauseSkipRequested = (uint16_t)(skip ? 1 : 0);
 
@@ -983,7 +994,7 @@ void InputSDL_PostFrame(void)
      * this is the one input DOS has and the Amiga does not, so it goes in beside them
      * rather than through them, and only in DOS mode. */
     if (_gDosGameplay) {
-        MatchStep_LocalBenchButton(1, pad_secondary(0));
-        MatchStep_LocalBenchButton(2, pad_secondary(1));
+        MatchStep_LocalBenchButton(1, split ? 0 : pad_secondary(0));
+        MatchStep_LocalBenchButton(2, pad_secondary(split ? 0 : 1));
     }
 }

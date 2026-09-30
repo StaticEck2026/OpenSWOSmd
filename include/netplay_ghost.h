@@ -28,17 +28,13 @@ void Ghost_Begin(int32_t player);
  * re-simulation. Reads the players and the ball; writes nothing the match reads. */
 void Ghost_Played(int32_t frame, int32_t first);
 
-/* The player pressed "that was a ghost" (G, or the pad's BACK) at `frame`: logged now,
- * and the report looks at the seconds before it. */
-void Ghost_Mark(int32_t frame);
-
 /* Every frame up to `lastFrame` is final: compare, and print the report -- the drawn-vs-
  * final summary, the rollback ghosts, the walk-throughs in the final game (an opponent on
- * top of the man on the ball who wins nothing), and for each mark what led up to it. */
+ * top of the man on the ball who wins nothing). */
 void Ghost_Report(int32_t lastFrame);
 
-/* The windows Ghost_Report kept, as CSV text: CLIP_S seconds either side of every mark
- * and of the longest events, each frame as played and, where it differed, as drawn. NULL
+/* The windows Ghost_Report kept, as CSV text: CLIP_S seconds either side of the longest
+ * events, each frame as played and, where it differed, as drawn. NULL
  * when there are none. Valid until the next Ghost_Begin -- the match report
  * (src/match_report.c) puts both players' in its zip. */
 const char *Ghost_Clips(uint32_t *len);

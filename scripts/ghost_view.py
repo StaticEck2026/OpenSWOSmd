@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the ghost windows a match report carries: what a player saw against what happened.
 
-Every online match keeps windows around each G-mark and the worst detected ghosts
+Every online match keeps windows around the worst detected ghosts
 (src/netplay_ghost.c) -- every frame as finally played and, where it differed, as that
 player's screen drew it -- and the match report zips both players' as ghost_player1.csv
 and ghost_player2.csv (docs/NETPLAY_REPORT.md). This draws each window around the ball:
@@ -152,7 +152,7 @@ def main():
     else:
         sources.append(("", open(args.source, encoding="latin-1").read()))
     if not sources:
-        sys.exit("ghost_view: %s has no ghost windows (no G-mark and nothing detected in that match)"
+        sys.exit("ghost_view: %s has no ghost windows (nothing detected in that match)"
                  % args.source)
     for sub, text in sources:
         render(text, os.path.join(out, sub) if sub else out, args.step, args.radius, args.cols)
