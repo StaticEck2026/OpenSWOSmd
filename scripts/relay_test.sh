@@ -122,7 +122,7 @@ else
     done
 fi
 
-RECORD_ENV=""
+RECORD_ENV="SWOS_RECORD=off"     # recording is on by default in the game; only RECORD=1 tests it
 [ "$RECORD" = 1 ] && RECORD_ENV="SWOS_RECORD=server SWOS_RECORD_MODE=$RECORD_MODE"
 # A report is made of SWOS.log, so REPORTS=1 lets each player write one (in its own HOME).
 NO_LOG="SWOS_NO_LOG=1"

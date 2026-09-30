@@ -21,10 +21,21 @@
     #bar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--bar); box-sizing: border-box;
            background: var(--panel); border-top: 1px solid #2a2a2a; padding: 8px 16px;
            display: flex; flex-direction: column; gap: 6px; }
-    #scrub { width: 100%; margin: 0; accent-color: var(--accent); }
+    /* The bar's handle is a fixed 14 px so the timeline above can be inset by half of it
+       and put every frame under the handle's centre (a browser's own handle size varies). */
+    #scrub { width: 100%; margin: 0; height: 14px; background: transparent; -webkit-appearance: none; appearance: none; }
+    #scrub::-webkit-slider-runnable-track { height: 4px; background: #3a3a3a; border-radius: 2px; }
+    #scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px;
+                                   border: none; border-radius: 50%; background: var(--accent); }
+    #scrub::-moz-range-track { height: 4px; background: #3a3a3a; border-radius: 2px; }
+    #scrub::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--accent); }
+    #tlwrap { position: relative; margin: 0 7px; }
+    #tlwrap[hidden] { display: none; }
+    #playhead { position: absolute; top: -2px; bottom: -2px; width: 1px; margin-left: -1px;
+                background: var(--accent); pointer-events: none; }
     /* What each player saw (PRED): a row a player, one column a slice of frames. */
     #timeline { width: 100%; height: 12px; display: block; cursor: pointer; background: #0b0b0b; }
-    #timeline[hidden], .pred[hidden] { display: none; }
+    .pred[hidden] { display: none; }
     #lag { font: 12px/1.4 monospace; color: var(--dim); }
     .p1 { color: #ffe600; } .p2 { color: #ffffff; } .bad { color: #ff4040; } .off { color: #ff9a30; }
     .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -46,7 +57,7 @@
     <div id="status">loading…</div>
   </div>
   <div id="bar">
-    <canvas id="timeline" hidden title="What each player saw: top row player 1 (yellow), bottom row player 2 (white). Brighter = more of the other player's input guessed; orange = a guess was wrong; red = the player saw something that did not happen. Click to jump."></canvas>
+    <div id="tlwrap" hidden><canvas id="timeline" title="What each player saw: top row player 1 (yellow), bottom row player 2 (white). Brighter = more of the other player's input guessed; orange = a guess was wrong; red = the player saw something that did not happen; a dotted line = no data from that player. Click to jump."></canvas><div id="playhead"></div></div>
     <input id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Frame">
     <div class="row">
       <button id="back10" title="10 frames back (Shift+Left)">&laquo;10</button>
@@ -158,7 +169,7 @@
         if (!(api.has() & 1)) return;
         pred = new Uint8Array(2 * n);
         for (var f = 0; f < n; f++) { var v = api.predAt(f); pred[2 * f] = v & 0xFF; pred[2 * f + 1] = (v >> 8) & 0xFF; }
-        timeline.hidden = false;
+        document.getElementById('tlwrap').hidden = false;
         document.querySelector('.pred').hidden = false;
         drawTimeline();
       }
@@ -169,8 +180,11 @@
         var g = timeline.getContext('2d');
         g.fillStyle = '#0b0b0b'; g.fillRect(0, 0, w, h);
         var rgb = [[255, 230, 0], [235, 235, 235]];
+        // Column x holds the frames whose handle position falls in it: the slider puts frame
+        // f at f / (n - 1) of its track, and the timeline spans exactly that track.
         for (var x = 0; x < w; x++) {
-          var a = Math.floor(x * n / w), b = Math.max(a + 1, Math.floor((x + 1) * n / w));
+          var a = Math.ceil((x - 0.5) * (n - 1) / w), b = Math.ceil((x + 0.5) * (n - 1) / w);
+          a = Math.max(0, a); b = Math.min(n, Math.max(a + 1, b));
           for (var p = 0; p < 2; p++) {
             var lag = 0, bad = false, off = false, known = false;
             for (var f = a; f < b; f++) {
@@ -181,8 +195,11 @@
               if (seen(v)) bad = true;
               else if (wrong(v)) off = true;
             }
-            if (!known) g.fillStyle = '#222';
-            else if (bad) g.fillStyle = '#ff4040';
+            if (!known) {                       // no data from this player: a dotted line
+              if (x % 3 === 0) { g.fillStyle = '#555'; g.fillRect(x, p * 6 + 2, 1, 1); }
+              continue;
+            }
+            if (bad) g.fillStyle = '#ff4040';
             else if (off) g.fillStyle = '#b86a20';
             else if (!lag) continue;
             else { var k = 0.25 + 0.75 * Math.min(lag, 8) / 8, c = rgb[p];
@@ -196,7 +213,7 @@
         if (!bind() || !pred) return;
         var r = timeline.getBoundingClientRect(), n = pred.length / 2;
         api.pause(1);
-        api.seek(Math.floor((e.clientX - r.left) / r.width * n));
+        api.seek(Math.round((e.clientX - r.left) / r.width * (n - 1)));
       });
       // The start of the next (or previous) run of frames drawn wrong, for the views shown.
       function eventAt(f) {
@@ -258,7 +275,10 @@
         if (f !== lastShown) {
           lastShown = f;
           frameEl.textContent = 'frame ' + f + ' / ' + (n - 1) + '  ' + clock(f, rate);
-          if (pred) lagEl.innerHTML = lagText(f);
+          if (pred) {
+            lagEl.innerHTML = lagText(f);
+            document.getElementById('playhead').style.left = (n > 1 ? f / (n - 1) * 100 : 0) + '%';
+          }
         }
         playBtn.innerHTML = api.paused() ? '&#9654;' : '&#10074;&#10074;';
         // The address follows a paused frame, so a reload or a copied URL lands on it.
