@@ -1074,7 +1074,11 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
      * centered at the top" (ReportBot 0008), the score being the HUD at its
      * Amiga coordinates. The camera constants just below are already f(view)
      * and only land on the DOS numbers once the view is set.
-     * MatchViewLeave is in viewAndRestoreMenu, so every exit path is covered. */
+     * MatchViewLeave is in viewAndRestoreMenu, so every exit path is covered.
+     * A .SRP is shown in the view ITS match was played in, whatever this player's is. */
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayV2_UseRecordedView(void); ReplayV2_UseRecordedView(); }
+#endif
     MatchViewEnter();
     /* Set the highlight flag AFTER InitGameSaveTeams' fade-out. The flag is what
      * flips refresh_palette_from_copper to the DOS pitch palette; setting it

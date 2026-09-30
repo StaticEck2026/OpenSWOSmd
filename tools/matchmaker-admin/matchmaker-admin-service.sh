@@ -57,6 +57,8 @@ ReadWritePaths=/srv/swos-matchmaker/admin
 # Clearing fetched reports and recordings (main.py CLEAR_ACTIONS, POST /clear).
 ReadWritePaths=/srv/swos-matchmaker/reports
 ReadWritePaths=/srv/swos-matchmaker/recordings
+# "Update recordings player" (scripts/update_playback.sh) copies the player in here.
+ReadWritePaths=/srv/swos-matchmaker/playback
 
 [Install]
 WantedBy=multi-user.target

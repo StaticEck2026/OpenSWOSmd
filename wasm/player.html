@@ -104,6 +104,21 @@
     window.onerror = function () { Module.setStatus('error — see console (F12)'); };
     document.getElementById('name').textContent = srp || '';
     document.title = (srp || '') + ' — SWOS Playback';
+    // Who played whom: the recorder's card beside the recording (docs/PLAYBACK.md).
+    if (srp) fetch(base + encodeURIComponent(srp.replace(/\.SRP$/i, '.json')), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (c) {
+        if (!c || !c.players) return;
+        function side(i) {
+          var p = c.players[i], t = (c.teams || [])[i];
+          return (p && p.name ? p.name : '?') + (t ? ' (' + t + ')' : '');
+        }
+        var text = side(0) + (c.score ? '  ' + c.score[0] + '-' + c.score[1] + '  ' : ' v ') + side(1);
+        document.getElementById('name').textContent = text;
+        document.getElementById('name').title = srp;
+        window.matchTitle = text + ' — SWOS Playback';
+        document.title = window.matchTitle;
+      }).catch(function () {});
 
     // ---- The controls: the player API in src/replay_v2.c (ReplayV2_Player*) ----
     (function () {
@@ -226,6 +241,8 @@
       }
       function tick() {
         requestAnimationFrame(tick);
+        // The game names its window (SDL_SetWindowTitle is the tab's title): the match wins.
+        if (window.matchTitle && document.title !== window.matchTitle) document.title = window.matchTitle;
         if (!bind()) return;
         var n = api.frames();
         if (n <= 0) return;

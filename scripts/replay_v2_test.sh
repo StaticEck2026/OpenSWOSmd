@@ -105,10 +105,17 @@ for swr in "${SWRS[@]}"; do
     done
 done | xargs -P "$JOBS" -I{} bash -c '{}'
 
-# "frame F sprites N hash H" and "frame F sound K C I" lines; the first difference, or "".
+# "frame F sprites N hash H view X Y FX FY" and "frame F sound K C I" lines; the first
+# difference, or "".
+#
+# Frames the PLAYBACK marks "clamped" are not compared for sprites: the rig simulates in
+# the corpus's 200-line view while an Amiga-view run draws 272 lines, so its camera goes
+# down to 664 and the live run drew past the bottom of the stadium; playback holds the
+# camera where the picture stays on the pitch (src/replay_v2.c shown_camera_y).
 compare() {   # live-trace play-trace
     python3 - "$1" "$2" <<'EOF'
 import sys
+skip = set()
 def load(p):
     spr, snd = {}, {}
     for l in open(p):
@@ -117,6 +124,8 @@ def load(p):
             continue
         fr = int(f[1])
         if f[2] == "sprites":
+            if f[-1] == "clamped":
+                skip.add(fr)        # held on the pitch in playback: see above
             spr[fr] = (f[3], f[5], f[7:11])
         elif f[2] == "sound":
             snd.setdefault(fr, []).append(tuple(f[3:]))
@@ -125,7 +134,7 @@ ls, la = load(sys.argv[1])
 ps, pa = load(sys.argv[2])
 if not ls:
     print("the live run traced no frames"); sys.exit()
-d = [k for k in sorted(set(ls) | set(ps)) if ls.get(k) != ps.get(k)]
+d = [k for k in sorted(set(ls) | set(ps)) if k not in skip and ls.get(k) != ps.get(k)]
 s = [k for k in sorted(set(la) | set(pa)) if la.get(k) != pa.get(k)]
 if d:
     print("sprites differ on %d of %d frames, first %d" % (len(d), len(ls), d[0]))

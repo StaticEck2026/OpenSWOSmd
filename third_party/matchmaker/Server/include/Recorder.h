@@ -110,6 +110,10 @@ private:
     void OnReplayScore(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayResume(Connection& c, const uint8_t* p, uint32_t len);
     void WriteReplay(Match& m, bool last);
+    // Who played whom, beside the .SRP (<name>.json) and all of them in index.json: what
+    // the playback page lists (docs/PLAYBACK.md, "Who played whom").
+    void WriteMatchCard(const Match& m, const std::string& why);
+    void WriteIndex();
     void Compare(Match& m, int from, uint32_t frame);
     void CloseConnection(Connection& c, const char* why);
     void Finish(Match& m, const char* why);

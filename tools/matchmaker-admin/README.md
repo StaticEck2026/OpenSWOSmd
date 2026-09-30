@@ -1,9 +1,20 @@
 # matchmaker-admin
 
-A tiny password-protected web page with eight buttons (`git pull`, rebuild, the
-four `swos-matchmaker-service.sh` actions, and clearing the reports and the
-recordings) plus a live output pane, for maintaining the matchmaker server without
+A tiny password-protected web page with nine buttons (`git pull`, rebuild, update the
+recordings player, the four `swos-matchmaker-service.sh` actions, and clearing the reports
+and the recordings) plus a live output pane, for maintaining the matchmaker server without
 an SSH session.
+
+## Update recordings player
+
+Builds the player (`scripts/build_playback.sh`, needs emsdk) and copies it into
+`/srv/swos-matchmaker/playback`, then brings the recordings' match cards and `index.json`
+up to date -- `scripts/update_playback.sh`, as the gateway's own user. No root and no
+restart, so a match in progress is untouched; reload `/playback/` to get it. The gateway's
+unit needs write access to that folder: after pulling this, run
+`tools/matchmaker-admin/matchmaker-admin-service.sh install` once so the new unit is
+written. (nginx's `/playback/` itself is set up once by `swos-matchmaker-service.sh
+install`.) "Rebuild" builds the player too, but only this button puts it live.
 
 ## Clearing reports and recordings
 

@@ -104,6 +104,13 @@ int32_t ReplayV2_Loaded(void);
 /* The recording carries its own sounds (so the viewer must not add random crowd chants). */
 int32_t ReplayV2_HasAudio(void);
 
+/* A loaded .SRP is shown in the view its match was played in (DOS 320x200 or Amiga):
+ * UseRecordedView before the viewer's MatchViewEnter, RestoreView after its
+ * MatchViewLeave puts the player's own setting back. No-ops without a recording, or
+ * when the recording's view is not known or is the player's own. */
+void    ReplayV2_UseRecordedView(void);
+void    ReplayV2_RestoreView(void);
+
 /* PlayHighlightsLoop, starting the one scene a .SRP is. */
 void    ReplayV2_StartScene(void);
 /* DrawReplayFrame, for a loaded .SRP: one recorded frame, and its sounds. */

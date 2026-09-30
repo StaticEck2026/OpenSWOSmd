@@ -265,6 +265,7 @@ static void viewAndRestoreMenu(void (*viewFunc)(void))
      * restores the same saved values. Doing it HERE rather than inside the
      * viewer covers its early-return paths too. */
     { extern void MatchViewLeave(void); MatchViewLeave(); }
+    { extern void ReplayV2_RestoreView(void); ReplayV2_RestoreView(); }   /* a .SRP's view */
 #endif
 
     _menuStatus = 1;

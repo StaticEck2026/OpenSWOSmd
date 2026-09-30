@@ -28,6 +28,7 @@
 #include "swos_io.h"
 #include "image_cmd.h"      /* ProcessImageCommandStream */
 #include "platform_sdl.h"   /* Platform_NearestColour: the prediction overlay */
+#include "dos_mode.h"       /* _gDosView: the view a recording was played in */
 #ifdef SWOS_NETPLAY
 #include "netplay_ghost.h"  /* Ghost_Prediction: this player's PRED and SEEN */
 #include "match_prediction.h"   /* the other player's, over the lobby's link */
@@ -138,6 +139,7 @@ static int32_t grow(void **buf, uint32_t *cap, uint32_t need, uint32_t elem)
  * live match drew) and while playing (the sprites the player drew), so a test can require
  * the two to be identical at the same screen width. */
 static FILE    *s_trace;
+static int32_t  s_traceClamped;     /* playback held this frame's camera (shown_camera_y) */
 static int32_t  s_traceTried;
 static uint32_t s_traceCount;
 static uint64_t s_traceHash;
@@ -179,9 +181,10 @@ static void trace_frame(uint32_t frame)
     /* "view": the pitch's draw origin and the presenter's sub-pixel shift, as published
      * by the last ScrollToCurrent -- the picture under the sprites. */
     if (trace_file())
-        fprintf(s_trace, "frame %u sprites %u hash %016llx view %d %d %u %u\n", frame,
+        fprintf(s_trace, "frame %u sprites %u hash %016llx view %d %d %u %u%s\n", frame,
                 s_traceCount, (unsigned long long)s_traceHash, Render_CameraX(), _cameraY.s.i,
-                fx, fy);
+                fx, fy, s_traceClamped ? " clamped" : "");
+    s_traceClamped = 0;
     s_traceCount = 0;
     s_traceHash = 0;
 }
@@ -603,8 +606,10 @@ static uint8_t *build_meta(void)
         return NULL;
     BE_WRITE_U16(q, 1);                                           q += 2;  /* meta version */
     BE_WRITE_U16(q, (uint16_t)_screen_width);                     q += 2;
+    /* 8 the DOS view (320x200), 16 "the view is recorded" -- a recording made before the
+     * view was kept says neither, and the player works it out (recorded_view). */
     BE_WRITE_U16(q, (uint16_t)((_gDosGameplay ? 1 : 0) | (_gDosGraphics ? 2 : 0) |
-                               (_gArcadeMode ? 4 : 0)));          q += 2;
+                               (_gArcadeMode ? 4 : 0) | (_gDosView ? 8 : 0) | 16));   q += 2;
     BE_WRITE_U16(q, 0);                                           q += 2;
     BE_WRITE_U32(q, (uint32_t)time(NULL));                        q += 4;
     snprintf((char *)q, 32, "%s", Build_Version());               q += 32;
@@ -874,6 +879,7 @@ static struct {
     uint8_t    *seen;           /* SEEN's records */
     uint32_t    seenLen;
     uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
+    int32_t     dosView;        /* the view it was played in: 1 DOS, 0 Amiga, -1 not known */
 } s_play;
 
 /* Worked out on load, never in a file: this frame was DRAWN wrong for that player -- one
@@ -1026,6 +1032,51 @@ static void apply_meta(const uint8_t *m)
     _hilNumGoals = 1;
 }
 
+/* The view the match was played in, which the replay is shown in (ReplayV2_UseRecordedView):
+ * the DOS view draws 200 lines, and a DOS-view match shown 272 lines tall shows what that
+ * player never saw -- players below the picture, and past the bottom of the stadium at
+ * the bottom goal (20260929-205209-f526dc63.SRP, frame 7056). META says, from now on;
+ * a netplay recording's SIMV said before that; older files are read from the camera,
+ * which goes below Y 608 (880 - 272) only when the match was simulated 200 lines tall. */
+static int32_t recorded_view(const uint8_t *meta, const uint8_t *file, uint32_t fileLen)
+{
+    uint16_t flags = BE_READ_U16(meta + 4);
+    uint32_t simvLen = 0, f;
+    uint8_t *simv;
+    if (flags & 16)
+        return (flags & 8) ? 1 : 0;
+    simv = chunk_get(file, fileLen, CHUNK_SIMV, &simvLen);
+    if (simv && simvLen >= SRP_SIMV_BYTES && (simv[2] & 0x40)) {     /* P2P_RULE_VIEW_KNOWN */
+        int32_t dos = (simv[2] & 0x20) != 0;                         /* P2P_RULE_DOS_VIEW */
+        free(simv);
+        return dos;
+    }
+    free(simv);
+    for (f = 0; f < s_play.frameCount; f++)
+        if ((int16_t)(BE_READ_U32(s_play.frms + s_play.offsets[f] + 6) >> 16) > 880 - SCREEN_HEIGHT)
+            return 1;
+    return -1;
+}
+
+static int32_t s_ownDosView = -1;       /* the player's own, while a recording's is on */
+
+void ReplayV2_UseRecordedView(void)
+{
+    if (!s_play.loaded || s_play.dosView < 0 || s_play.dosView == (_gDosView != 0))
+        return;
+    s_ownDosView = _gDosView;
+    _gDosView = s_play.dosView;
+    fprintf(stderr, "[replay] shown in the %s view it was played in\n", _gDosView ? "DOS" : "Amiga");
+}
+
+void ReplayV2_RestoreView(void)
+{
+    if (s_ownDosView < 0)
+        return;
+    _gDosView = s_ownDosView;
+    s_ownDosView = -1;
+}
+
 /* PRED and SEEN, if the file has them; a file without plays exactly as before. */
 static void load_prediction(const uint8_t *file, uint32_t fileLen)
 {
@@ -1151,8 +1202,10 @@ int32_t ReplayV2_Load(const uint8_t *name)
         }
     }
     free(audio);
-    if (!why)
+    if (!why) {
         load_prediction(file, fileLen);
+        s_play.dosView = recorded_view(meta, file, fileLen);
+    }
 
     if (why) {
         fprintf(stderr, "[replay] %s: %s\n", (const char *)name, why);
@@ -1386,6 +1439,28 @@ static void draw_prediction(uint32_t f, int16_t origin, int16_t camY)
     }
 }
 
+/* A recorded camera Y as this display can show it. The camera's limit depends on the
+ * height of the view it was SIMULATED in (include/display.h: SIM_CAMERA_POS_MAX_Y = 880 -
+ * viewH): a match played in the 200-line DOS view goes down to 664, and drawn 272 lines
+ * tall that runs past the bottom of the stadium -- rows below the 880-tall pitch, drawn
+ * from whatever lies after it (20260929-205209-f526dc63.SRP, frame 7056, and every
+ * DOS-view recording at the bottom goal). Held at this screen's own limit it still shows
+ * everything that player saw, since a taller picture reaching the same bottom covers it;
+ * a recording simulated at this height never reaches it. A recording is normally shown
+ * in the view it was played in (recorded_view), so this is for the ones that were not:
+ * the replay rig simulates in the corpus's 200-line view while drawing 272, so its live
+ * runs went past the pitch on those frames too -- the trace marks them "clamped" and
+ * scripts/replay_v2_test.sh leaves them out of the comparison. */
+static uint32_t shown_camera_y(uint32_t cy)
+{
+    int32_t max = 880 - _screen_height;
+    if (max >= 0 && (int16_t)(cy >> 16) > max) {
+        s_traceClamped = 1;
+        return (uint32_t)max << 16;
+    }
+    return cy;
+}
+
 void ReplayV2_DrawFrame(void)
 {
     const uint8_t *h, *sp;
@@ -1432,7 +1507,7 @@ void ReplayV2_DrawFrame(void)
 
     if (_replayState == 1) {
         /* The first frame: the camera straight to where the match had it, both buffers. */
-        int16_t x = (int16_t)(BE_READ_U32(h + 2) >> 16), y = (int16_t)(BE_READ_U32(h + 6) >> 16);
+        int16_t x = (int16_t)(BE_READ_U32(h + 2) >> 16), y = (int16_t)(shown_camera_y(BE_READ_U32(h + 6)) >> 16);
         _replayState = 2;
         _savedCameraX = _cameraX.s.i;
         _savedCameraY = _cameraY.s.i;
@@ -1452,7 +1527,7 @@ void ReplayV2_DrawFrame(void)
          * draws the pitch at -- and publishes the presenter's sub-pixel shift from -- the
          * camera the match drew with. Set after, the pitch sat a pixel off the sprites at
          * a scaled width, and the scroll lost its sub-pixel smoothness. */
-        uint32_t cx = BE_READ_U32(h + 2), cy = BE_READ_U32(h + 6);
+        uint32_t cx = BE_READ_U32(h + 2), cy = shown_camera_y(BE_READ_U32(h + 6));
         _cameraX.s.frac = (uint16_t)cx;
         _cameraY.s.frac = (uint16_t)cy;
         MoveView((int16_t)(cx >> 16), (int16_t)(cy >> 16));

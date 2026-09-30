@@ -119,7 +119,9 @@ or CRC is refused with a reason rather than played.
 ### `META` — the match (stored)
 
 Version, screen width the recording was made on, gameplay flags (1 DOS
-gameplay, 2 DOS graphics, 4 arcade), the UTC time, the 32-character build
+gameplay, 2 DOS graphics, 4 arcade, 8 the DOS view, 16 the view is recorded -- a file
+without 16 predates it, and the viewer works the view out: docs/PLAYBACK.md, "A recording
+is shown in the view it was played in"), the UTC time, the 32-character build
 stamp, the final score, `pitchNumberAndType`, `gameMaxSubstitutes`, the
 competition name and round, and the two teams as the `.HIL` header holds them
 (1018 bytes each, the 11 int16 kit words big-endian).

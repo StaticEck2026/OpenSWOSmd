@@ -50,6 +50,9 @@ LOCAL_ACTIONS = {
     "pull": ["git", "pull", "--ff-only"],
     "build": ["scripts/run_matchmaker.sh", "--rebuild", "--build-only", "--with-playback"],
     "status": ["scripts/swos-matchmaker-service.sh", "status"],
+    # The recordings player alone: built and copied into /srv/.../playback, which this
+    # account owns -- no root, and no restart, so no match in progress is touched.
+    "player": ["scripts/update_playback.sh"],
 }
 # Needs real root - queued for admin-cron-worker.sh instead. That script has
 # its own copy of this same set; both must agree, or a queued file just sits
@@ -63,6 +66,7 @@ CLEAR_ACTIONS = {"clear-reports", "clear-recordings"}
 ACTIONS = [
     ("pull", "git pull"),
     ("build", "Rebuild (server + recordings player)"),
+    ("player", "Update recordings player"),
     ("status", "Service: status"),
     ("install", "Service: install"),
     ("restart", "Service: restart"),
@@ -205,7 +209,20 @@ def clear_entries(entries):
             continue
         (removed if delete_file(path, int(size)) else kept).append(name)
     prune_empty_report_dirs()
+    if any(RECORDING_NAME.match(n) for n in removed):
+        refresh_recordings_index()      # the cleared recordings' cards go with them
     return removed, kept, refused
+
+
+def refresh_recordings_index():
+    """The playback page's list (scripts/recordings_index.py): cards whose .SRP was
+    cleared go, and index.json is written again."""
+    try:
+        subprocess.run(["python3", "scripts/recordings_index.py", "--recordings", RECORDINGS_DIR,
+                        "--ledger", "/srv/swos-matchmaker/matches.jsonl"],
+                       cwd=REPO_DIR, capture_output=True, timeout=120)
+    except Exception:
+        pass
 
 
 def clear_all(which):
@@ -220,6 +237,7 @@ def clear_all(which):
         for f in os.listdir(RECORDINGS_DIR) if os.path.isdir(RECORDINGS_DIR) else []:
             if RECORDING_NAME.match(f):
                 removed += delete_file(os.path.join(RECORDINGS_DIR, f))
+        refresh_recordings_index()      # their cards go with them
     return removed
 
 

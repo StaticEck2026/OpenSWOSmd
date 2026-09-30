@@ -13,6 +13,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
 #endif
 #include <ctime>
 
@@ -625,7 +629,103 @@ void Recorder::Finish(Match& m, const char* why)
         + ",\"finalAgree\":" + finalAgree
         + ",\"recording\":" + (m.recording.empty() ? std::string("null") : JsonString(m.recording))
         + "}");
+    WriteMatchCard(m, why);
     m_matches.erase(m.id);
+}
+
+// The match's card: <recording>.json beside it, for the playback page. Names, teams,
+// score, builds and how it ended -- who played whom, never where from (no addresses:
+// the page is public). scripts/recordings_index.py writes the same card from the ledger
+// for recordings made before this, and the same index.
+void Recorder::WriteMatchCard(const Match& m, const std::string& why)
+{
+    if (m.recording.empty() || m_dir.empty())
+        return;
+    const Side& a = m.side[0];
+    const Side& b = m.side[1];
+    const Side& any = a.present ? a : b;
+    const Side& scored = a.haveScore ? a : b;
+    auto player = [](int n, const Side& s) {
+        if (!s.present)
+            return std::string("null");
+        return "{\"player\":" + std::to_string(n) + ",\"name\":" + JsonString(s.name)
+            + ",\"build\":" + JsonString(s.build) + ",\"platform\":" + JsonString(s.platform)
+            + ",\"outcome\":" + JsonString(!s.ended ? "none" : s.outcome == 0 ? "finished" : "ended early")
+            + "}";
+    };
+    std::string file = m.recording.substr(m.recording.find_last_of('/') + 1);
+    std::string card = "{\"file\":" + JsonString(file)
+        + ",\"match\":\"" + Hex64(m.id) + "\""
+        + ",\"started\":" + JsonString(m.started)
+        + ",\"teams\":[" + JsonString(any.team1) + "," + JsonString(any.team2) + "]"
+        + ",\"score\":" + (scored.haveScore ? "[" + std::to_string(scored.score[0]) + ","
+                                                  + std::to_string(scored.score[1]) + "]"
+                                               : std::string("null"))
+        + ",\"players\":[" + player(1, a) + "," + player(2, b) + "]"
+        + ",\"frames\":" + std::to_string(any.offsets.size())
+        + ",\"gameplay\":" + std::to_string(any.gameplay)
+        + ",\"relayed\":" + (any.relayToken ? "true" : "false")
+        + ",\"desync\":" + (m.desyncFrame < 0 ? std::string("null") : std::to_string(m.desyncFrame))
+        + ",\"why\":" + JsonString(why)
+        + "}\n";
+    std::string path = m.recording.substr(0, m.recording.size() - 4) + ".json";
+    std::string tmp = path + ".part";
+    FILE* f = fopen(tmp.c_str(), "wb");
+    bool ok = f && fwrite(card.data(), 1, card.size(), f) == card.size();
+    if (f)
+        ok = (fclose(f) == 0) && ok;
+    if (!ok || rename(tmp.c_str(), path.c_str()) != 0)
+    {
+        std::cout << Tag() << Hex64(m.id) << " cannot write " << path << "\n";
+        remove(tmp.c_str());
+        return;
+    }
+    WriteIndex();
+}
+
+// index.json: every card in the folder, newest first -- the cards' own bytes, so no
+// JSON is parsed here. A card whose .SRP has gone is left out.
+void Recorder::WriteIndex()
+{
+    DIR* d = opendir(m_dir.c_str());
+    if (!d)
+        return;
+    std::vector<std::string> names;
+    while (dirent* e = readdir(d))
+    {
+        std::string n = e->d_name;
+        if (n.size() > 5 && n.compare(n.size() - 5, 5, ".json") == 0 && n != "index.json")
+            names.push_back(n);
+    }
+    closedir(d);
+    std::sort(names.rbegin(), names.rend());
+    std::string out = "[\n";
+    bool first = true;
+    for (const std::string& n : names)
+    {
+        struct stat st;
+        std::string srp = m_dir + "/" + n.substr(0, n.size() - 5) + ".SRP";
+        if (stat(srp.c_str(), &st) != 0)
+            continue;
+        std::ifstream in(m_dir + "/" + n, std::ios::binary);
+        std::stringstream ss;
+        ss << in.rdbuf();
+        std::string card = ss.str();
+        while (!card.empty() && (card.back() == '\n' || card.back() == '\r' || card.back() == ' '))
+            card.pop_back();
+        if (card.empty() || card[0] != '{')
+            continue;
+        out += (first ? "" : ",\n") + card;
+        first = false;
+    }
+    out += "\n]\n";
+    std::string path = m_dir + "/index.json", tmp = path + ".part";
+    FILE* f = fopen(tmp.c_str(), "wb");
+    bool ok = f && fwrite(out.data(), 1, out.size(), f) == out.size();
+    if (f)
+        ok = (fclose(f) == 0) && ok;
+    if (!ok || rename(tmp.c_str(), path.c_str()) != 0)
+        remove(tmp.c_str());
 }
 
 #endif

@@ -56,6 +56,10 @@ deploy_playback() {
     sudo cp -f "${built}"/index.html "${built}"/SWOS.html "${built}"/SWOS.js "${built}"/SWOS.wasm \
                "${built}"/SWOS.data "${DEPLOY_DIR}/playback/"
     sudo chown -R "${RUN_USER}:${RUN_USER}" "${DEPLOY_DIR}/playback"
+    # Who played whom, for the page's list: cards for recordings made before the
+    # recorder wrote them (scripts/recordings_index.py), as the service's own user.
+    sudo -u "${RUN_USER}" python3 "${REPO_DIR}/scripts/recordings_index.py" \
+        --recordings "${DEPLOY_DIR}/recordings" --ledger "${DEPLOY_DIR}/matches.jsonl" || true
     nginx_playback
 }
 

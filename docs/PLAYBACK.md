@@ -26,6 +26,36 @@ The frame number under the picture counts from the first frame of the recording 
 kick-off of the first half). While paused, the page's address follows the frame, so a
 reload stays there and the address bar is itself the link to send.
 
+## Who played whom
+
+Each row of the list says who played -- `PAYAVELI (ENGLAND) 0-0 UMTY (BRAZIL)` -- with a
+mark for a match that desynced (and its frame) or that one player ended early, and the
+filter searches names and teams as well as dates and match ids. The player's bar and its
+tab title say it too.
+
+It comes from the recorder: when a match closes it writes a CARD beside the `.SRP`
+(`<name>.json`: the players' names, teams, score, builds and platforms, how each one's
+match ended, whether it was relayed, the desync frame) and `index.json`, every card in the
+folder newest first (`third_party/matchmaker/Server/Recorder.cpp`, `WriteMatchCard`). The
+page reads `index.json` beside nginx's listing and lists every recording either way; one
+without a card shows its match id as before. Addresses are never on a card -- the page is
+public; it says who, not where from. Recordings made before the recorder wrote cards get
+theirs from the ledger's `match` lines, and a card whose recording was cleared goes:
+`scripts/recordings_index.py`, which `install`, `restart` and the admin page's
+"Update recordings player" run, and the "Clear" buttons after them.
+
+## A recording is shown in the view it was played in
+
+The DOS view draws 200 lines, the Amiga view 272. A DOS-view match shown 272 lines tall shows
+what its players never saw: players below their picture, and at the bottom goal rows past
+the bottom of the stadium (`20260929-205209-f526dc63.SRP`, frame 7056). So the viewer --
+the in-game LOAD/VIEW, `--view-replay`, this page -- switches to the recording's view for
+the replay and back after (`ReplayV2_UseRecordedView`). META's flags say which it was from
+now on (8 the DOS view, 16 "the view is recorded"); a netplay recording's SIMV said before
+that; an older file is read from its camera, which goes below Y 608 only when the match
+was simulated 200 lines tall. Where the camera still points past the pitch for the screen
+it is shown on, it is held at the bottom (`shown_camera_y`).
+
 ## What each player saw
 
 A live match's recording also keeps what each PLAYER saw of it (`PRED` and `SEEN`,
@@ -81,7 +111,15 @@ bin/SWOS.x86_64 --replay-player=/abs/path/to/X.SRP
 
 ## On the server
 
-Built by the unprivileged user and installed by the service script, like the matchmaker:
+**To update it:** the admin page's **Update recordings player** button, or
+`scripts/update_playback.sh` on the server -- it builds the player, copies it into
+`/srv/swos-matchmaker/playback` and refreshes the match cards, as the service account, with
+no root and no restart (a match in progress is untouched). The admin gateway needs write
+access there: after pulling this, `tools/matchmaker-admin/matchmaker-admin-service.sh
+install` once.
+
+The first time, it is built by the unprivileged user and installed by the service script,
+like the matchmaker:
 
 ```bash
 scripts/build_playback.sh                      # -> dist/playback; needs emsdk (EMSDK_DIR, default ~/emsdk)

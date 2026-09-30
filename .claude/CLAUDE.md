@@ -152,6 +152,11 @@ own to the recorder and they swap them in the lobby (`src/match_prediction.c`), 
 host's file still equals the recorder's. Optional (`[netplay] prediction`); the page draws
 it as a timeline and an overlay. GGPO-X's guess is "repeat the last input", checked on every
 guessed frame (`[pred]` log line) -- so PRED + INPT rebuild each player's predictions.
+A replay is shown in the VIEW its match was played in (`ReplayV2_UseRecordedView`: META flags
+8/16, else SIMV, else the camera) -- a DOS-view match drawn 272 tall showed rows past the
+stadium. The page names who played whom from the recorder's per-match card (`<rec>.json`,
+`index.json`; `scripts/recordings_index.py` backfills from the ledger, never addresses), and
+the admin page's "Update recordings player" runs `scripts/update_playback.sh` (no root/restart).
 
 ### Release builds — `scripts/build_dist.sh`
 
