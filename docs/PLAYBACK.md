@@ -42,7 +42,10 @@ without a card shows its match id as before. Addresses are never on a card -- th
 public; it says who, not where from. A player who does not record (`[netplay] record = off`, a
 browser, or a build from before 2026-09-30, when it became on by default) never streams, but still gets a name: the other player's opening message names
 both (`"recorded": false` on the card, `peer` in the ledger), and for matches from before the
-recorder kept that, `recordings_index.py` reads it from the match report's `rating.txt`. Recordings made before the recorder wrote cards get
+recorder kept that, `recordings_index.py` reads it from the match report's `rating.txt`. A
+recording the ledger never closed (the server stopped mid-match) gets a card from the
+recording itself -- its teams, score and length from META -- and names only if a match
+report came in, so no recording is left showing only its id. Recordings made before the recorder wrote cards get
 theirs from the ledger's `match` lines, and a card whose recording was cleared goes:
 `scripts/recordings_index.py`, which `install`, `restart` and the admin page's
 "Update recordings player" run, and the "Clear" buttons after them.

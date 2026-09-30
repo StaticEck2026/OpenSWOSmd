@@ -29,6 +29,57 @@ DEFAULT_DIR = "/srv/swos-matchmaker"
 SRP_META_SCORE_OFF = 2 + 2 + 2 + 2 + 4 + 32     # include/srp_writer.h
 
 
+META_TEAMS_OFF = SRP_META_SCORE_OFF + 4 + 2 + 2 + 2 + 40 + 40     # the two teams, 1018 bytes each
+TEAM_BYTES, TEAM_NAME_OFF = 1018, 22
+
+
+def srp_meta(path):
+    """(teams, score, frames) from a .SRP's own header and META, or None."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(32)
+            if len(head) < 32 or head[:4] != b"SWRP":
+                return None
+            frames = struct.unpack(">I", head[16:20])[0]
+            n = struct.unpack(">H", head[20:22])[0]
+            dirs = f.read(16 * n)
+            for i in range(n):
+                fourcc, off, stored, raw = struct.unpack(">4sIII", dirs[i * 16:i * 16 + 16])
+                if fourcc == b"META" and stored == raw and raw >= META_TEAMS_OFF + 2 * TEAM_BYTES:
+                    f.seek(off)
+                    m = f.read(raw)
+                    teams = []
+                    for k in range(2):
+                        b = m[META_TEAMS_OFF + k * TEAM_BYTES + TEAM_NAME_OFF:][:17]
+                        teams.append(b.split(b"\0")[0].decode("latin-1").strip())
+                    return teams, list(struct.unpack(">HH", m[SRP_META_SCORE_OFF:SRP_META_SCORE_OFF + 4])), frames
+    except OSError:
+        pass
+    return None
+
+
+def card_from_srp(recordings, file, reports):
+    """A card from the recording alone, for one the ledger has no line for (the server
+    stopped before it closed the match, say): its teams, score and length; the players'
+    names only if a match report for it came in."""
+    meta = srp_meta(os.path.join(recordings, file))
+    if not meta:
+        return None
+    teams, score, frames = meta
+    m = re.match(r"^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-([0-9a-f]{8})\.SRP$", file, re.I)
+    match = m.group(7) if m else ""
+    if match and reports and os.path.isdir(reports):         # the report's folder has the full id
+        full = [d for d in os.listdir(reports) if d.startswith(match)]
+        if len(full) == 1:
+            match = full[0]
+    card = {"file": file, "match": match,
+            "started": "%s-%s-%sT%s:%s:%s" % m.groups()[:6] if m else "",
+            "teams": teams, "score": score, "players": [None, None], "frames": frames,
+            "gameplay": 0, "relayed": False, "desync": None, "why": "no ledger line"}
+    fill_names(card, None, reports)
+    return card
+
+
 def srp_score(path):
     """The final score in a .SRP's META, or None."""
     try:
@@ -139,6 +190,17 @@ def backfill(recordings, ledger, reports):
             card = card_from_ledger(m, file)
             card["score"] = srp_score(srp)
             fill_names(card, m, reports)
+            write(card_path, json.dumps(card, separators=(",", ":")) + "\n")
+            made += 1
+    # Recordings the ledger never closed: a card from the recording itself.
+    for name in os.listdir(recordings):
+        if not name.upper().endswith(".SRP") or name in by_file:
+            continue
+        card_path = os.path.join(recordings, name[:-4] + ".json")
+        if os.path.exists(card_path):
+            continue
+        card = card_from_srp(recordings, name, reports)
+        if card:
             write(card_path, json.dumps(card, separators=(",", ":")) + "\n")
             made += 1
     # Cards already there (the recorder's, or an earlier run's) with a player missing.
