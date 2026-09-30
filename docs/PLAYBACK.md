@@ -44,8 +44,10 @@ browser, or a build from before 2026-09-30, when it became on by default) never 
 both (`"recorded": false` on the card, `peer` in the ledger), and for matches from before the
 recorder kept that, `recordings_index.py` reads it from the match report's `rating.txt`. A
 recording the ledger never closed (the server stopped mid-match) gets a card from the
-recording itself -- its teams, score and length from META -- and names only if a match
-report came in, so no recording is left showing only its id. Recordings made before the recorder wrote cards get
+recording itself -- its teams, score and length from META, and since 2026-09-30 its players'
+names from its own `PLYR` chunk (docs/REPLAY_FORMAT_V2.md §4), which every online match
+writes from kick-off -- so no recording is left showing only its id. The player page reads
+`PLYR` too when a recording has no card. Recordings made before the recorder wrote cards get
 theirs from the ledger's `match` lines, and a card whose recording was cleared goes:
 `scripts/recordings_index.py`, which `install`, `restart` and the admin page's
 "Update recordings player" run, and the "Clear" buttons after them.

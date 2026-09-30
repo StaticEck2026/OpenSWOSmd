@@ -34,7 +34,7 @@ TEAM_BYTES, TEAM_NAME_OFF = 1018, 22
 
 
 def srp_meta(path):
-    """(teams, score, frames) from a .SRP's own header and META, or None."""
+    """(teams, score, frames, names) from a .SRP's own header, META and PLYR, or None."""
     try:
         with open(path, "rb") as f:
             head = f.read(32)
@@ -43,6 +43,18 @@ def srp_meta(path):
             frames = struct.unpack(">I", head[16:20])[0]
             n = struct.unpack(">H", head[20:22])[0]
             dirs = f.read(16 * n)
+            names = [None, None]
+            for i in range(n):
+                fourcc, off, stored, raw = struct.unpack(">4sIII", dirs[i * 16:i * 16 + 16])
+                if fourcc == b"PLYR" and stored == raw:          # who played, from kick-off
+                    f.seek(off)
+                    p, o = f.read(raw), 2
+                    for k in range(2):
+                        if o >= len(p):
+                            break
+                        ln = p[o]
+                        names[k] = p[o + 1:o + 1 + ln].decode("latin-1") or None
+                        o += 1 + ln
             for i in range(n):
                 fourcc, off, stored, raw = struct.unpack(">4sIII", dirs[i * 16:i * 16 + 16])
                 if fourcc == b"META" and stored == raw and raw >= META_TEAMS_OFF + 2 * TEAM_BYTES:
@@ -52,7 +64,7 @@ def srp_meta(path):
                     for k in range(2):
                         b = m[META_TEAMS_OFF + k * TEAM_BYTES + TEAM_NAME_OFF:][:17]
                         teams.append(b.split(b"\0")[0].decode("latin-1").strip())
-                    return teams, list(struct.unpack(">HH", m[SRP_META_SCORE_OFF:SRP_META_SCORE_OFF + 4])), frames
+                    return teams, list(struct.unpack(">HH", m[SRP_META_SCORE_OFF:SRP_META_SCORE_OFF + 4])), frames, names
     except OSError:
         pass
     return None
@@ -65,7 +77,7 @@ def card_from_srp(recordings, file, reports):
     meta = srp_meta(os.path.join(recordings, file))
     if not meta:
         return None
-    teams, score, frames = meta
+    teams, score, frames, names = meta
     m = re.match(r"^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-([0-9a-f]{8})\.SRP$", file, re.I)
     match = m.group(7) if m else ""
     if match and reports and os.path.isdir(reports):         # the report's folder has the full id
@@ -74,7 +86,8 @@ def card_from_srp(recordings, file, reports):
             match = full[0]
     card = {"file": file, "match": match,
             "started": "%s-%s-%sT%s:%s:%s" % m.groups()[:6] if m else "",
-            "teams": teams, "score": score, "players": [None, None], "frames": frames,
+            "teams": teams, "score": score, "frames": frames,
+            "players": [{"player": k + 1, "name": names[k]} if names[k] else None for k in range(2)],
             "gameplay": 0, "relayed": False, "desync": None, "why": "no ledger line"}
     fill_names(card, None, reports)
     return card
@@ -213,7 +226,18 @@ def backfill(recordings, ledger, reports):
                 card = json.load(f)
         except (OSError, ValueError):
             continue
-        if fill_names(card, by_file.get(card.get("file", "")), reports):
+        changed = False
+        players = card.get("players") or [None, None]
+        if any(not p or not p.get("name") for p in players[:2]):
+            meta = srp_meta(os.path.join(recordings, card.get("file", "")))
+            for k in range(2):                           # the recording's own PLYR first
+                if meta and meta[3][k] and (len(players) <= k or not players[k] or not players[k].get("name")):
+                    while len(players) <= k:
+                        players.append(None)
+                    players[k] = {"player": k + 1, "name": meta[3][k]}
+                    changed = True
+            card["players"] = players
+        if fill_names(card, by_file.get(card.get("file", "")), reports) or changed:
             write(path, json.dumps(card, separators=(",", ":")) + "\n")
             named += 1
     return made, named

@@ -73,6 +73,9 @@ void    ReplayRec_SetHash(uint32_t frame, uint64_t hash);
  *                       halves. 0, or 1 when there was nothing to add it to. */
 struct SrpPrediction;
 void    ReplayRec_SetPredictionKept(int32_t on);
+/* Who played an online match (PLYR), player 1 (the host) first: from the lobby, as the
+ * match starts; written into its .SRP from kick-off. */
+void    ReplayRec_SetPlayers(const char *player1, const char *player2);
 int32_t ReplayRec_PredictionKept(void);
 int32_t ReplayRec_AddPeerPrediction(const struct SrpPrediction *peer);
 

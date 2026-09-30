@@ -656,6 +656,8 @@ static int32_t write_file(const char *name, const uint8_t *buf, uint32_t len)
     return 0;
 }
 
+static char s_playerNames[2][64];  /* who played: ReplayRec_SetPlayers, below */
+
 /* The recording so far as the parts of a file (include/srp_writer.h). */
 static void content(SrpContent *c)
 {
@@ -671,6 +673,10 @@ static void content(SrpContent *c)
     c->chapters     = s_rec.chapters;
     c->chapterCount = s_rec.chapterCount;
     c->tickRate     = (uint16_t)DosGameplay_TargetFps();
+    if (s_playerNames[0][0] || s_playerNames[1][0]) {
+        c->players[0] = s_playerNames[0];
+        c->players[1] = s_playerNames[1];
+    }
     c->quirks       = _gOriginalFireHoldLockout ? SWRP_QUIRK_ORIGINAL_FIRE_HOLD_LOCKOUT : 0;
     /* The resume parts whenever there are any (the recorder's stream sends them as they
      * come); write_recording keeps them only when every frame has its input and hash. */
@@ -700,6 +706,15 @@ int32_t ReplayRec_Content(SrpContent *out)
  * (netplay_ghost.h), and the other player's when it arrives over the lobby's link after
  * the match (src/match_prediction.c) -- then the files are written again with both, and
  * are the recorder's copy byte for byte. [netplay] prediction = false keeps neither. */
+/* Who played (PLYR): an online match's two players, player 1 (the host) first, from the
+ * lobby -- in the file from kick-off, so a recording names its players however the match
+ * ends. Kept until the match that set them is written. */
+void ReplayRec_SetPlayers(const char *player1, const char *player2)
+{
+    snprintf(s_playerNames[0], sizeof s_playerNames[0], "%s", player1 ? player1 : "");
+    snprintf(s_playerNames[1], sizeof s_playerNames[1], "%s", player2 ? player2 : "");
+}
+
 static int32_t s_predKept = 1;
 static struct {
     int32_t       player;           /* this machine's half: 1 or 2; 0 when there is none */
@@ -856,6 +871,7 @@ void ReplayRec_MatchEnd(void)
     }
     rec_free();
     resume_clear();
+    s_playerNames[0][0] = s_playerNames[1][0] = '\0';     /* this match's, now written */
     if (s_trace)
         fflush(s_trace);
 }
@@ -880,6 +896,7 @@ static struct {
     uint32_t    seenLen;
     uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
     int32_t     dosView;        /* the view it was played in: 1 DOS, 0 Amiga, -1 not known */
+    char        names[2][64];   /* PLYR: who played, "" when the file does not say */
 } s_play;
 
 /* Worked out on load, never in a file: this frame was DRAWN wrong for that player -- one
@@ -1203,6 +1220,17 @@ int32_t ReplayV2_Load(const uint8_t *name)
     }
     free(audio);
     if (!why) {
+        uint32_t plyrLen = 0, o = 2, k;
+        uint8_t *plyr = chunk_get(file, fileLen, CHUNK_PLYR, &plyrLen);
+        for (k = 0; plyr && k < 2 && o < plyrLen; k++) {
+            uint32_t n = plyr[o++];
+            if (o + n > plyrLen || n >= sizeof s_play.names[k])
+                break;
+            memcpy(s_play.names[k], plyr + o, n);
+            s_play.names[k][n] = '\0';
+            o += n;
+        }
+        free(plyr);
         load_prediction(file, fileLen);
         s_play.dosView = recorded_view(meta, file, fileLen);
     }
@@ -1320,6 +1348,11 @@ EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPredAt(int32_t frame)
     if (!s_play.pred || frame < 0 || (uint32_t)frame >= s_play.frameCount)
         return -1;
     return s_play.pred[2 * frame] | (s_play.pred[2 * frame + 1] << 8);
+}
+/* Who played (PLYR): player 1's or 2's name, "" when the recording does not say. */
+EMSCRIPTEN_KEEPALIVE const char *ReplayV2_PlayerName(int32_t player)
+{
+    return s_play.loaded && player >= 1 && player <= 2 ? s_play.names[player - 1] : "";
 }
 /* All of it, for the page's timeline: 2 bytes a frame, as ReplayV2_PlayerPredAt. */
 EMSCRIPTEN_KEEPALIVE uint8_t *ReplayV2_PlayerPredData(void) { return s_play.pred; }

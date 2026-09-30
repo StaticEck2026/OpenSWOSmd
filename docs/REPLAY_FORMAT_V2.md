@@ -229,6 +229,18 @@ A 600-frame match gains about 5.7 KB: `STAT` 1.9 KB, `SETP` 1.1 KB, `INPT`
 0.2 KB, `HASH` 2.4 KB. `HASH` does not compress, so a full match carries about
 90 KB of it — beside a ~1 MB file.
 
+### Who played: `PLYR`
+
+An online match's two players, as the lobby named them: version u16 (1), then player 1's
+(the host's) name and player 2's, each a length byte and the bytes. Written from kick-off
+(`ReplayRec_SetPlayers`, at the live match's start) by the game, and by the recorder from the
+players' HELLOs (a player who did not record is named by the other's), so every copy of a
+recording says who played however the match ended -- a server restart mid-match, a report
+that never came. It sits right after `CHAP`, before `PRED`/`SEEN`, which
+`Srp_WithPrediction` replaces at the end, so the byte-for-byte rule holds. Optional: an
+offline match has none. The playback page reads it (`ReplayV2_PlayerName`) when a recording
+has no card, and `scripts/recordings_index.py` builds cards from it.
+
 ### What each player SAW: `PRED` and `SEEN`
 
 Everything above is the match as finally PLAYED. Under rollback that is not what either

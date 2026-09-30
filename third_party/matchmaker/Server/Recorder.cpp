@@ -514,6 +514,17 @@ void Recorder::WriteReplay(Match& m, bool last)
         c.rules = s->rules;
         c.simWidth = s->resumeSimWidth;
     }
+    // Who played (PLYR), as the players' games write it: player 1 (the host) first, each
+    // named by its own HELLO or, if it did not record, by the other's.
+    std::string names[2] = {
+        m.side[0].present ? m.side[0].name : m.side[1].peer,
+        m.side[1].present ? m.side[1].name : m.side[0].peer,
+    };
+    if (!names[0].empty() || !names[1].empty())
+    {
+        c.players[0] = names[0].c_str();
+        c.players[1] = names[1].c_str();
+    }
     // What each player saw, from each player's own stream: both halves in one file.
     SrpPrediction halves[2];
     for (int i = 0; i < 2; i++)

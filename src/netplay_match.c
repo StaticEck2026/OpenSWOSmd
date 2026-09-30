@@ -947,6 +947,9 @@ static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
     info.peerName   = them ? them->name : "";
     info.team1      = team1;
     info.team2      = team2;
+    /* Who played, into the match's .SRP from kick-off (PLYR): the host (player 1) first. */
+    ReplayRec_SetPlayers(localPlayer == 1 ? info.myName : info.peerName,
+                         localPlayer == 1 ? info.peerName : info.myName);
     MatchRecord_Begin(&info);
     MatchReport_Begin(&info);           /* both players' logs, zipped, after the match */
     MatchPrediction_Begin();            /* both players' PRED and SEEN, after it */

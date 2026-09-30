@@ -292,6 +292,20 @@
           scrub.max = String(n - 1);
           if (startFrame >= 0) { api.seek(startFrame); api.pause(1); }
           loadPred(n);
+          // No card (or one without names): the recording itself names its players (PLYR).
+          if (!window.playerNames && Module.cwrap) {
+            var nm = Module.cwrap('ReplayV2_PlayerName', 'string', ['number']);
+            var names = [nm(1), nm(2)];
+            if (names[0] || names[1]) {
+              window.playerNames = names;
+              if (!window.matchTitle) {
+                var t = (names[0] || '?') + ' v ' + (names[1] || '?');
+                document.getElementById('name').textContent = t;
+                window.matchTitle = t + ' — SWOS Playback';
+              }
+              window.onPlayerNames();
+            }
+          }
           Module.setStatus('');
         }
         var f = api.frame(), rate = api.rate();

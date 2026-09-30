@@ -41,6 +41,7 @@ extern "C" {
 #define CHUNK_HASH          FOURCC('H', 'A', 'S', 'H')     /* each frame's SIM-tier hash, at its start */
 /* What each player SAW of a netplay match (docs/REPLAY_FORMAT_V2.md §4, "Prediction"):
  * optional, and a file plays the same without them. */
+#define CHUNK_PLYR          FOURCC('P', 'L', 'Y', 'R')     /* who played: both players' names */
 #define CHUNK_PRED          FOURCC('P', 'R', 'E', 'D')     /* per frame, per player: the lag, rollbacks */
 #define CHUNK_SEEN          FOURCC('S', 'E', 'E', 'N')     /* where players were drawn, where they were */
 
@@ -127,6 +128,10 @@ typedef struct SrpContent {
     uint64_t             layout;        /* SimState_LayoutHash of the recording build */
     uint8_t              rules;         /* P2P_RULE_*: what it was played by */
     uint16_t             simWidth;      /* the simulation draw width it was played at */
+
+    /* Who played an online match (PLYR): player 1's (the host's) name and player 2's, as
+     * the lobby had them; both NULL for a match with no players to name. */
+    const char          *players[2];
 
     /* What each player saw (PRED, SEEN): [0] player 1's, [1] player 2's, NULL for a half
      * this file does not have. Both NULL: neither chunk. */

@@ -215,12 +215,34 @@ static uint8_t *build_seen(uint32_t frames, const SrpPrediction *const half[2], 
     return out;
 }
 
+/* PLYR: version, then each player's name as a length byte and the bytes. */
+static uint8_t *build_players(const SrpContent *c, uint32_t *len)
+{
+    uint8_t *out = (uint8_t *)malloc(2 + 2 * 256);
+    uint32_t o = 2, i;
+    if (!out)
+        return NULL;
+    BE_WRITE_U16(out, 1);
+    for (i = 0; i < 2; i++) {
+        size_t n = c->players[i] ? strlen(c->players[i]) : 0;
+        if (n > 255)
+            n = 255;
+        out[o++] = (uint8_t)n;
+        memcpy(out + o, c->players[i] ? c->players[i] : "", n);
+        o += (uint32_t)n;
+    }
+    *len = o;
+    return out;
+}
+
 uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
 {
-    Chunk chunks[12];
-    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0, parts = 5, predLen = 0, seenLen = 0;
-    uint8_t *raw[12], *file, *p;
+    Chunk chunks[13];
+    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0, parts = 5, predLen = 0, seenLen = 0,
+             plyrLen = 0;
+    uint8_t *raw[13], *file, *p, *plyr = NULL;
     int32_t predicted = c->prediction[0] || c->prediction[1];
+    int32_t named = c->players[0] || c->players[1];
     int32_t missing = 0;
     int32_t resumable = c->setup && c->setupLen && c->kickoff && c->kickoffLen &&
                         c->inputs && c->hashes && c->frameCount;
@@ -232,6 +254,8 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
     raw[2] = build_audio(c);
     raw[3] = build_seek(c, &seekLen);
     raw[4] = build_chapters(c, &chapLen);
+    if (named && !(plyr = build_players(c, &plyrLen)))
+        missing = 1;
     if (resumable) {
         raw[5] = build_simv(c);
         raw[6] = copy_of(c->setup, c->setupLen);
@@ -252,6 +276,7 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
     if (missing) {
         for (i = 0; i < parts; i++)
             free(raw[i]);
+        free(plyr);
         return NULL;
     }
     chunk_make(&chunks[n++], CHUNK_META, raw[0], c->metaLen, 0);
@@ -259,6 +284,10 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
     chunk_make(&chunks[n++], CHUNK_AUDI, raw[2], c->audioCount * AUDIO_EVENT_BYTES, 1);
     chunk_make(&chunks[n++], CHUNK_SEEK, raw[3], seekLen, 0);
     chunk_make(&chunks[n++], CHUNK_CHAP, raw[4], chapLen, 0);
+    /* Before PRED and SEEN, which Srp_WithPrediction replaces at the end: every other
+     * chunk keeps its place, so a file rewritten with the other half is still this one. */
+    if (plyr)
+        chunk_make(&chunks[n++], CHUNK_PLYR, plyr, plyrLen, 0);
     if (resumable) {
         /* The state packet is deflated already; the hashes do not compress. */
         chunk_make(&chunks[n++], CHUNK_SIMV, raw[5], SRP_SIMV_BYTES, 0);
@@ -268,10 +297,8 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
         chunk_make(&chunks[n++], CHUNK_HASH, raw[9], c->frameCount * SRP_HASH_BYTES, 0);
     }
     if (predicted) {
-        chunk_make(&chunks[n], CHUNK_PRED, raw[n], predLen, 1);
-        n++;
-        chunk_make(&chunks[n], CHUNK_SEEN, raw[n], seenLen, 1);
-        n++;
+        chunk_make(&chunks[n++], CHUNK_PRED, raw[parts - 2], predLen, 1);
+        chunk_make(&chunks[n++], CHUNK_SEEN, raw[parts - 1], seenLen, 1);
     }
 
     total = SWRP_HEADER_BYTES + n * SWRP_DIR_BYTES;
