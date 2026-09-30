@@ -563,6 +563,13 @@ int main(int argc, char **argv)
             replay_window = 1;
             replay_paced = 1;
             ReplayV2_PlayerMode(1);
+#ifdef __EMSCRIPTEN__
+            /* SDL's keyboard on the canvas alone, so the page's own keys (Space, the arrows,
+             * [ ], V) stay the page's. A hint, read when the video starts -- the page cannot
+             * say it: Module.keyboardListeningElement is SDL1's, and a newer Emscripten
+             * refuses the whole page for passing it. */
+            SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
             /* Straight to the recording: paced, the intro would play first, a minute of it. */
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "srp-resim")) != NULL) {

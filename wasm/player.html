@@ -83,8 +83,9 @@
 
     var Module = {
       canvas: document.getElementById('canvas'),
-      // SDL listens for keys on the canvas only, so the page's shortcuts stay the page's.
-      keyboardListeningElement: document.getElementById('canvas'),
+      // Keys: SDL listens on the canvas only (a hint set by --replay-player in src/main.c).
+      // Not Module.keyboardListeningElement -- that is SDL1's, and Emscripten 4+ aborts on
+      // a Module property it does not use (INCOMING_MODULE_JS_API).
       arguments: ['--replay-player=/in/' + srp],
       preRun: [function () {
         try { FS.mkdir('/in'); } catch (e) { /* already there */ }
