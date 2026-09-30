@@ -27,6 +27,11 @@
 #include "srp_writer.h"     /* the file's layout, shared with the recorder */
 #include "swos_io.h"
 #include "image_cmd.h"      /* ProcessImageCommandStream */
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>     /* EMSCRIPTEN_KEEPALIVE: the playback page's controls */
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
 #include "match_sim.h"      /* InitTeams */
 
 #include <stdio.h>
@@ -473,7 +478,12 @@ static void write_head(void)
     BE_WRITE_U16(h + 12, _team2TotalGoals);
     BE_WRITE_U16(h + 14, _animPatternsState);
     BE_WRITE_U16(h + 16, (uint16_t)(_gameTime[1] * 100 + _gameTime[2] * 10 + _gameTime[3]));
-    BE_WRITE_U16(h + 18, 0);
+    /* The animated ad's line, plus one: 0 is a recording from before it was kept. The
+     * ad is a change to the sprite GRAPHICS, not a position (Adverts_ApplyStripLine). */
+    {
+        extern uint16_t _currentAnimatedAdLine;
+        BE_WRITE_U16(h + 18, (uint16_t)(_currentAnimatedAdLine + 1));
+    }
     s_rec.headDone = 1;
 }
 
@@ -1012,14 +1022,82 @@ static void fire_sound(const AudioEvent *e)
     }
 }
 
+/* ---- The player: a recording under a scrub bar (the playback page, wasm/player.html) ----
+ *
+ * --view-replay plays a recording once and exits. As the PLAYER (ReplayV2_PlayerMode) it
+ * holds instead: the page seeks to any frame, pauses and steps, and the last frame stays
+ * on screen. Every frame of FRMS has its own offset, so a seek is only the cursor --
+ * plus the sound cursor, and the camera put straight where the match had it, as on
+ * the first frame (_replayState 1). */
+static struct {
+    int32_t on, paused, seekTo, step;
+    int32_t silenced;               /* the pause's silence is done */
+} s_player = { 0, 0, -1, 0, 0 };
+
+void ReplayV2_PlayerMode(int32_t on) { s_player.on = on != 0; }
+
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerFrames(void)   { return s_play.loaded ? (int32_t)s_play.frameCount : 0; }
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerTickRate(void) { return s_play.loaded ? (int32_t)s_play.tickRate : 0; }
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPaused(void)   { return s_player.paused; }
+/* The frame on screen: the one last drawn. */
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerFrame(void)
+{
+    return s_play.cursor > 0 ? (int32_t)s_play.cursor - 1 : 0;
+}
+EMSCRIPTEN_KEEPALIVE void ReplayV2_PlayerPause(int32_t paused) { s_player.paused = paused != 0; }
+EMSCRIPTEN_KEEPALIVE void ReplayV2_PlayerSeek(int32_t frame)
+{
+    if (frame < 0)
+        frame = 0;
+    if (s_play.loaded && frame >= (int32_t)s_play.frameCount)
+        frame = (int32_t)s_play.frameCount - 1;
+    s_player.seekTo = frame;
+}
+/* One frame forward or back, then paused there. */
+EMSCRIPTEN_KEEPALIVE void ReplayV2_PlayerStep(int32_t delta)
+{
+    s_player.paused = 1;
+    ReplayV2_PlayerSeek(ReplayV2_PlayerFrame() + delta);
+}
+
 void ReplayV2_DrawFrame(void)
 {
     const uint8_t *h, *sp;
     uint16_t sprites, i;
     int16_t origin, camY;
+    int32_t fresh = 1;              /* a frame not drawn before: its sounds play */
+    uint16_t adLine;
+    extern int32_t Adverts_ApplyStripLine(uint16_t image, uint16_t line);
 
     if (!s_play.loaded)
         return;
+    if (s_player.on) {
+        /* No sound carries across a jump or a pause: a seek skips what would have
+         * ended a looping effect, which then played on regardless of where the
+         * recording is (AudioSDL_SilenceSfx). The recording's next events start
+         * what should be heard from here. */
+        extern void AudioSDL_SilenceSfx(void);
+        if (s_player.seekTo >= 0 || (s_player.paused && !s_player.silenced)) {
+            AudioSDL_SilenceSfx();
+            s_player.silenced = s_player.paused;
+        }
+        if (!s_player.paused)
+            s_player.silenced = 0;
+        if (s_player.seekTo >= 0) {
+            s_play.cursor = (uint32_t)s_player.seekTo;
+            s_player.seekTo = -1;
+            for (s_play.audioCursor = 0; s_play.audioCursor < s_play.audioCount &&
+                 s_play.audio[s_play.audioCursor].frame < s_play.cursor; s_play.audioCursor++)
+                ;
+            _replayState = 1;
+            fresh = 0;
+        } else if (s_player.paused || s_play.cursor >= s_play.frameCount) {
+            /* Hold: the frame on screen, drawn again. */
+            if (s_play.cursor > 0)
+                s_play.cursor--;
+            fresh = 0;
+        }
+    }
     if (s_play.cursor >= s_play.frameCount) {
         _replayState = 0;
         return;
@@ -1060,21 +1138,39 @@ void ReplayV2_DrawFrame(void)
 
     origin = Render_CameraX();
     camY = _cameraY.s.i;
+    adLine = BE_READ_U16(h + 18);
+    adLine = adLine ? (uint16_t)(adLine - 1) : 0;     /* older recordings: the first strip */
     sprites = BE_READ_U16(h);
     sp = h + FRAME_HEAD_BYTES;
     for (i = 0; i < sprites; i++, sp += SPRITE_BYTES) {
+        extern int _menu_draw_x_offset;
         uint16_t image = BE_READ_U16(sp);
+        /* Where it lands on screen: the world position through the playback camera, as
+         * live drawing does. */
         int16_t sx = (int16_t)((int16_t)BE_READ_U16(sp + 2) - origin);
         int16_t sy = (int16_t)((int16_t)BE_READ_U16(sp + 4) - camY);
-        const SpriteGraphics *g = graphics(image);
+        const SpriteGraphics *g;
+        (void)Adverts_ApplyStripLine(image, adLine);   /* the ad's window, as the match cut it */
+        g = graphics(image);
         if (!in_render_view(g, sx, sy))
             continue;
-        DarkenRectangle(image, sx, sy);
-        if (s_trace)
-            trace_sprite(g->ordinal, sx, sy);
+        /* The blit adds _menu_draw_x_offset -- WIDE_MARGIN in the highlights viewer, a
+         * menu screen -- and the pitch is drawn without it, so it is taken off here, as
+         * the .HIL path does (DrawReplayFrame) and drawPatternFromIndex does. Left on,
+         * every sprite of a replay wider than 336 sat (W-336)/2 right of the pitch: the
+         * goal net drawn a second time beside the goal, every shadow on the wrong
+         * ground. The trace records the column the pixels land in -- what the blit is
+         * given plus what it adds -- so the replay test compares what is SEEN; it used
+         * to record the value before the blit, and could never see this. */
+        {
+            int16_t blitX = (int16_t)(sx - _menu_draw_x_offset);
+            DarkenRectangle(image, blitX, sy);
+            if (s_trace)
+                trace_sprite(g->ordinal, (int16_t)(blitX + _menu_draw_x_offset), sy);
+        }
     }
 
-    while (s_play.audioCursor < s_play.audioCount &&
+    while (fresh && s_play.audioCursor < s_play.audioCount &&
            s_play.audio[s_play.audioCursor].frame <= s_play.cursor)
         fire_sound(&s_play.audio[s_play.audioCursor++]);
 

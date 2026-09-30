@@ -137,6 +137,13 @@ the setup, the state at frame 0, every confirmed frame's input and SIM hash (REP
 §4). `--srp-resim=<file>` (`src/srp_resim.c`) replays it headless through the netplay step and
 names the first frame that parts from the recording: a cross-machine desync reproduced offline from
 the recorder's copy. `RECORD=1 scripts/relay_test.sh` resims every copy of what it records.
+**The recordings player** (docs/PLAYBACK.md): `make WASM=1 PLAYER=1` builds `dist/playback`, which the
+server publishes at `https://us.swos.eu/playback/` -- every recording, playable under a scrub bar with
+frame numbers and `&f=<frame>` links, so a tester's "the short pass after the first corner" becomes a
+frame. `--replay-player=<file>` is the same natively; `scripts\serve_playback.bat` serves it locally
+over `build/recordings`. It found three viewer bugs that every replay had: sprites drawn
+(W-336)/2 right of the pitch on wide screens, the pitch in left-over colours, the animated ad
+unrolled -- `scripts/replay_v2_test.sh` now traces where sprites actually land on screen.
 
 ### Release builds — `scripts/build_dist.sh`
 

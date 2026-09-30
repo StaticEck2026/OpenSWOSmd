@@ -921,7 +921,13 @@ after_decode:
      * WIDE_MARGIN is measured from 336 and is -8 in the DOS view, which would put
      * both of these 8 pixels further left than the DOS draws them. */
     const int dosv = (_gDosView != 0);
-    const int overlayMargin = (_screen_width - (dosv ? DOS_VIEW_WIDTH : SCREEN_WIDTH)) / 2;
+    /* ...less what the blit itself adds: _menu_draw_x_offset is 0 in a match (an
+     * instant replay) but WIDE_MARGIN in the highlights viewer, a menu screen, where
+     * adding the margin here as well put the score (W-336)/2 right of its corner --
+     * near the middle of a wide screen. */
+    extern int _menu_draw_x_offset;
+    const int overlayMargin = (_screen_width - (dosv ? DOS_VIEW_WIDTH : SCREEN_WIDTH)) / 2
+                              - _menu_draw_x_offset;
 
     /* Show replay icon (spinning R) when NOT in normal replay: (11, 14) in both
      * releases. */

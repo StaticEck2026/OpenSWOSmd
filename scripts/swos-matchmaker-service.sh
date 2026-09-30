@@ -19,7 +19,8 @@ usage() {
 
 ensure_srv_layout() {
     echo "Ensuring ${DEPLOY_DIR} directories/files exist (ReadWritePaths requires them to already be there, systemd won't create them) ..."
-    sudo mkdir -p "${DEPLOY_DIR}/tls" "${DEPLOY_DIR}/bin" "${DEPLOY_DIR}/recordings" "${DEPLOY_DIR}/reports"
+    sudo mkdir -p "${DEPLOY_DIR}/tls" "${DEPLOY_DIR}/bin" "${DEPLOY_DIR}/recordings" "${DEPLOY_DIR}/reports" \
+                  "${DEPLOY_DIR}/playback"
     sudo touch "${DEPLOY_DIR}/matches.jsonl"
     sudo chown -R "${RUN_USER}:${RUN_USER}" "${DEPLOY_DIR}"
 }
@@ -40,9 +41,31 @@ deploy_binary() {
     sudo mv -f "${BINARY}.new" "$BINARY"
 }
 
+# The recordings player (docs/PLAYBACK.md): static files nginx serves at /playback/,
+# built beforehand as the unprivileged user (scripts/build_playback.sh, or the admin
+# page's Rebuild) -- never here, which can run as root.
+deploy_playback() {
+    local built="${REPO_DIR}/dist/playback"
+    if [ ! -s "${built}/SWOS.wasm" ] || [ ! -s "${built}/index.html" ]; then
+        echo "Recordings player not built (${built}); skipping it. Build it with"
+        echo "  ${REPO_DIR}/scripts/build_playback.sh   (needs emsdk)"
+        return 0
+    fi
+    echo "Copying the recordings player -> ${DEPLOY_DIR}/playback ..."
+    sudo mkdir -p "${DEPLOY_DIR}/playback"
+    sudo cp -f "${built}"/index.html "${built}"/SWOS.html "${built}"/SWOS.js "${built}"/SWOS.wasm \
+               "${built}"/SWOS.data "${DEPLOY_DIR}/playback/"
+    sudo chown -R "${RUN_USER}:${RUN_USER}" "${DEPLOY_DIR}/playback"
+    if ! grep -rqs "location /playback/" /etc/nginx/ 2>/dev/null; then
+        echo "NOTE: nginx has no 'location /playback/' yet -- see docs/PLAYBACK.md:"
+        echo "  location /playback/ { alias ${DEPLOY_DIR}/playback/; }"
+    fi
+}
+
 install_service() {
     ensure_srv_layout
     deploy_binary
+    deploy_playback
 
     echo "Writing ${SERVICE_FILE} ..."
     # One argument per line. In this unquoted heredoc "\\" writes the single backslash
@@ -99,6 +122,7 @@ EOF
 
 restart_service() {
     deploy_binary
+    deploy_playback
     echo "Restarting ${SERVICE_NAME} ..."
     sudo systemctl restart "$SERVICE_NAME"
     systemctl status "$SERVICE_NAME" --no-pager || true

@@ -105,6 +105,16 @@ void    ReplayV2_DrawFrame(void);
  * SWOS_REPLAY_TRACE=<file> writes a line per frame both when recording and when playing
  * (the sprites actually drawn, and the sounds), so the two can be compared. */
 int32_t ReplayV2_ArmViewTest(const char *path);
+/* --replay-player: --view-replay that holds at the end instead of exiting, and takes
+ * the playback page's controls -- exported to it on the web build. */
+void    ReplayV2_PlayerMode(int32_t on);
+int32_t ReplayV2_PlayerFrames(void);
+int32_t ReplayV2_PlayerTickRate(void);
+int32_t ReplayV2_PlayerFrame(void);         /* the frame on screen */
+int32_t ReplayV2_PlayerPaused(void);
+void    ReplayV2_PlayerPause(int32_t paused);
+void    ReplayV2_PlayerSeek(int32_t frame);
+void    ReplayV2_PlayerStep(int32_t delta);   /* +-N frames, then paused */
 int32_t ReplayV2_ViewTestArmed(void);
 void    ReplayV2_ViewTestRun(void);
 

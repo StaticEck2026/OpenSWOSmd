@@ -48,7 +48,7 @@ RECORDING_NAME = re.compile(r"^(\d{8}-\d{6}-[0-9a-f]{8}\.SRP)$")
 # queue, no cron delay.
 LOCAL_ACTIONS = {
     "pull": ["git", "pull", "--ff-only"],
-    "build": ["scripts/run_matchmaker.sh", "--rebuild", "--build-only"],
+    "build": ["scripts/run_matchmaker.sh", "--rebuild", "--build-only", "--with-playback"],
     "status": ["scripts/swos-matchmaker-service.sh", "status"],
 }
 # Needs real root - queued for admin-cron-worker.sh instead. That script has
@@ -62,7 +62,7 @@ CLEAR_ACTIONS = {"clear-reports", "clear-recordings"}
 
 ACTIONS = [
     ("pull", "git pull"),
-    ("build", "Rebuild (--rebuild --build-only)"),
+    ("build", "Rebuild (server + recordings player)"),
     ("status", "Service: status"),
     ("install", "Service: install"),
     ("restart", "Service: restart"),

@@ -666,6 +666,28 @@ bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP
 That replays the match from its recorded inputs and names the first frame that parts from
 what was recorded (docs/REPLAY_FORMAT_V2.md, docs/NETPLAY.md §7 "The recorder").
 
+### The recordings player: /playback/
+
+`https://<server>/playback/` plays any recording in a browser under a scrub bar, so a
+moment a tester describes can be named by its frame (docs/PLAYBACK.md). Once:
+
+```bash
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk     # as the service user
+cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
+```
+
+and in the HTTPS server block, beside the `/recordings/` one:
+
+```nginx
+location /playback/ {
+    alias /srv/swos-matchmaker/playback/;
+}
+```
+
+(`sudo nginx -t && sudo systemctl reload nginx`). Then the admin page's Rebuild builds it
+with the server (`scripts/run_matchmaker.sh --build-only --with-playback`), and `install`
+or `restart` copies it into place. Without emsdk the build says so and skips it.
+
 ### Lag, delay and stutter: read both players' SWOS.log
 
 `SWOS.log` is in the save folder (`Documents\SWOS` on Windows). Every online match writes

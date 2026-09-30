@@ -105,6 +105,11 @@ ifdef WASM
 TARGET_NAME := SWOS.html
 BUILD_OS    := emscripten
 BUILD_ARCH  := wasm
+# PLAYER=1: the recordings player for the server's /playback/ page -- the same game,
+# its own page (wasm/player.html) and objects, and no netplay (docs/PLAYBACK.md).
+ifdef PLAYER
+BUILD_ARCH  := wasm-player
+endif
 else ifeq ($(OS),Windows_NT)
 TARGET_NAME := SWOS.exe
 BUILD_OS    := windows
@@ -163,7 +168,11 @@ BINDIR := bin
 # and the .nsp. scripts/build_dist.sh has always excluded them from every
 # archive for the same reason.
 ifdef WASM
+ifdef PLAYER
+OUTDIR := dist/playback
+else
 OUTDIR := dist/web
+endif
 else
 OUTDIR := $(BINDIR)
 endif
@@ -555,6 +564,11 @@ endif
 # native ran 8bpp. grafs_aga is currently a complete superset, so grafs/ is only
 # the safety net — droppable later if the ~268K matters for download size.
 ifdef WASM
+ifdef PLAYER
+WASM_SHELL := wasm/player.html
+else
+WASM_SHELL := wasm/shell.html
+endif
 # EMULATE_FUNCTION_POINTER_CASTS: SWOS's menu system stores void(void) callbacks
 # (e.g. FriendlyMenu) in void(MenuEntry*) fields and invokes them through void*
 # casts — fine on every native ABI, but wasm hard-traps an indirect call whose
@@ -564,7 +578,7 @@ LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
            -sEMULATE_FUNCTION_POINTER_CASTS=1 \
            -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 \
            -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS -lidbfs.js \
-           --pre-js wasm/pre.js --shell-file wasm/shell.html \
+           --pre-js wasm/pre.js --shell-file $(WASM_SHELL) \
            --preload-file bin/data@/data \
            --preload-file bin/grafs@/grafs \
            --preload-file bin/grafs_aga@/grafs_aga \
@@ -572,7 +586,7 @@ LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
            --preload-file bin/sound@/sound \
            --preload-file bin/data_json@/data_json
 # Re-link when the pre-js or shell HTML changes (both embedded at link time).
-WASM_LINK_DEPS := wasm/pre.js wasm/shell.html
+WASM_LINK_DEPS := wasm/pre.js $(WASM_SHELL)
 # The --preload-file dirs are baked into SWOS.data AT LINK TIME, but nothing above
 # makes them a prerequisite — so editing/adding a data file and re-running
 # `make WASM=1` relinked nothing and silently shipped the OLD SWOS.data. (Hit for
@@ -622,7 +636,9 @@ endif
 GGPO_DIR := third_party/ggpo-x/src
 ENET_DIR := third_party/enet
 ifndef NETPLAY
-ifdef WASM
+ifdef PLAYER
+NETPLAY := 0
+else ifdef WASM
 NETPLAY := 1
 else ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
 NETPLAY := 1
@@ -717,6 +733,13 @@ $(BUILD_FLAGS_STAMP):
 # ---- Targets ----
 .PHONY: all clean distclean debug macos-universal macos-app
 all: $(TARGET)
+ifdef PLAYER
+# The recordings list beside the player (docs/PLAYBACK.md).
+all: $(OUTDIR)/index.html
+$(OUTDIR)/index.html: wasm/playback-index.html
+	@mkdir -p $(OUTDIR)
+	cp $< $@
+endif
 
 debug:
 	$(MAKE) DEBUG=1 all

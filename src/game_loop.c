@@ -98,6 +98,7 @@ extern void EnsureSfxLoadedAndStart(void);
 extern void SetPitchTypeAndNumber(void);
 extern void InitGameSaveTeams(TeamGame *topTeam, TeamGame *bottomTeam);
 extern void InitGameRestoreTeams(void);
+extern void ApplyPitchPaletteAndFactors(void);
 extern uint16_t Rand(void);
 extern uint16_t Rand2(void);
 extern void ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
@@ -1054,6 +1055,17 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
     CopyTeamsAndHeader();
     InitGameSaveTeams(leftTeam, rightTeam);
+    /* The recorded pitch's colours. In SWOS2.s InitGameSaveTeams ends in `bra.w *+4`
+     * and FALLS THROUGH into InitGameRestoreTeams, whose highlight test skips nothing,
+     * so the original viewer ran all of it -- apply_palette_and_pitch_tables included.
+     * The C InitGameSaveTeams returns, and the viewer never called the rest: every
+     * replay drew its grass in whatever pitch colours were left over (the recordings
+     * player, which skips the front end: a dry-pitch match in muddy brown, and its
+     * shadows looking wrong on it). Not the whole of InitGameRestoreTeams: the rest
+     * works on the MATCH's team files (_gameTeam1/2, ApplyTeamTactics), which a viewer
+     * has none of -- the original ran it on whatever the last match left there, and
+     * here that is NULL. */
+    ApplyPitchPaletteAndFactors();
     /* The DOS view, on the same seam StartMatchSequence uses: AFTER
      * InitGameSaveTeams has faded out, because the stadium "VS" line-up above is
      * menu-sized and resizing while it is on screen re-letterboxes it mid-fade.

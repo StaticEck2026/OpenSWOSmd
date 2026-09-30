@@ -38,5 +38,7 @@ void StartPenalties(void);
 
 /* Game restore */
 void InitGameRestoreTeams(void);
+/* Its pitch step alone: palette, Jaguar shadow, ball physics (the highlights viewer). */
+void ApplyPitchPaletteAndFactors(void);
 
 #endif

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SWOS Playback</title>
+  <!-- The list half of the recordings player (docs/PLAYBACK.md): every .SRP the server has
+       recorded, newest first, each opening SWOS.html?srp=<name>. It reads nginx's listing
+       of /recordings/ and loads none of the game, so it is quick to browse. -->
+  <style>
+    :root { --fg: #d8d8d8; --dim: #8a8a8a; --accent: #6c6; --bg: #0e0e0e; --row: #161616; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p { color: var(--dim); margin: 0 0 16px; }
+    input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 12px; background: var(--row);
+            color: var(--fg); border: 1px solid #333; border-radius: 4px; font: inherit; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li a { display: flex; gap: 12px; padding: 8px 10px; margin-bottom: 4px; background: var(--row);
+           border-radius: 4px; color: var(--fg); text-decoration: none; font: 13px/1.4 monospace; }
+    li a:hover { outline: 1px solid var(--accent); }
+    .when { min-width: 17ch; }
+    .id { color: var(--accent); }
+    .size { margin-left: auto; color: var(--dim); }
+    #msg { color: var(--dim); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SWOS Playback</h1>
+    <p>Recorded online matches. Open one, scrub to the moment, and "copy link" gives the exact frame.</p>
+    <input id="filter" type="search" placeholder="Filter by date or match id" autocomplete="off">
+    <div id="msg">loading…</div>
+    <ul id="list"></ul>
+  </main>
+  <script>
+    (function () {
+      var base = new URLSearchParams(location.search).get('base') || '../recordings/';
+      var listEl = document.getElementById('list'), msg = document.getElementById('msg');
+      var items = [];
+      function render() {
+        var f = document.getElementById('filter').value.trim().toLowerCase();
+        listEl.textContent = '';
+        items.filter(function (it) { return !f || it.name.toLowerCase().indexOf(f) >= 0; })
+             .forEach(function (it) {
+          var m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-([0-9a-f]+)\.SRP$/i.exec(it.name);
+          var a = document.createElement('a');
+          a.href = 'SWOS.html?srp=' + encodeURIComponent(it.name);
+          var when = document.createElement('span'); when.className = 'when';
+          when.textContent = m ? m[1] + '-' + m[2] + '-' + m[3] + ' ' + m[4] + ':' + m[5] + ' UTC' : it.name;
+          var id = document.createElement('span'); id.className = 'id';
+          id.textContent = m ? m[7] : '';
+          var size = document.createElement('span'); size.className = 'size';
+          size.textContent = it.size;
+          a.appendChild(when); a.appendChild(id); a.appendChild(size);
+          var li = document.createElement('li'); li.appendChild(a); listEl.appendChild(li);
+        });
+        msg.textContent = items.length ? '' : 'No recordings on the server.';
+      }
+      document.getElementById('filter').addEventListener('input', render);
+      // nginx's autoindex: one <a href="NAME"> per file, then its date and size on the line.
+      fetch(base, { cache: 'no-store' }).then(function (r) {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return r.text();
+      }).then(function (html) {
+        var re = /<a href="([^"]+\.SRP)">[^<]*<\/a>\s*(\S+\s+\S+)?\s*(\S+)?/gi, m;
+        while ((m = re.exec(html)) !== null)
+          items.push({ name: decodeURIComponent(m[1]), size: m[3] ? (+m[3] > 1e6 ? (m[3] / 1e6).toFixed(1) + ' MB' :
+                                                                        Math.round(m[3] / 1e3) + ' KB') : '' });
+        items.sort(function (a, b) { return a.name < b.name ? 1 : -1; });   // names start with the date
+        render();
+      }).catch(function (e) { msg.textContent = 'Could not read ' + base + ': ' + e.message; });
+    })();
+  </script>
+</body>
+</html>

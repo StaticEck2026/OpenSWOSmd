@@ -788,6 +788,55 @@ void StartPenalties(void)
 }
 
 /* ================================================================
+ * ApplyPitchPaletteAndFactors
+ *
+ * InitGameRestoreTeams' apply_palette_and_pitch_tables (SWOS2.s), on its own: the pitch
+ * type's colours into gamePalette, the Jaguar shadow re-made from that grass, and the
+ * pitch's ball physics. The highlights viewer needs it too (ViewHighLightsMain) -- the
+ * original reached it by falling through into InitGameRestoreTeams.
+ * ================================================================ */
+void ApplyPitchPaletteAndFactors(void)
+    {
+        /* Apply pitch palette */
+        uint16_t pitchIdx = _pitchNumberAndType & 0xFF;
+
+        /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
+        _paletteTable[2] = _gamePalette;
+
+#ifdef AGA
+        {
+            /* AGA: apply 9 pitch entries via paletteIndices, write full 256-color palette to copper */
+            extern uint8_t _paletteIndices[];
+            const uint16_t *palPtr = _pitchPalettePtrs[pitchIdx];
+            int16_t pi;
+            for (pi = 0; pi < 9; pi++)
+            {
+                uint16_t idx = _paletteIndices[pi];
+                ((uint16_t *)_gamePalette)[idx] = palPtr[pi];
+            }
+        }
+#else
+        {
+            /* OCS: copy 3 palette entries to fixed positions */
+            uint16_t *palPtr = (uint16_t *)_pitchPalettePtrs[pitchIdx];
+            *(uint16_t *)(_gamePalette) = palPtr[0];
+            *(uint16_t *)(_gamePalette + 0xE) = palPtr[1];
+            *(uint16_t *)(_gamePalette + 0x12) = palPtr[2];
+        }
+#endif
+
+        /* The Jaguar sprites' shadow is the PITCH in shade, so it is re-made from
+         * the grass this match is played on (jag_graphics.c). No-op otherwise. */
+        JagGfx_PitchApplied();
+
+        /* Pitch physics factors (pitchIdx >> 1 for word-indexed tables) */
+        uint16_t physIdx = pitchIdx;
+        _pitchBallSpeedFactor = _kPitchBallSpeedInfluence[physIdx];
+        _ballSpeedBounceFactor = _kBallSpeedBounceFactorTable[physIdx];
+        _ballBounceFactor = _kBallBounceFactorTable[physIdx];
+    }
+
+/* ================================================================
  * InitGameRestoreTeams  (SWOS2.s line 11915)
  *
  * Master match initialization: restores team data from snapshots,
@@ -873,45 +922,7 @@ void InitGameRestoreTeams(void)
     /* bne.w *+4 — when playHighlightFlag != 0, skip to palette setup */
 
 apply_palette_and_pitch:
-    {
-        /* Apply pitch palette */
-        uint16_t pitchIdx = _pitchNumberAndType & 0xFF;
-
-        /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
-        _paletteTable[2] = _gamePalette;
-
-#ifdef AGA
-        {
-            /* AGA: apply 9 pitch entries via paletteIndices, write full 256-color palette to copper */
-            extern uint8_t _paletteIndices[];
-            const uint16_t *palPtr = _pitchPalettePtrs[pitchIdx];
-            int16_t pi;
-            for (pi = 0; pi < 9; pi++)
-            {
-                uint16_t idx = _paletteIndices[pi];
-                ((uint16_t *)_gamePalette)[idx] = palPtr[pi];
-            }
-        }
-#else
-        {
-            /* OCS: copy 3 palette entries to fixed positions */
-            uint16_t *palPtr = (uint16_t *)_pitchPalettePtrs[pitchIdx];
-            *(uint16_t *)(_gamePalette) = palPtr[0];
-            *(uint16_t *)(_gamePalette + 0xE) = palPtr[1];
-            *(uint16_t *)(_gamePalette + 0x12) = palPtr[2];
-        }
-#endif
-
-        /* The Jaguar sprites' shadow is the PITCH in shade, so it is re-made from
-         * the grass this match is played on (jag_graphics.c). No-op otherwise. */
-        JagGfx_PitchApplied();
-
-        /* Pitch physics factors (pitchIdx >> 1 for word-indexed tables) */
-        uint16_t physIdx = pitchIdx;
-        _pitchBallSpeedFactor = _kPitchBallSpeedInfluence[physIdx];
-        _ballSpeedBounceFactor = _kBallSpeedBounceFactorTable[physIdx];
-        _ballBounceFactor = _kBallBounceFactorTable[physIdx];
-    }
+    ApplyPitchPaletteAndFactors();
 
     /* Clear match state */
     _playingPenalties = 0;

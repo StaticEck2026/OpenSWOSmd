@@ -90,6 +90,43 @@ void CopyAdvertisementsData(void)
         _advert3Pointers[i] = table[129 + i]->sprData;
 }
 
+#ifdef SWOS_SDL_BUILD
+/* ================================================================
+ * Adverts_ApplyStripLine -- a replay's ad tile, as the match drew it
+ *
+ * The animated ad behind the goal is not a sprite position but a change to the SPRITE
+ * GRAPHICS: each frame the update below cuts the current ad's 8 tiles to a 6-line window
+ * (nlines) scrolled down by _currentAnimatedAdLine (sprData). A replay has only the
+ * image, so it drew each tile at whatever size and scroll its graphics were left in --
+ * the whole ad unrolled over the goal (the .SRP player, 2026-09-29). The recorder keeps
+ * the line (replay_v2.c, the frame head's word 18) and playback puts the window back
+ * with this, before drawing the tile. Returns 1 if `image` is an ad tile.
+ * ================================================================ */
+int32_t Adverts_ApplyStripLine(uint16_t image, uint16_t line)
+{
+    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
+    uint8_t **bases;
+    SpriteGraphics *gfx;
+    uint16_t tile;
+
+    if (image >= SPR_ADVERT_1_PART_1 && image < SPR_ADVERT_1_PART_1 + 8) {
+        bases = _advert1Pointers; tile = (uint16_t)(image - SPR_ADVERT_1_PART_1);
+    } else if (image >= SPR_ADVERT_2_PART_1 && image < SPR_ADVERT_2_PART_1 + 8) {
+        bases = _advert2Pointers; tile = (uint16_t)(image - SPR_ADVERT_2_PART_1);
+    } else if (image >= SPR_ADVERT_3_PART_1 && image < SPR_ADVERT_3_PART_1 + 8) {
+        bases = _advert3Pointers; tile = (uint16_t)(image - SPR_ADVERT_3_PART_1);
+    } else {
+        return 0;
+    }
+    if (!bases[tile])
+        CopyAdvertisementsData();       /* the bases, captured once the sprites are in */
+    gfx = table[image];
+    gfx->nlines = 6;
+    gfx->sprData = bases[tile] + (uint32_t)line * ((uint32_t)gfx->wquads * 16);   /* chunky, as above */
+    return 1;
+}
+#endif
+
 /* ================================================================
  * InitAdvertisements  (SWOS2.s line 11849)
  *

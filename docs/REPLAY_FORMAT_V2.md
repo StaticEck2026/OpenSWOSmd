@@ -142,11 +142,16 @@ Per frame, a 20-byte head followed by its sprites:
 | 12 | 2 | team 2 goals |
 | 14 | 2 | `animPatternsState` (the crowd) |
 | 16 | 2 | the minute on the clock |
-| 18 | 2 | 0 |
+| 18 | 2 | the animated ad's line + 1 (`_currentAnimatedAdLine`); 0 in a recording from before 2026-09-29 |
 
 then 6 bytes per sprite: image index, world X, world Y — the sprite's position
 with its graphic's centre and its z already taken out, so playback only has to
 subtract the camera.
+
+The ad behind the goal is the one sprite whose look is not its image and position: the
+match cuts its 8 tiles' GRAPHICS to a 6-line window scrolled by the ad's line, so playback
+re-cuts them from word 18 before drawing (`Adverts_ApplyStripLine`); an older recording
+gets the first strip.
 
 Two things this head gets right that the legacy stream does not:
 

@@ -216,6 +216,9 @@ static void print_usage(const char *argv0)
         "                            played). A .HIL is a NAME in the save folder, as\n"
         "                            the highlights menu loads it. --replay-width sets\n"
         "                            the width; SWOS_REPLAY_TRACE=<file> traces a .SRP.\n"
+        "  --replay-player=<file>    Watch a .SRP in real time and hold at its end;\n"
+        "                            the playback page seeks, pauses and steps it\n"
+        "                            (wasm/player.html, make WASM=1 PLAYER=1).\n"
         "  --replay-window           Open a window during --replay-test or\n"
         "                            --view-replay. Off by default: a replay is a batch\n"
         "                            run and a full matrix would open one window per\n"
@@ -553,6 +556,14 @@ int main(int argc, char **argv)
             record_replay = v;
         } else if ((v = match_kv(a, "view-replay")) != NULL) {
             view_replay = v;
+        } else if ((v = match_kv(a, "replay-player")) != NULL) {
+            /* --view-replay to be watched and scrubbed: the playback page's (wasm/player.html). */
+            view_replay = v;
+            replay_window = 1;
+            replay_paced = 1;
+            ReplayV2_PlayerMode(1);
+            /* Straight to the recording: paced, the intro would play first, a minute of it. */
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "srp-resim")) != NULL) {
             /* Play a recorded match again and check every frame (src/srp_resim.c). */
             if (SrpResim_Arm(v) != 0) {

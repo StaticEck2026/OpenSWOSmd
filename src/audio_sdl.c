@@ -442,6 +442,21 @@ void AudioSDL_StopSfx(void)
     SDL_UnlockMutex(s_mtx);
 }
 
+/* Every sound effect playing now stops, and the player stays ready for the next one --
+ * unlike AudioSDL_StopSfx, which deactivates it. The recordings player calls it when it
+ * seeks or pauses: a jump skips whatever would have ended a looping effect, which then
+ * played on for ever. */
+void AudioSDL_SilenceSfx(void)
+{
+#if SWOS_AUDIO_DISABLED
+    return;
+#endif
+    SDL_LockMutex(s_mtx);
+    if (sfx_act())
+        RJP1_StopAll(sfx_tgt());
+    SDL_UnlockMutex(s_mtx);
+}
+
 /* Enable/disable auto-restart of the current song when it finishes. Used for the
  * arcade HERO title song, which has no internal loop-back. Reset by StartSong. */
 void AudioSDL_SetSongLoop(int loop)

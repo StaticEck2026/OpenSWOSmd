@@ -6,6 +6,7 @@
 #   scripts/run_matchmaker.sh --port 20000 # a different port
 #   scripts/run_matchmaker.sh --rebuild    # force a reconfigure + rebuild
 #   scripts/run_matchmaker.sh --build-only # build, don't run
+#   scripts/run_matchmaker.sh --build-only --with-playback   # and the recordings player
 #   scripts/run_matchmaker.sh -- --relay --websocket   # anything after -- goes to the server
 #
 # A public server runs under systemd with its full argument list, including wss://'s
@@ -46,6 +47,7 @@ BIN="$BUILD_DIR/swos-matchmaker"
 PORT=19602
 REBUILD=0
 BUILD_ONLY=0
+WITH_PLAYBACK=0
 SERVER_ARGS=()
 
 usage() {
@@ -56,6 +58,8 @@ Options:
       --port N      listen on port N (default $PORT)
       --rebuild     wipe $BUILD_DIR and reconfigure first
       --build-only  build and exit without running
+      --with-playback  also build the recordings player (scripts/build_playback.sh:
+                    needs emsdk; skipped with a warning without it)
       -- ARGS...    pass ARGS to the server (--relay, --websocket, --tls-cert ...;
                     see: $BIN --help)
   -h, --help        this text
@@ -67,6 +71,7 @@ while [ $# -gt 0 ]; do
         --port)       PORT="$2"; shift 2 ;;
         --rebuild)    REBUILD=1; shift ;;
         --build-only) BUILD_ONLY=1; shift ;;
+        --with-playback) WITH_PLAYBACK=1; shift ;;
         -h|--help)    usage; exit 0 ;;
         --)           shift; SERVER_ARGS=("$@"); break ;;
         *) echo "run_matchmaker: unknown option '$1' (try --help)" >&2; exit 2 ;;
@@ -84,6 +89,13 @@ if [ ! -x "$BIN" ] || [ "$REBUILD" = 1 ]; then
     cmake --build "$BUILD_DIR" -j"$(nproc 2>/dev/null || echo 4)" >/dev/null ||
         { echo "run_matchmaker: build failed" >&2; exit 1; }
     echo "-- built $(ls -lh "$BIN" | awk '{print $5}')"
+fi
+
+if [ "$WITH_PLAYBACK" = 1 ]; then
+    scripts/build_playback.sh
+    rc=$?
+    [ "$rc" = 3 ] && echo "-- the recordings player was not built (no emsdk)"
+    [ "$rc" = 1 ] && exit 1
 fi
 
 [ "$BUILD_ONLY" = 1 ] && { echo "-- --build-only: not running"; exit 0; }
