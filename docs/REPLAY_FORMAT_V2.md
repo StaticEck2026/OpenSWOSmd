@@ -3,7 +3,8 @@
 Status: **implemented** (`src/replay_v2.c`, `include/replay_v2.h`, SDL builds).
 A whole match is recorded to `LATEST.SRP` in the save folder and played back
 through the highlights viewer at any screen width, with the sounds the match
-made. Trick play (§6) is specified but not wired yet.
+made. Trick play (§6) is specified but not wired in the game's viewer; the recordings
+player (docs/PLAYBACK.md) seeks, pauses and steps by frame.
 
 Test: `scripts/replay_v2_test.sh --all` — every recording in the corpus, both
 gameplays, recorded and played back at 336/484/672, requiring the sprites, the
@@ -186,7 +187,8 @@ sound this peer happened to play.
 ### `SEEK` — keyframes every 50 frames
 
 `{interval, count}` then `{frame, FRMS offset, audio index}`. Written and
-verified; nothing reads it yet (§6).
+verified; nothing reads it yet (§6). The recordings player's seek does not need it: the
+loader walks `FRMS` once and keeps every frame's offset (docs/PLAYBACK.md, "How it works").
 
 ### `CHAP` — chapters
 
@@ -209,7 +211,9 @@ finds some but not all refuses the file, rather than play half of it).
 
 | Chunk | Stored | Content |
 |---|---|---|
-| `SIMV` | as is, 16 bytes | version u16 (1); the handshake's rules byte (`P2P_RULE_*`: 0x01 DOS gameplay, 0x02 arcade, 0x04 fire-hold lockout, 0x08 no bookings, 0x10 no injuries, 0x20 the DOS view, 0x40 the view is known -- `--srp-resim` plays in the recorded view; a recording without 0x40 plays in the local one and, if it parts at frame 1, says to try the other `--view`); 0; the registry's layout hash u64 (`SimState_LayoutHash`); the simulation width u16 (`_sim_draw_width`); 0 |
+| `SIMV` | as is, 16 bytes | version u16 (1); the handshake's rules byte (`P2P_RULE_*`: 0x01 DOS gameplay, 0x02 arcade, 0x04 fire-hold lockout, 0x08 no bookings, 0x10 no injuries, 0x20 the DOS view, 0x40 the view is known -- `--srp-resim` plays in the recorded view; a recording without 0x40 plays in the local one and, if it parts at frame 1, says to try the other `--view`; 0x80 one clock tick a frame -- a recording without it was
+played on the double clock every live match ran before 2026-09-29, and `--srp-resim` replays
+it that way, `NetplayMatch_SetLegacyDoubleClock`, docs/NETPLAY.md §5); 0; the registry's layout hash u64 (`SimState_LayoutHash`); the simulation width u16 (`_sim_draw_width`); 0 |
 | `SETP` | deflated | the match setup the host sent (`include/netplay_setup.h`): teams, tactics, the rules they are played by |
 | `STAT` | as is (it is deflated already) | a `state_wire` packet of the SIM and VIEW tiers at the start of frame 0, in the portable encoding (`src/state_wire.c`) |
 | `INPT` | deflated | 4 bytes a frame: player 1's two bytes (controls, key), then player 2's, as `MatchStep_UnpackInput` reads them |
@@ -353,7 +357,8 @@ bin/SWOS.x86_64 --srp-resim=LATEST.SRP
 ```
 
 It takes the gameplay style and the fire-hold lockout from the file, whatever
-`SWOS.ini` says, and refuses (exit 1) a file recorded by a build with a different
+`SWOS.ini` says -- the view too, when `SIMV` says it (0x40), and the clock (without 0x80 it
+plays the old two ticks a frame) -- and refuses (exit 1) a file recorded by a build with a different
 layout or rules. On the build and rules it was recorded with, every frame must
 agree; the first that does not is where THIS machine plays the match differently
 from the one that recorded it. So a desync between two machines no longer has to
@@ -377,6 +382,9 @@ joiner's to part at exactly N+1.
 ---
 
 ## 6. Trick play (replaces `.IDX`) — not wired yet
+
+(In the game's own viewer. The browser recordings player, docs/PLAYBACK.md, already seeks to
+any frame, pauses and steps a frame at a time, from the frame offsets it keeps on load.)
 
 - **FF / RW:** jump to nearest keyframe, replay deltas; audio either muted or
   time-compressed.

@@ -1,12 +1,25 @@
 # DOS gameplay (70 FPS) support
 
+> **Status (2026-09-30): implemented.** Written as the research + porting plan;
+> the plan has landed. `src/dos_gameplay.c` (`ApplyGameStyle`,
+> `DosGameplay_TargetFps`) switches the §3 constants, the formations
+> (`TacticsData_SelectRelease`, 25b90e6) and the §8.3 movement scale
+> (`_gMoveDeltaScaleNum/Den` = 41/64); `platform_sdl.c` paces at
+> `Platform_ActivePacingFps()` (70 Hz in DOS mode). It is selected by
+> `[gameplay] style = amiga | dos` in SWOS.ini (or `--dos-gameplay=on|off`), and
+> since a4f2689 the style sets the **view** too (the DOS 320x200 view with DOS
+> gameplay; `[gameplay] view` is gone, `--view=amiga|dos` still pins one). Online,
+> a match plays the HOST's style (`GameplayStyle_Borrow`). The "plan" wording
+> below is kept as the record of how.
+
 The Amiga SWOS runs its match simulation at **50 FPS** (PAL VBlank); the DOS
 version runs at **70 FPS**. SWOS is **frame-locked** — exactly one logic step per
 rendered frame, no `deltaTime` multiplier — so to make the two versions *feel* the
 same despite different frame rates, a set of physics/timer constants are
 **pre-scaled per frame rate**. This doc captures which constants change and how,
-so the SDL port can offer a DOS-gameplay mode (the reserved `gDosGameplay` flag /
-`[dos] gameplay=true`).
+so the SDL port can offer a DOS-gameplay mode (the `_gDosGameplay` flag /
+`[gameplay] style = dos`; originally the reserved `[dos] gameplay=true`, which the
+settings reader no longer knows).
 
 Source of truth: **swos-2020** (`/mnt/c/Projects/GitHub/swos-2020`), the most
 up-to-date reference, which patches every FPS-dependent constant at startup in
@@ -31,9 +44,10 @@ Only **0 (DOS/70)** and **1 (Amiga/50)** matter for this port; 2/3/4 are bonus
 reference points. The style→FPS map (`render.cpp::getTargerFPS()` 4620-4640,
 `game.cpp:8927`) is `0→70, 1→50, 2→50, 3→60, 4→60`.
 
-**For our port:** `gDosGameplay` (already in `dos_mode.h`, currently reserved)
-selects DOS(70) vs Amiga(50). Note it is **independent of `gDosGraphics`** — you
-can run DOS gameplay with Amiga graphics or vice-versa. Recommend a single
+**For our port:** `_gDosGameplay` (`include/dos_mode.h`) selects DOS(70) vs
+Amiga(50). It is **independent of `gDosGraphics`** (`[graphics] style`) — you
+can run DOS gameplay with Amiga graphics or vice-versa — but NOT of the view:
+since a4f2689 the gameplay style also picks the DOS/Amiga view. Recommend a single
 internal "game style" enum so 60 FPS modes can be added later.
 
 ## 2. Frame pacing (the game loop)
@@ -44,9 +58,9 @@ internal "game style" enum so 60 FPS modes can be added later.
   `perfFreq * factor / kTargetFps`, `kTargetFps` from the style
   (`render.cpp::frameDelay()` 4719-4806); menus fall back to 30 FPS.
 - **Our port** drives the tick from `tick_timer_cb` / `_RunInt3HandlerThrottled`
-  in `platform_sdl.c`, currently hard-coded to ~50 Hz (20 ms; throttle `< 18`).
-  DOS gameplay needs this retuned to **70 Hz (~14.29 ms; throttle ~12 ms)** when
-  the DOS style is active. The multiplayer frame budget per mode (from
+  in `platform_sdl.c`, originally hard-coded to ~50 Hz (20 ms; throttle `< 18`).
+  **Done:** the timer now runs at `1000 / Platform_ActivePacingFps()` — 70 Hz
+  (~14 ms; throttle ~12 ms) when the DOS style is active. The multiplayer frame budget per mode (from
   swos-2020 `issue-list.txt`): `1000/50 = 20 ms` (Amiga), `1000/70 ≈ 14.29 ms`
   (DOS), `1000/60 ≈ 16.67 ms` (XBOX).
 
@@ -121,19 +135,23 @@ on one side and spelled out on the other.
   1536→2218. Only styles ≥3 (60 FPS) apply a ×1.2 boost. Do **not** rescale
   kick/pass power between 50 and 70.
 
-### Differentiated but NOT switched by `ApplyGameStyle` — the formations
+### Differentiated — the formations (switched by `ApplyGameStyle` since 25b90e6)
 The DOS release re-tuned three of the twelve built-in formations, and
 `GetPlayerPrice` walks the tactics table for every player, so this is a
 gameplay difference that reaches player values and in-game skill nibbles as
-well as where men stand. `ApplyGameStyle` swaps the physics and timer constants
-and leaves the formations alone.
+well as where men stand. When this section was written `ApplyGameStyle` swapped
+only the physics and timer constants; since 25b90e6 ("tactics: --dos-gameplay
+switches the formations too") it also calls `TacticsData_SelectRelease(dos)`
+(`src/tactics_data.c`), because the replay corpus showed the DOS formations are
+part of what DOS gameplay means. The build flag below still pins a set.
 
 Available as a **build flag** since 2026-09-03: `make clean && make
 SWOS_DOS_TACTICS=1` bakes the DOS coverage
 (`bin/data_json/tactics/<id>_dos.json`, extracted from the DOS disassembly).
-It is not yet wired to `--dos-gameplay=on` — that is a deliberate hold, because
+It was at first not wired to `--dos-gameplay=on` — a deliberate hold, because
 the recorded-game corpus disagrees with the DOS data's two forward slots
-(docs/TACTICS_POSITION_VALUE.md §9.6). Sizes and the caveat are there.
+(docs/TACTICS_POSITION_VALUE.md §9.6; sizes and the caveat are there). It is
+wired now (25b90e6, above); a `-DSWOS_DOS_TACTICS` build keeps its set either way.
 
 ## 4. Match clock
 
@@ -379,9 +397,10 @@ frame-rate-tagged (§7.6) — a decoupled loop must record/replay at the logic r
 - `issue-list.txt` — multiplayer frame-time + per-mode notes.
 
 ## Open questions
-- **`GS_54_49` — DECIDED:** default `54` (authentic original DOS), exposed as a
-  runtime tweak so it can be flipped to swos-2020's `69`. Keep both values in the
-  code comment. (See §3 note ¹.)
+- **`GS_54_49` — SETTLED BY MEASUREMENT:** `70` (§3 note ¹). The earlier
+  decision here ("default 54, runtime tweak to 69") is superseded; both 54 and 69
+  are wrong against a DOS recording. `src/dos_gameplay.c` uses 70.
 - Do we want the 60-FPS styles at all, or just DOS-70/Amiga-50?
-- Does our match-clock path already key off `GS_54_49`, or is the cadence
-  hard-coded somewhere that needs the same treatment?
+- ~~Does our match-clock path already key off `GS_54_49`?~~ Yes:
+  `game_state.c:UpdateTime` reads `_gsFramesPerGameSecond`, which
+  `ApplyGameStyle` sets.

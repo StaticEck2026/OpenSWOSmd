@@ -1,5 +1,7 @@
 # SLOT_ALIAS S6 — discovery + classification (slot 0 / primary)
 
+> Status (2026-09-30): **complete** -- S6 landed (`6f2ab40`, follow-ups `27cb59b`, `9793b17`). The 18 slot-0 aliases no longer exist, and the `.equ` lines this doc cites at `src/swos_competition_slots.c:71-88` are gone. Kept as the record of how.
+
 Status: **DISCOVERY ONLY — no code changed.** Read-only classification of every
 slot-0 alias reference, produced before any migration edit. Pairs with
 `docs/COMPETITION_SLOT_ALIAS_UNTANGLE.md` §3 (slot 0) and §6 (increment plan).

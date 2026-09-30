@@ -1,5 +1,7 @@
 # DIYCompetitionEx offset audit
 
+> Status (2026-09-30): **complete** -- the refactor this audit drove has landed: `DIYCompetitionEx` in `include/game_types.h` was rewritten to the SWOS2.s layout (with `DIYTournamentSlot`, `DIYTeamStats`, the `bracketScratch` union, and later the trailing `leagueStandings[64]`), and the raw offsets in `src/diy_competition.c` became typed fields (`f14ce73`, `a01ab60`, `8f14738`). Kept as the record of the investigation.
+
 This is the source-of-truth investigation for refactoring the ~400 raw
 `*(uintNN_t *)(p + offset)` accesses in `src/diy_competition.c` into
 typed `struct->field` accesses. Before any code changes happen, every
@@ -10,7 +12,7 @@ addresses, cross-referenced against the original Amiga BSS layout in
 
 ## TL;DR — the key discovery
 
-The C struct `DIYCompetitionEx` in `src/game_types.h` was reverse-
+The C struct `DIYCompetitionEx` in `include/game_types.h` was reverse-
 engineered with educated guesses and is **substantially wrong** in its
 extended fields. Furthermore, the audit's first pass misframed the "Type 2
 slot pointer" — it is *not* one of the 5 `careerCompetitionSlotPtrTable[]`
@@ -314,7 +316,7 @@ no unpacking is needed.
 **Investigation is complete; we can now redesign the struct.** Concrete
 next steps:
 
-1. **Rewrite `DIYCompetitionEx`** in `src/game_types.h`:
+1. **Rewrite `DIYCompetitionEx`** in `include/game_types.h`:
    - Total size = `0x734` (1844) bytes including the audioInstrumentBank-
      overlay region used by `clearLeagueTableStats` (or: redesign so the
      league table is a separate global and `DIYCompetitionEx` is `0x5C8` /

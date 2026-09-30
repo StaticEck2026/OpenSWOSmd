@@ -45,8 +45,10 @@ render a DOS replay sprite index with the **Amiga** sprite set:
 ```
 amigaIdx = (dosIdx < 227) ? dosIdx : dosIdx - 114;
 ```
-(the `- 114` matches the existing `color_sprites.c::_DosOverlaySprites`
-`amigaIdx = dosIdx - 114`.)
+(the `- 114` matches the DOS sprite overlay in `src/color_sprites.c`
+(`dos_build_sprite_dat`: `amigaIdx = dosStart + i - DOS_TO_AMIGA_OFFSET`, from
+`dos_graphics.h`) and `DOS_TO_AMIGA_SPR` in `src/dos_replay_load.c`, the `.RPL`/`.HIL`
+loader that uses this table. A `_DosOverlaySprites` function no longer exists.)
 
 **For `.RPL`/`.HIL` replays specifically** the frame stream only references sprite
 indices ≥ 341, which are all ≥ 227 — so the remap is uniformly `dosIdx - 114`.

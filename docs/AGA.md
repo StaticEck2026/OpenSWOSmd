@@ -3,6 +3,13 @@
 Status (2026-07-11): **P1 + P2 done and SDL-verified. P3 (Amiga hardware-sprite
 speedup) pending** — see [AMIGA_SPRITES.md](AMIGA_SPRITES.md).
 
+> **Status (2026-09-30): AGA work is PARKED (since 2026-07-30) — SDL first.** Not abandoned, but do not
+> resume it without the owner's say-so. Since the note above, P3's decode half landed
+> (`DetectBankPlanes` is used by the Amiga branches of `image_cmd.c` too, and sprites are
+> stored at their real depth via `spriteNumPlanes`), the FMODE=1 scroll of §11 was solved,
+> and the plane23 band is disabled on AGA (§11c, [AGA_TEST.md](AGA_TEST.md) §5c). The
+> test-bed entry point for the Amiga side is [AGA_TEST.md](AGA_TEST.md).
+
 AGA mode gives the game a 256-colour display (8 bitplanes) for backgrounds and
 the pitch, while keeping sprite/menu/charset banks at **4 bitplanes (16 colours)**.
 The depth is **mixed per bank** and auto-detected at load, so the same decode path
@@ -46,7 +53,9 @@ planes = decompressedSize / (planeRowBytes × rows)      // include/display.h: D
 
 Exact-division checked; falls back to compile-time `NUM_PLANES` on an unexpected size.
 This mirrors SwosGfx's `-bitplanes=auto` — change the art depth and it self-adjusts.
-`DetectBankPlanes` is currently **`#ifdef SWOS_SDL_BUILD`**; P3 ungate it for Amiga.
+~~`DetectBankPlanes` is currently **`#ifdef SWOS_SDL_BUILD`**; P3 ungate it for Amiga.~~
+Done: it is ungated in `include/display.h` and the Amiga `0x7000`/`0x8000` branches of
+`image_cmd.c` call it too.
 
 ## 3. Decode sites (P1)
 
@@ -62,7 +71,8 @@ bitplane-direct path):
 `s_bankSrcPlanes` (file-static in `image_cmd.c`) tracks the current sprite bank's
 depth; it is reset to `NUM_PLANES` at each `ProcessImageCommandStream` entry and set
 from the load size on each `0x7000`/`0x8000` opcode. On the Amiga build it stays
-`NUM_PLANES` until P3 wires the detection in.
+`NUM_PLANES` until P3 wires the detection in. (Since done — the Amiga branches set it
+from the load size as well.)
 
 ## 4. Folder redirect + fallback (P2)
 
@@ -84,6 +94,13 @@ Consequences of this design:
 The Amiga asset backend is separate (`Resload.s`), so this redirect is SDL-only. On
 the Amiga the assets must already be in `grafs_aga/` (or the same fallback added to
 its backend). `bin/grafs_aga` was staged for the SDL build **without** CHARSET.RAW.
+
+> **Update (2026-09-30):** the Amiga path now lives in `src/resload.c` too (the
+> `#ifdef AGA` `grafs/` → `grafs_aga/` rewrite beside `grafs_aga_buf`) — a plain rewrite
+> with **no** fallback to `grafs/`, whose comment says `grafs_aga/` holds every asset
+> "charset included". And `bin/grafs_aga/CHARSET.RAW` now exists (it differs from
+> `bin/grafs/CHARSET.RAW`). Which of the two is the extended font was not re-checked;
+> confirm before relying on §5.
 
 ## 5. Extended charset (SWOS_Font) — always `grafs/`
 
@@ -146,7 +163,8 @@ cd bin && SDL_VIDEODRIVER=dummy SWOS_SCREENSHOT_INTERVAL=45 ./SWOS.x86_64   # �
 Verified rendering: Sensible loader logo (8bpp), credits charset (4bpp), 256-colour
 palette all correct. Both AGA and OCS builds exit-0.
 
-**Amiga** (FS-UAE + gdb, Kickstart 3.1 A1200 = AGA):
+**Amiga** (FS-UAE + gdb, Kickstart 3.1 A1200 = AGA; the toolchain must be the
+benbaker76 fork of vscode-amiga-debug — see `.claude/CLAUDE.md` "Building"):
 ```
 scripts/amiga/amiga_gdb.sh up          # launch FS-UAE + attach gdb (DH1: = bin/)
 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "info registers"
@@ -200,7 +218,8 @@ The complete, working solution is documented in **§11·SOLVED** immediately bel
 older subsections (§11a "DMA contention TODO", the SNAP fine-scroll table, "no buffer
 widen needed", "empty column is off-screen headroom") describe **earlier, since-superseded
 theories** and are kept only as a debugging cautionary trail — read §11·SOLVED for the
-truth. Not committed at time of writing (owner commits).
+truth. Not committed at time of writing (owner commits) — since committed (`2899dea`
+"AGA FMODE geometry"; `SCROLL_LEFT_MARGIN_BYTES` is in `include/display.h`).
 
 ### 11·SOLVED — the complete FMODE=1 pitch scroll (2026-07-14)
 
@@ -344,7 +363,9 @@ IDE, no GUI. (Screenshot/DMA tools need the **modified** fs-uae at
 `fsemu_screenshot_capture_now` and the cycle-exact DMA recorder; boot it with
 `FSUAE_BIN=/mnt/c/Projects/Linux/fs-uae/fs-uae ./amiga_gdb.sh up --fresh`. The stock
 vscode/bartman binary's `monitor screenshot` RE-COMPOSITES a clean settled frame and so
-cannot capture real-time artifacts.)
+cannot capture real-time artifacts. Since then `scripts/amiga/amigascope.env`, which the
+`scripts/amiga/amiga_gdb.sh` shim loads, sets `FSUAE_BIN` to that modified binary, so it
+is the default for this project.)
 
 - **`dma_profile.py [N]`** — capture N frames of cycle-exact DMA and report, per frame,
   blitter-vs-bitplane contention (blitter cells landing on display lines), DMA conflicts,

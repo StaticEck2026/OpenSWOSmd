@@ -5,8 +5,9 @@ finds an opponent through a matchmaking server (§7), the two connect directly, 
 teams and the rules in the lobby (§6), and play a live match over GGPO with rollback; when
 it ends, or is cut short, both are back in the same lobby with their choices kept (§6,
 "Rematch"). Recorded matches played through GGPO's synctest and as two peers come out
-identical to plain runs at every frame, sound included (§5). No human has yet played it
-across two real machines.
+identical to plain runs at every frame, sound included (§5). Testers have played it across
+real machines since the first multiplayer weekend (2026-09-26/27, docs/NETPLAY_REPORT.md,
+docs/NETPLAY_GHOSTING.md), natively and in the browser (§8).
 
 OpenSWOS continues SWOS 2020, whose online play runs on
 [GGPO-X](https://github.com/thomashenry79/ggpo-x). It is a submodule of the owner's fork,
@@ -25,7 +26,7 @@ matchmaking are SWOS 2020 menus, imported separately (docs/MENUS.md §10).
 | `include/sim_state.h`, `src/sim_state.c` | the match state GGPO saves and loads (docs/ROLLBACK.md) |
 | `scripts/netplay_test.sh` | recorded matches through the step, GGPO's synctest and two peers over loopback, compared frame by frame with plain runs |
 | `include/p2p_link.h`, `src/p2p_link.c` | the UDP handshake two players make before a match (§6) |
-| `include/p2p_menu.h`, `src/p2p_menu.c` | the MULTIPLAYER menu over it, JSON-only (§6, docs/MENUS.md §10) |
+| `include/p2p_menu.h`, `src/p2p_menu.c` | the direct-IP menu over it, JSON-only (§6, docs/MENUS.md §10); MULTIPLAYER itself opens the matchmaking flow (§7) |
 | `include/netplay_lobby.h`, `src/netplay_lobby.c` | the lobby's protocol: each side, the rules, START and its answer, rematch (§6) |
 | `src/online_menus.c` | the imported online menus' handlers (docs/MENUS.md §10) |
 | `include/audio_sfx_filter.h` | the gate every sound effect passes, so a rollback does not repeat them (§5) |
@@ -43,7 +44,7 @@ the C code, and links with `$(CXX)`.
 | macOS universal (`make macos-app`) | **on** | both slices; self-tested on arm64 (2026-09-17) |
 | Linux x86 (`make`, -m32) | off | needs g++-multilib (no 32-bit libstdc++ installed here) |
 | ARM Linux | off | `NETPLAY=1` should work — the POSIX platform layer is shared — not yet tried |
-| WASM | never | a browser has no UDP sockets |
+| WASM | **on** (since 2026-09-24) | a browser has no UDP sockets: each datagram goes as a WebSocket message to the server's gate, and every browser match is relayed (§8) |
 | Switch | off | `Makefile.switch` does not build it; sockets there are `nn::socket` |
 | Amiga | — | `netplay.c` is in `SDL_ONLY_SRCS` |
 
@@ -53,7 +54,8 @@ macOS), so no DLL or `.so` is added: the Windows drop's four-DLL list and the Li
 `ldd bin/SWOS.x86_64` after touching the link.
 
 Without `SWOS_NETPLAY`, `netplay.c` compiles to stubs: `Netplay_Available()` is 0 and
-every call returns `NETPLAY_ERR_UNAVAILABLE`. Toggling `NETPLAY` needs a `clean`.
+every call returns `NETPLAY_ERR_UNAVAILABLE`. Toggling `NETPLAY` rebuilds every object by
+itself (the makefile's flags stamp, CLAUDE.md); it no longer needs a `clean`.
 
 ## 3. The API (`include/netplay.h`)
 
@@ -208,7 +210,17 @@ played and again for every re-simulation of it:
 | the frame | the body of `GameLoop`'s loop, **drawing included** | `GameLoop_Frame` (`src/game_loop.c`) |
 | the clock | `_currentTick`, and `_currentGameTick` behind the interrupt's own gates | `MatchStep_AdvanceClock` |
 | the swap | swap the buffers and set the camera | `GameLoop_EndFrame(0)` |
-| the VBlank interrupt | its per-frame work: fade ticks, audio channels, key repeat | `_Int3TimerHandler` |
+| the VBlank interrupt | its per-frame work: fade ticks, audio channels, key repeat -- but not the clock, which the step already advanced (`NetplayMatch_OwnsClock`) | `_Int3TimerHandler` |
+
+**One clock tick a frame** (fixed 2026-09-29, ReportBot 0014). Until then the step's call of
+the interrupt advanced `_currentTick`/`_currentGameTick` a second time, so every live match
+ran both clocks at double speed (frame 5000 was tick 10000) -- and the rules read both: the
+ball ran away from the dribbler, and dozens of AI and physics decisions came at the wrong
+rate. No test saw it, because the corpus runs under the replay rig's clock. A recording made
+since carries `P2P_RULE_ONE_TICK` (0x80) in its rules byte; `--srp-resim` plays one without it
+on the old double clock (`NetplayMatch_SetLegacyDoubleClock`), so older recordings still
+replay exactly, and `scripts/relay_test.sh` fails a match whose clock does not end on its
+frame.
 
 Only the frame GGPO ends on is shown: `Platform_Present`, which is `Platform_VBlank`
 without the interrupt. `GameLoop` itself is now the same parts in a loop, so the replay
@@ -438,7 +450,8 @@ damaged packets are still refused, forged ones would not be.
 The lobby link has the same need at smaller stakes: a flipped bit in a START would kick two
 peers off from different setups. Its packets end in a 32-bit FNV-1a checksum (unkeyed —
 there is no shared secret yet), except a packet of another protocol version, which is let
-through so it can be refused with the reason. Link protocol 3.
+through so it can be refused with the reason. Link protocol 4 (`kProtocol`, `p2p_link.c`;
+4 added the build to the setup, 2026-09-27).
 
 **It found a GGPO bug on the way.** `Platform::GetCurrentTimeMS` on Linux, Cygwin and macOS
 returned 0 on its first call, so the first sync request of a process was stamped 0 — and GGPO
@@ -638,17 +651,20 @@ It reads `dir * sizeof(int16_t *)` now, which is the same m68k code.
 
 ### Next
 
-1. **Two humans on two machines**, through MULTIPLAYER, the lobby and a rematch.
+1. ~~**Two humans on two machines**, through MULTIPLAYER, the lobby and a rematch.~~ Done:
+   testers have played since 2026-09-26/27 (docs/NETPLAY_REPORT.md).
 2. **Instant replays in a session**, driven by both peers.
 
 ----
 
-## 6. The MULTIPLAYER menu (`src/p2p_menu.c`, `src/p2p_link.c`)
+## 6. The direct-IP menu and the link (`src/p2p_menu.c`, `src/p2p_link.c`)
 
-The main menu's MULTIPLAYER button opens a menu of OpenSWOS's own, `p2p/p2pMenu`
-(JSON-only, docs/MENUS.md §10): one player hosts on a UDP port, the other joins by the
-host's IPv4 address. No server, no lobby — SWOS 2020's matchmaking menus are a separate
-import (`src/online_menus.c`) and need its servers.
+The direct-IP menu is OpenSWOS's own, `p2p/p2pMenu` (JSON-only, docs/MENUS.md §10): one
+player hosts on a UDP port, the other joins by the host's IPv4 address. No server —
+SWOS 2020's matchmaking menus are a separate import (`src/online_menus.c`) and need a
+matchmaking server (§7). The main menu's MULTIPLAYER button opened this menu at first; it
+now opens the matchmaking flow (§7, "The menus"), and this one is reached with
+`--menu=p2p/p2pMenu`.
 
 | Row | What it is |
 |---|---|
@@ -666,6 +682,8 @@ simulation depends on before a session starts, because a disagreement is a desyn
 first frame rather than an error:
 
 - the protocol version,
+- the build itself: the commit, with a mark for uncommitted changes (`P2P_FAIL_VERSION`,
+  "THE OTHER PLAYER HAS ANOTHER VERSION", since 2026-09-27),
 - `SimState_LayoutHash` — the shape of the state a rollback saves, so two builds whose
   match state differs refuse each other,
 - the rules: arcade mode and the original fire-hold lockout, which must match,
@@ -687,9 +705,10 @@ the match's simulation draw width (§5, "One simulation width").
 
 A joiner that differs is refused with the reason, and the host is told who bounced off it.
 
-Six packets, all UDP, each either repeated until it is answered or harmless to lose:
-`HELLO`, `WELCOME` and `REFUSE` for the handshake, `PING`/`PONG` for the round trip, `BYE`
-on leaving. Every one starts with `"SWUN"`, the protocol version and the type, so a peer
+Six packets for the link itself, all UDP, each either repeated until it is answered or
+harmless to lose: `HELLO`, `WELCOME` and `REFUSE` for the handshake, `PING`/`PONG` for the
+round trip, `BYE` on leaving. Three more came later: `DELAY` (each side's proposed input
+delay) and `BLOB`/`BLOB_ACK` (the chunks of a message and their ack), both below. Every one starts with `"SWUN"`, the protocol version and the type, so a peer
 of another version is recognised and told so rather than ignored; fields are big-endian,
 like the save format. The socket is non-blocking and polled from the menu's draw, and it
 closes before GGPO opens its own on the same local port — which is also what keeps a NAT
@@ -736,8 +755,9 @@ other. SWOS 2020 derives a delay on each machine from that machine's own ping, j
 same jitter, and if one runs slower they do not even agree on the frame time, so a match
 that began "AUTO 3" can end up 1 against 5. It announces the number to the other player
 (`sendFrameDelayInfo`) — as English prose, into the chat, which nothing parses. Ours takes
-its frame time from the **gameplay mode**, which the handshake already forces to be equal,
-rather than from anything either machine measures.
+its frame time from the **gameplay mode**, which both sides share (the joiner borrows the
+host's style as the link connects, before the delay is proposed), rather than from anything
+either machine measures.
 
 It is very probably most of the reported **ghosting** too: in a shoulder-to-shoulder
 contest for the ball, four extra frames decides it before the game's own skill roll is
@@ -762,7 +782,8 @@ reason to keep the input delay and the pacing right, not a bug in the contest.
 
 **Messages**, for anything that must arrive whole: `P2PLink_Send(channel, …)` /
 `P2PLink_Received(channel, …)`, as numbered chunks with a bitmap ack. Each kind of message
-has a **channel**, and sending on a channel again **replaces** what was there: it gets the
+has a **channel** (`P2P_NUM_CHANNELS` is 5: 0-2 the lobby, 3 the match report, 4 what each
+player saw, `PRED`), and sending on a channel again **replaces** what was there: it gets the
 next generation, the receiver keeps only the newest complete one, and chunks of an older
 transfer still in flight cannot be mixed into a newer one. Before generations, a re-send of
 the same length was indistinguishable from the first and would have been assembled from
@@ -879,9 +900,9 @@ of every menu. **Returning from it restores the lobby menu from its template**, 
 entry visible again, so the lobby re-applies its layout (and the navigation links SWOS 2020
 wires in code) on every draw.
 
-Not ported: the location flags, ranked and tournament modes, team database choice, cup legs,
-chat and the live cast — hidden. Editing a tactic in the lobby is not there either: players
-choose among the tactics they already have.
+Not ported: the location flags, ranked and tournament modes, team database choice, chat and
+the live cast — hidden. (Cup legs are there now: the CUP row, below. So is editing a tactic:
+TACTICS opens the team screen, whose EDIT TACTICS is the game's own editor.)
 
 **Both peers kick off from the host's state.** The init (`InitAndPlayGame`) does not write
 everything a match reads: the game state, the stoppage timers, where the ball and players
@@ -1217,8 +1238,8 @@ that cannot be, or should not be:
 
 - **testing** — the server can put a misbehaving network in the middle of a real match
   between two real machines (`--netem`), which neither of them knows is there;
-- **the browser build** — a browser has no UDP, so no peer to peer (phase 2 carries the
-  same sessions over WebSocket);
+- **the browser build** — a browser has no UDP, so no peer to peer (the same sessions
+  now also run over WebSocket, through the server's gate: §8);
 - **players whose NATs will not punch**, and a match being streamed live.
 
 **How.** At `START:` the server makes a session with a random 64-bit token and sends each
@@ -1394,7 +1415,9 @@ Since then (2026-09-16/17) the rest of the path exists: both peers punch to all 
 other's candidate addresses at once rather than meeting on the first one (`P2PLink_Punch`),
 the host is asked to accept or refuse a player who wants to join (`hostGameMessageMenu`),
 the link hands over to the lobby (§6), the lobby to a live GGPO match, and the match back to
-the lobby for a rematch. What has not happened is two people doing it on two machines.
+the lobby for a rematch. Two people doing it on two machines has happened too, since the
+first multiplayer weekend (2026-09-26/27) -- what they reported is docs/NETPLAY_REPORT.md
+and docs/NETPLAY_GHOSTING.md.
 
 ## 8. The browser (the web build, `third_party/matchmaker/Server/WebGate.cpp`)
 
@@ -1482,12 +1505,13 @@ way the native tests drive a binary. Headless Chrome is Playwright's
 `--enable-logging=stderr`, so no browser driver is needed. `SWOS_NO_LOG=1` matters there:
 without it the game's stderr goes to a `SWOS.log` in the browser's memory.
 
+**Done since:** **`wss://` on the public server.** A page served over https (baker76.com
+is) may only open `wss://`. The gate speaks it (`--tls-cert`/`--tls-key`, TLS on the same
+port, `TLS=1 scripts/wasm_netplay_test.sh`; docs/NETPLAY_SETUP.md §10), and `wasm/pre.js`
+picks `wss://` on an https page. us.swos.eu has its certificate, and the web build has
+netplay on by default since (2026-09-24).
+
 **Not done yet:**
-- **`wss://` on the public server.** A page served over https (baker76.com is) may only
-  open `wss://`. The gate speaks it (`--tls-cert`/`--tls-key`, TLS on the same port,
-  `TLS=1 scripts/wasm_netplay_test.sh`; docs/NETPLAY_SETUP.md §10), and `wasm/pre.js`
-  picks `wss://` on an https page. us.swos.eu has its certificate, and
-  the web build has netplay on by default since (2026-09-24).
 - **Recording from a browser.** The recorder's TCP stream would arrive as a WebSocket too;
   the gate sees `SWRC` in its first message and could hand it to the recorder. Not wired:
   a browser player's match is recorded only if the other player records it.

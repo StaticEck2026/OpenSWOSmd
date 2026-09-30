@@ -29,14 +29,14 @@ surviving rebuilds / 32↔64-bit / LE↔BE and human-editable.
 
 - **`TEAM.<country>`** — one team database per country, the extension being the
   country number (`TEAM.008` = England, `TEAM.033` = Scotland). The country
-  numbering is the `CN_*` enum in `src/game_types.h` (`CN_ALBANIA=0` …
+  numbering is the `CN_*` defines in `include/game_types.h` (`CN_ALBANIA=0` …
   `CN_ENGLAND=8` … `CN_OCEANIA=85`). A `{country, ordinal}` **TeamId** (the
   2-byte team identity used throughout the game) resolves to a club by loading
   `TEAM.<country>` and taking the record whose `teamOrdinal == ordinal` — exactly
   what `competition_data.c`'s `teamSeedList[]` draws encode, e.g.
   `{ CN_SCOTLAND, 33 }` → **RANGERS**.
 - **`*.TMD`** — the European-cup team pools, loaded into `tmdFileBuffer`
-  (`TeamFileEx[80]`). `EUROCUP.TMD` is the 16 Champions Cup teams (it matches the
+  (was `TeamFileEx[80]`, now 87552 bytes = 128 records). `EUROCUP.TMD` is the 16 Champions Cup teams (it matches the
   `euroCup` seed list one-for-one: Auxerre, Ajax, Rangers, Juventus, AC Milan, …).
 - **`POOLPLYR.DAT`** — the pool-player database (`_FindPoolplyrDatPlayer`),
   loaded into `poolplyrDatBuffer`.
@@ -46,7 +46,7 @@ decompressor auto-detects it.
 
 ---
 
-## 2. Record layouts (`src/game_types.h`)
+## 2. Record layouts (`include/game_types.h`)
 
 ### `TeamFileEx` = 684 bytes — `TeamFile` header (76) + 16 × `PlayerFile` (38)
 
@@ -223,8 +223,9 @@ stem for the rest: `EUROCUP.json`, `EUROCWC.json`, `UEFACUP.json`,
 (indented)** by default while developing (readable); `--compact` minifies them
 (~7.8 MB vs ~16 MB) for release. The dir lives under `bin/` so the game can load
 JSON in place of the binaries during testing; the binary files are retained for
-the loader's auto-detect during the transition. The corpus is git-ignored
-(regenerable).
+the loader's auto-detect during the transition. The corpus is regenerable but
+**tracked** in git (`.gitignore` re-includes `bin/data_json/teams/*.json`), so a
+clone has it without the original data.
 
 ---
 
@@ -233,8 +234,9 @@ the loader's auto-detect during the transition. The corpus is git-ignored
 1. **Python tooling — DONE.** Parse + faithful encode + `--verify` round-trip
    (76/76 files, 0 mismatched bytes). All layouts decoded.
 2. **Finalise the JSON schemas** (this doc). Decide the on-disk naming/location.
+   — DONE (`bin/data_json/teams/`).
 3. **Export pass.** Generate the JSON corpus with `decode_data.py --dump-json`
-   and check it in (or generate on demand).
+   and check it in (or generate on demand). — DONE, checked in.
 4. **C-side JSON loaders.** Because the schema matches the save format, the
    readers can **reuse `save_format_json.c`'s `load_struct_object` with the
    existing `s_team_file_fields` / `s_player_fields` tables** (and a small
@@ -242,11 +244,18 @@ the loader's auto-detect during the transition. The corpus is git-ignored
    nothing from addresses, keep endianness explicit. Each loader
    **auto-detects** format by header (RNC magic / `{` JSON) so legacy binary
    still loads — same policy as the save loader.
+   — DONE for `TEAM.<country>`: `DataJson_LoadTeamFileForCountry` /
+   `DataJson_LoadTeamArray` (`src/save_format_json.c`), called from `src/teams.c`,
+   default-on in the SDL build (`SWOS_DATA_JSON=0` falls back to the binary).
+   No JSON reader was found for `*.TMD` / `POOLPLYR.DAT`; they still load from
+   the binary.
 5. **Verify** byte-image parity (JSON-derived image == binary image) and
    cross-target (the Amiga build reads the same JSON).
 6. **Author as JSON.** Once parity holds, JSON becomes the source of truth; the
-   binary writer is only needed for export/back-compat. Back-port to the Amiga C
-   port (user commits there manually).
+   binary writer is only needed for export/back-compat. — DONE:
+   `scripts/emit_teams.py --write` regenerates the RNC binaries from the JSON,
+   which both targets read (one shared tree since the 2026-08-12 merge; no
+   separate Amiga port to back-port to).
 
 ### Policy note
 

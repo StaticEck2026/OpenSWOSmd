@@ -1,5 +1,9 @@
 # Weather effects
 
+> **Status (2026-09-30): proposal, nothing implemented.** No weather code exists in
+> `src/`, and the `[weather]` section in §8 is a proposal — the settings reader
+> does not know it yet.
+
 SWOS already has weather — it just never shows you any. The pitch arrives frozen,
 muddy, wet, soft, normal, dry or hard (`_pitchNumberAndType`), the ball behaves
 differently on each, and the only visible sign is that the grass is a different

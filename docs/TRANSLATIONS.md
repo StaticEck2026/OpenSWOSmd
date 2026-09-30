@@ -15,6 +15,29 @@ driven by **JSON** locale files (consistent with the project's existing JSON use
 If you meant Spanish (ES) or another, it's a one-line locale-code change; the
 system is locale-agnostic.
 
+> **Status (2026-09-30): implemented, in a simpler shape than the plan below.**
+> What exists:
+> - **Files:** `bin/data_json/translations/<lang>.json` (not `bin/lang/`), a
+>   `{ "strings": { symbol: text } }` map, tracked for `en de fr it es nl`.
+> - **Runtime:** `src/translations.c` — `Translations_Load(lang)` at startup
+>   (`src/main.c`) and a `tr()` lookup by symbol name (bsearch), plus a
+>   pointer → text map for strings the renderer only holds by address (string
+>   tables). The compiled globals are **not** repointed; a missing key or file
+>   falls back to the compiled English string. SDL only — the Amiga gets stubs
+>   that behave as "no translation loaded".
+> - **Selection:** `SWOS.ini` `[general] language = en | de | fr | es | it | nl`
+>   (default `en`). There is no `--lang` flag and no in-game language option.
+> - **Tooling:** `scripts/export_translations.py` writes `en.json` from
+>   `src/strings_data.c` + `src/swos_amiga_strings.c`;
+>   `scripts/gen_translations.py` writes the other five from `en.json` plus
+>   `scripts/translations_master.json`. `extract_strings.py` and
+>   `check_translations.py` were never written.
+> - **Glyphs:** the font was extended with accented capitals, `$` and `€`
+>   (`docs/FONTS.md`); `tr_dup` decodes the JSON's UTF-8 to the game's Latin-1
+>   bytes (plus spare bytes for `Œ Ÿ €`).
+>
+> The sections below are the original plan, kept as the design record.
+
 ## Current state
 
 All UI text is hard-coded **English C-string globals** in `src/strings_data.c`

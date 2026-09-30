@@ -1,6 +1,6 @@
 # STRUCT_FIELDS_UNK.md — Naming the `unkX` fields in the competition data structs
 
-**Scope:** the competition-data struct family in `src/game_types.h` (lines ~1394–1801):
+**Scope:** the competition-data struct family in `include/game_types.h` (lines ~1394–1801):
 `Competition`, `Division`, `CompetitionLeague`, `CompetitionCup`, `Round`,
 `CompetitionCup2`, all the `_N` / `_N_M` variant structs, `Playoffs_*`,
 `Leagues_*`, `QualifyingGroup_*`, `CompetitionCareer`, `DIYStage`.
@@ -23,7 +23,7 @@ C port actually read each byte.
 
 ## Status (2026-06-18) — most of this is LANDED
 
-This started as a backlog; nearly all of it is now applied in `src/game_types.h`:
+This started as a backlog; nearly all of it is now applied in `include/game_types.h`:
 
 - **Priority 1–4 — DONE.** `nameTableOffset`, `teamListOffset`, `seedReorderFlag`,
   `subsAndMaxSubs`, `subsAndPointsForWin`, `numRoundsOverride`, `roundStringBase`,
@@ -38,6 +38,17 @@ This started as a backlog; nearly all of it is now applied in `src/game_types.h`
   leave until proven against the SWOS2.s data tables.
 - **Not a naming task: §9.1 `Competition.type` convention conflict** — still a
   latent bug to fix before any `CompType` enum.
+
+> **Update (2026-09-30):** the "still `unkX`" list above is out of date — in
+> `include/game_types.h` now: `Competition.unk2` (byte 6) is **`isPlayoff`**
+> (Playoffs-vs-Cup discriminator); `Division.unk1` is **`qualifierLinkOffset`**;
+> `CompetitionCup2.unk4` is **`reserved`** (confirmed unread; `a145e36`). Only the
+> `Leagues.linkParams1..4[8]` bytes keep a generic name. Since then `CompetitionCup2`
+> was renamed **`CompetitionTournament`** (header `CompTournamentHeader`, `fbf391d`),
+> and Untangle Step 4b (`3de6702`) moved `nameTableOffset`/`teamListOffset` reads
+> behind accessors (`comp_name_table()`, `comp_team_seed_list()`), leaving those
+> bytes as the inert `reserved1`/`reserved2`. The `game_types.h:NNN` line numbers
+> in the sections below are stale — grep the struct name.
 
 NB these competition templates are serialized as **opaque offset/size blobs** in
 `save_format_json.c` (pointers re-derived from the static template on load), so

@@ -23,6 +23,9 @@ see `SDL_ONLY_SRCS` in `Makefile.amiga`.
 > or comment referring to "the Amiga port" as a separate tree, it predates
 > the merge; fix it when you touch it.
 
+**Docs map:** `docs/INDEX.md` lists every doc in `docs/` (what it is, whether it is current,
+when to read it) and every path the project uses — repos, tools, servers, save folders.
+
 ## Building
 
 Both targets build from a plain bash shell (WSL included) — the old
@@ -80,10 +83,12 @@ plays the corpus through it — directly, under GGPO's synctest, and as two peer
 a plain run's; run it after touching the game loop, the step, or anything the VBlank interrupt
 does. A loop that waits for input inside a frame (pause, the old statistics overlay) hangs a
 peer holding only a prediction: under `_gFrameStepInput` such a loop makes one pass per frame.
-The main menu's MULTIPLAYER button opens OpenSWOS's own direct-IP menu (`src/p2p_menu.c` over
-`src/p2p_link.c`, docs/NETPLAY.md §6): a UDP handshake that refuses a peer whose build, rules
-or screen width would desync the match (not the gameplay STYLE: a game plays its host's, picked at
-OPEN, and the joiner borrows it until they leave -- `GameplayStyle_Borrow`), and shows the ping. `--netplay-selftest` runs it over
+The main menu's MULTIPLAYER button opens SWOS 2020's online flow (matchmaking, `swos2020/logInMenu`,
+docs/MENUS.md §10); OpenSWOS's own direct-IP menu (`src/p2p_menu.c`) is `--menu=p2p/p2pMenu`. Both
+connect through `src/p2p_link.c` (docs/NETPLAY.md §6): a UDP handshake that refuses a peer whose build
+or rules would desync the match (not the gameplay STYLE: a game plays its host's, picked at OPEN, and
+the joiner borrows it until they leave -- `GameplayStyle_Borrow`; and not the screen width: the two
+agree one simulation width), and shows the ping. `--netplay-selftest` runs it over
 loopback. A live match through the lobby, and a rematch after it, is `scripts/netplay_lobby_test.sh`
 (two instances through the real menus); run it after touching the lobby, the link, or how a live
 match starts or ends. A live match must never `exit()` or leave the frame loop: it ends through
@@ -347,7 +352,7 @@ committed, so no build needs the script; re-run it after changing the SVG. A han
 for a small size goes in `packaging/icons/overrides/<size>.png` and wins over the vector.
 
 **Build stamp.** Every binary says which commit it is, because a tester report that does not
-is expensive to triage (docs/TESTS.md, release provenance). `scripts/gen_build_info.sh` writes
+is expensive to triage (docs/TRIAGE.md §5, "Never from a `-dirty` tree"). `scripts/gen_build_info.sh` writes
 `include/swos_build.h` (gitignored) with the short hash, a `-dirty` marker when tracked source
 differs from it, and the commit date; `src/build_info.c` exposes it. BOTH makefiles run the
 script at parse time, so the Amiga binary carries it too, and the header is rewritten only when

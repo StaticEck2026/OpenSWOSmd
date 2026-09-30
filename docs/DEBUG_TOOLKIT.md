@@ -12,12 +12,15 @@ This document covers the **inspection** layer. Two sibling docs cover the rest:
 - **`GDB_HARNESS.md`** — the higher-level *control* layer (drive the game: load careers,
   open menus, step seasons).
 
-All tools live in the **AmigaScope** repo (github.com/benbaker76/AmigaScope, checked out
-at `/mnt/c/Projects/AI/AmigaScope`; set `AMIGASCOPE_DIR` if yours is elsewhere) and talk
-to the target via `gdb_proxy.py`, so a healthy attached session (`amiga_gdb.sh up
---fresh`) is the only prerequisite. They were split out of `SWOS_C/scripts/amiga/` on
-2026-07-19 — paths written as `scripts/amiga/<tool>` below and in the sibling docs
-predate that move; read them as `$AMIGASCOPE_DIR/<tool>`.
+All tools live in the **AmigaScope** repo (github.com/benbaker76/AmigaScope), which this
+repo carries as a git submodule at **`scripts/amiga/amigascope/`** (a standalone checkout
+also sits at `/mnt/c/Projects/AI/AmigaScope`; set `AMIGASCOPE_DIR` if yours is elsewhere).
+They talk to the target via `gdb_proxy.py`, so a healthy attached session
+(`scripts/amiga/amiga_gdb.sh up --fresh` — a shim that loads `scripts/amiga/amigascope.env`
+and forwards to the submodule's `amiga_gdb.sh`) is the only prerequisite. They were split
+out of `SWOS_C/scripts/amiga/` (the pre-merge Amiga tree) on 2026-07-19 — a path written as
+`scripts/amiga/<tool>` in older docs means `scripts/amiga/amigascope/<tool>`. AmigaScope's
+own reference is `scripts/amiga/amigascope/docs/TOOLKIT.md`.
 
 > These tools are game-agnostic. Nothing here is SWOS-specific except the default
 > symbol names (`_copperListBuffer`, the pitch display window) — pass explicit
@@ -28,7 +31,11 @@ predate that move; read them as `$AMIGASCOPE_DIR/<tool>`.
 ## The two FS-UAE binaries (READ THIS FIRST)
 
 There are two FS-UAE builds, both derived from bartman's `amiga-debug` fork. **Which one
-you boot changes what you can capture.** Point the harness at one with `FSUAE_BIN`:
+you boot changes what you can capture.** Point the harness at one with `FSUAE_BIN`.
+(For this project `scripts/amiga/amigascope.env` already sets `FSUAE_BIN` to the modified
+binary, so the shim boots it by default; the extension itself must be the
+`benbaker76/vscode-amiga-debug` fork, whose FS-UAE has the gdb write packets the harness
+needs — see `.claude/CLAUDE.md` "Building".)
 
 | capability | stock (vscode ext) | modified (`/mnt/c/Projects/Linux/fs-uae`) |
 |---|---|---|
@@ -39,7 +46,8 @@ you boot changes what you can capture.** Point the harness at one with `FSUAE_BI
 
 Rule of thumb:
 
-- **Static / settled** state → either binary; the stock one is the default.
+- **Static / settled** state → either binary (AmigaScope's own default is the stock one;
+  this project's `amigascope.env` picks the modified one).
 - **Anything that only exists while the machine runs** (scroll tearing, blitter-vs-beam
   contention, a flickering column) → you **must** use the modified binary, because a halt
   or a re-composite erases the artifact. Boot it with:
@@ -144,11 +152,12 @@ dma_bobfix.prof: 284200 CPU cycles profiled, top functions:
      8730    3.1%  QueueMaskedSpriteBlitClipped
 ```
 
-The SVG is produced through the owner's FlameGraph port (`$FLAMEGRAPH_PY`, default
-`C:\Projects\Python\FlameGraph\flamegraph.py`). Captures made with the empty unwind file
+The SVG is produced through the owner's FlameGraph port (`$FLAMEGRAPH_PY`; it now
+defaults to AmigaScope's own `third_party/FlameGraph` submodule). Captures made with the empty unwind file
 (how `dma_profile.py` runs) are **depth-1** (leaf only) → a flat self-time profile; feeding
 fs-uae a real DWARF-derived unwind file makes the *same walk* emit full call stacks →
-hierarchical flame graph. Env: `SWOS_ELF`, `M68K_OBJDUMP`, `FLAMEGRAPH_PY`.
+hierarchical flame graph. Env: `AMIGASCOPE_ELF` (set by `amigascope.env`; `SWOS_ELF` is
+the fallback), `M68K_OBJDUMP`, `FLAMEGRAPH_PY`.
 
 ### `copper_disasm.py` — copper-list disassembler
 

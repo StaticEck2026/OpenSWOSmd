@@ -7,6 +7,13 @@
 > `bin/data_json/tactics/*.json` and diverge from the "amiga" column here for
 > those four. This snapshot is kept as the record of the original Amiga-vs-DOS
 > delta, not of the current data.
+>
+> **Note (2026-09-03).** Most of the 68 / 64 bytes below are in slots 8 and 9 of
+> 4-4-2 and Sweep, which neither release executes (`InitUserTactics` copies the
+> 5-3-2's last two rows over them at startup). The *live* difference is 21 bytes
+> — see `docs/TACTICS_POSITION_VALUE.md` §9.3 ("Retracted"). The DOS coverage is
+> buildable as `make SWOS_DOS_TACTICS=1`, from `bin/data_json/tactics/<id>_dos.json`
+> (§9.6).
 
 The SWOS engine + team files are identical across DOS and Amiga; the only
 gameplay-affecting data that differs between the two releases is the **default

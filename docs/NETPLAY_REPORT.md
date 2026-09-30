@@ -38,7 +38,8 @@ What went wrong before this existed (the first multiplayer weekend, 2026-09-26):
    folder's path (which names the player's account) replaced by `<SWOS folder>` —
    deflates it (a whole log is ~70 KB, ~5 KB deflated) and sends it with the rating and
    comment to the other player over the lobby's link: P2PLink channel 3, next to the
-   lobby's own three (src/match_report.c, include/report_proto.h `REPORT_HALF`).
+   lobby's own three (0-2) and before PRED's (4, what each player saw)
+   (src/match_report.c, include/report_proto.h `REPORT_HALF`).
 3. When both halves are in — or the other player has left, or two minutes pass, or the
    next match starts — each game writes **one zip**:
 
@@ -114,6 +115,8 @@ the worst detected ghosts. docs/NETPLAY_GHOSTING.md has what they are, and
   both players' ping, rollbacks, holds and frames-ahead every 30 s side by side — and the
   usual suspects flagged: a relay, a 60 Hz display against a 50 Hz game, a player far
   ahead, a silence.
-- **Retention on the server.** Nothing prunes `DIR/`; a report is ~5 KB, so it is years
-  of testing before it matters.
+- **Retention on the server.** Nothing prunes `DIR/` by itself; a report is ~5 KB, so it
+  is years of testing before it matters. By hand: `scripts/fetch_reports.py` mirrors the
+  reports and `--clear` then deletes from the server what was fetched (through the admin
+  gateway, `tools/matchmaker-admin`; docs/NETPLAY_GHOSTING.md, "Reading them").
 - **Low-rated matches to ReportBot**, as reports of their own.

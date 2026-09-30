@@ -1,5 +1,7 @@
 # bracketScratch / league-standings overlay untangle (roadmap step 3)
 
+> Status (2026-09-30): **complete** -- Stages 1-3 landed (`8f14738`, `2101ac1`, `18d00be`, `d88da82`), Stage 4 was moot, and Stage 5 (back-port) no longer applies because the trees merged on 2026-08-12. Kept as the record of how.
+
 Status: **STAGE 1 LANDED (2026-06-13).** The league standings are now the real
 trailing `DIYCompetitionEx.leagueStandings[64]` field (offset 0x5C8 / 0x5D0),
 clear of the cup scratch — they no longer overlay `cupTeamIds[51]`. Builds pass

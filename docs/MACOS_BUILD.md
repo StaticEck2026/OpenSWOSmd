@@ -9,6 +9,15 @@ Both paths target a **macOS 11 (Big Sur)** minimum by default, so a
 universal build produced on a 2025-era Mac will still run on a 2021 M1
 or a late-Intel iMac on Monterey.
 
+> **Release builds are not made by hand.** From the Linux/WSL dev machine,
+> `scripts/build_macos.sh` (`--release`, `--no-pull`) drives the Mac mini over
+> ssh: it `git pull --ff-only`s and prints the commit it built, runs
+> `make macos-app`, and brings back `dist/SWOS-macOS-app.zip` (the `.app`,
+> packed with `ditto` so `SDL2.framework`'s symlinks survive) and
+> `dist/SWOS-macOS.zip` (the universal binary alone). Overrides: `MAC_HOST`,
+> `MAC_PATH`, `MAC_ZIP`. See `.claude/CLAUDE.md` "macOS". This doc is for
+> building on the Mac itself.
+
 ---
 
 ## Prerequisites
@@ -122,7 +131,7 @@ oldest macOS we currently care about. Override per-invocation:
 
 ```bash
 make macos-universal MACOS_MIN=13.0      # Ventura+
-make macos-universal MACOS_MIN=10.13      # Big Sur+ (latest SDL2 still supports it)
+make macos-universal MACOS_MIN=10.13      # High Sierra+ (latest SDL2 still supports it)
 ```
 
 Going below ~10.13 is not recommended — newer SDL2 builds may not
@@ -139,7 +148,9 @@ load on those versions.
 ```
 
 The binary expects to find game data (`data/`, `grafs/`, `grafs_aga/`,
-`sound/`) **relative to itself** in the same `bin/` directory.
+`sound/`, `data_json/`, and the optional `grafs_dos/`, `grafs_2020/`,
+`grafs_arcade/`, `grafs_jag/` tiers) **relative to itself** in the same `bin/`
+directory.
 
 ### As an .app bundle (optional, for sharing)
 
@@ -159,12 +170,13 @@ SWOS.app/
     │   ├── data/                    # game assets (copied from bin/data/)
     │   ├── grafs/
     │   ├── grafs_aga/
+    │   ├── grafs_dos/  grafs_2020/  grafs_arcade/  grafs_jag/   # each if present in bin/
     │   ├── sound/
     │   └── data_json/               # (no save/ — saves go to a per-user dir; see docs/SAVE.md)
     ├── Frameworks/
     │   └── SDL2.framework           # bundled (so user doesn't need to install)
     └── Resources/
-        └── SWOS.icns                # optional, picked up if present in repo root
+        └── SWOS.icns                # from the repo root (committed; generated from SWOS.svg by scripts/generate_icons.py)
 ```
 
 The binary's `-rpath @executable_path/../Frameworks` means a bundled
@@ -208,7 +220,7 @@ account and `xcrun notarytool` — out of scope for this doc.
   reference an old SDL2 search path.
 - **The app crashes immediately on Monterey but runs on Tahoe** — you
   probably built without the deployment-target flag (the default is
-  `12.0`, so if you've overridden `MACOS_MIN` to a higher value the
+  `11.0`, so if you've overridden `MACOS_MIN` to a higher value the
   binary won't load on older systems).
 
 ---

@@ -3,8 +3,24 @@
 Goal: build SWOS to WebAssembly so it runs in a browser from the existing SDL2
 codebase, with as little divergence from the native SDL build as possible.
 
-Status: **PLANNING** (no code yet). This doc is the design we iterate on before
-touching the Makefile.
+> **Status (2026-09-30): LIVE.** The plan below landed as designed (ASYNCIFY,
+> `emscripten_sleep` in `Platform_VBlank`, IDBFS saves) in `4ff54c9`
+> (2026-06-28). `make WASM=1` (with `<emsdk>/emsdk_env.sh` sourced; emsdk lives at
+> `/mnt/c/Projects/Linux/emsdk` here, `EMSDK_DIR` in `scripts/build_dist.sh`)
+> writes `dist/web/SWOS.{html,js,wasm,data}` — not `bin/`. Two things this plan
+> never covered:
+> - **It plays online by default** (`NETPLAY=1` is the WASM default,
+>   `make WASM=1 NETPLAY=0` builds one without): a browser has no UDP, so each
+>   datagram goes as a WebSocket message to the matchmaker's `--websocket` gate,
+>   `wss://` since us.swos.eu got its certificate (2026-09-24); a match with a
+>   browser in it is always relayed. See docs/NETPLAY.md §8 and
+>   `scripts/wasm_netplay_test.sh`.
+> - **A second web build, the recordings player:** `make WASM=1 PLAYER=1` →
+>   `dist/playback` (page `wasm/player.html`, objects in `build/emscripten/wasm-player`,
+>   no netplay), served at https://us.swos.eu/playback/ — docs/PLAYBACK.md.
+>
+> The sections below are the design record and are kept as written; where a
+> detail changed, it is noted inline.
 
 ---
 
@@ -132,7 +148,9 @@ start" overlay).
 - **Game data** (`bin/data`, `bin/grafs`, `bin/grafs_2020`, `bin/sound`,
   `bin/data_json`): bundle into the virtual FS with `--preload-file` (read-only
   MEMFS, downloaded as a `.data` package on load). Open question: total size →
-  initial download (see §4).
+  initial download (see §4). *(As built: `data grafs grafs_aga grafs_jag sound
+  data_json` — no `grafs_2020`; `SWOS.data` is ~23 MB. See the WASM `LDFLAGS`
+  block in the `Makefile`.)*
 - **The chdir-to-own-dir startup**: on WASM there's no binary dir. Either skip the
   chdir under `__EMSCRIPTEN__` and preload data at `/`, or chdir to `/`. Pick one.
 - **Saves** (`bin/save/*.CAR/.HIL/...`): mount **IDBFS** at `/save` (persists in
@@ -209,7 +227,8 @@ Mirror the existing per-target branches:
 
 ## 3. Phased plan (each phase independently testable)
 
-0. **Prerequisite — install Emscripten.** `emcc` is not currently on this machine.
+0. **Prerequisite — install Emscripten.** *(Done: emsdk is at
+   `/mnt/c/Projects/Linux/emsdk`.)* `emcc` was not on this machine when this was written.
    Install the SDK (`git clone https://github.com/emscripten-core/emsdk && cd emsdk
    && ./emsdk install latest && ./emsdk activate latest && source ./emsdk_env.sh`).
    The build will pick it up once `emcc` is on PATH. Run from WSL (Linux emsdk), the
@@ -304,6 +323,7 @@ files + `project_wasm_target` memory):
    carriers get it automatically; raw asm `.skip` symbols don't.)
 
 **NEXT = the actual WASM build (§2–3): Makefile emcc branch + ASYNCIFY.**
+*(Done the same day — `4ff54c9`; see the status note at the top.)*
 
 The historical plan that produced this is kept below for reference.
 
@@ -353,6 +373,7 @@ swos_globals.c:22         career_board_confidence.c:19
 **Per-file gotchas:**
 - These files are **synced to the Amiga tree** — m68k supports both asm and C, but
   verify the Amiga build after each (user commits the Amiga side; don't auto-commit).
+  *(Pre-merge: since 2026-08-12 there is one tree and no sync — build both targets.)*
 - Preserve **alignment** (`.p2align N` → `aligned(1<<N)`) and **zero-init vs
   initialized** (`.bss`/`.skip` = zero-init C global; initialized data stays a C
   initializer).

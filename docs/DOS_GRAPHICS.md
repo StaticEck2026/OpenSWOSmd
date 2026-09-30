@@ -1,8 +1,10 @@
 # DOS graphics support (PC-only) — loaders that convert DOS assets → our internal format
 
 The Amiga build is the definitive SWOS; this is an optional PC-only feature.
-Gated on `gDosGraphics` (`dos_mode.h`), set by `[dos] graphics=true` in `SWOS.ini`
-or `--dos-graphics=on`. When on, we **load the DOS-format graphics from
+Gated on `_gDosGraphics` (`include/dos_mode.h`; directory in `_gDosGraphicsDir`),
+set by `[graphics] style = dos` in `SWOS.ini` (`style = 2020` is the same path
+reading `bin/grafs_2020`) or `--dos-graphics=on`. (Originally `[dos] graphics=true`;
+the settings reader no longer knows the `[dos]` section.) When on, we **load the DOS-format graphics from
 `bin/grafs_dos` and convert them into our existing internal indexed format**
 (8bpp chunky), then let the *unchanged* renderer draw them. We do NOT port a
 second renderer — our chunky pipeline already renders either asset set.
@@ -28,7 +30,7 @@ fields in the DOS files are **little-endian** (read natively on x86).
 | `SCORE.DAT` | planar sprite `.dat`, 114 sprites | DOS idx 227.. |
 | `GOAL1.DAT` | planar sprite `.dat`, 116 sprites (loaded twice) | DOS idx 947.. and 1063.. |
 | `BENCH.DAT` | planar sprite `.dat`, 155 sprites | DOS idx 1179.. |
-| `team1.dat`/`team3.dat` | planar player sprites, 303 each — **ABSENT from grafs_dos**; needed for players | DOS idx 341.. / 644.. |
+| `TEAM1.DAT`/`TEAM2.DAT`/`TEAM3.DAT` | planar player sprites, 303 each — now present in `grafs_dos`. They are kit PATTERNS (vertical stripes / coloured sleeves / horizontal stripes), not per-team sets: each team's range takes the file for its shirt type (`dos_kit_file`, f2d7e31) | DOS idx 341.. / 644.. |
 | `FILL.256` | `.256` image: 64000 chunky px (320×200) **+ 768-byte trailing 6-bit palette** = 64768 B | menu bg / palette |
 
 ### Sprite `.dat` record = `[24-byte header][planar pixels]`, concatenated
@@ -102,6 +104,12 @@ the DOS data into the exact buffer our renderer already consumes:
    `_ResetAnimatedPatternsForBothTeams`) early-returns for DOS, since it walks the
    raw `pitchDatBuffer` slots (the DOS path leaves the raw DAT bytes there, not
    relocated pointers) and would stomp `s_pitchFullPtrs`.
+   - **Superseded since:** `FixupAndColorPitchFile` no longer returns early for
+     DOS — it skips only Steps 1/1b (relocate/decode) and runs Step 2 on, so the
+     crowd's kit recolour applies to DOS pitches too (`pitchFansConvertTable` is
+     256 entries on SDL; see the comment above `dosPitch` in `src/pitch.c`). And
+     `animated_patterns.c` has no DOS gate any more (no `_gDosGraphics` in it);
+     `AnimatedPatterns_SyncTileMirror` notes the unmapped DOS surround instead.
    - **Row offset SETTLED: 42×55 from index 0, no header-row skip.** All six
      `PITCH{n}.DAT` are exactly 2310 = 42×55 entries, every offset a clean
      multiple of 256, every tile index in-range for its BLK. A standalone render
@@ -110,16 +118,19 @@ the DOS data into the exact buffer our renderer already consumes:
      top row. Matches the existing `_DrawChunkyPitch` (`PITCH_PTR_START=0`, 42×55).
      The reference's "skip 42-entry header row (→42×54)" does NOT apply here.
 
-3. **Sprites** — ✅ **DONE (players/keepers/bench)** (`color_sprites.c::
-   _DosOverlaySprites`, called at the end of `_ConvertColorsAndTextSprites` when
-   `gDosGraphics`). For each DOS `.dat` it walks the `[24-byte header][4-bitplane
+3. **Sprites** — ✅ **DONE (players/keepers/bench)** (originally
+   `color_sprites.c::_DosOverlaySprites`; now `dos_prepare_sprites()` /
+   `dos_build_all_sprites()` in `src/color_sprites.c`, called from
+   `ConvertColorsAndTextSprites` when `_gDosGraphics`). For each DOS `.dat` it walks the `[24-byte header][4-bitplane
    planar]` records, `DosGfx_DecodePlanarSprite`s the pixels into a persistent
    chunky buffer, fills a `SpriteGraphics` (pixWidth/nlines/wquads/centerX/centerY
    from the DOS header; **type=0, bltsize=h·64+wq·2, maskPtr=0** — same as the
    Amiga `_ProcessImageCommandStream` chunky output, NOT the DOS header's
    type/bltsize), and stores it at `amigaIndex = dosIndex − 114`. Files +
-   DOS-start indices (from the reference `loadAllGameSprites`): `team1.dat 303@341`
-   (→amiga 227), `team3.dat 303@644` (→530), `goal1.dat 116@947` (→833),
+   DOS-start indices (from the reference `loadAllGameSprites`): team 1's kit file
+   `303@341` (→amiga 227), team 2's kit file `303@644` (→530) — originally
+   hard-coded `team1.dat`/`team3.dat`, which put every team in stripes (fixed
+   f2d7e31, above), `goal1.dat 116@947` (→833),
    `goal1.dat 116@1063` (→949), `bench.dat 155@1179` (→1065). Built once
    (file-load + decode persist); the table slots are re-pointed every call because
    the Amiga load+convert path overwrote them earlier in the same function. The
@@ -141,14 +152,19 @@ the DOS data into the exact buffer our renderer already consumes:
      transparency).
 
 ## Status
-- Done: `[dos]` INI section + `--dos-graphics`/`--dos-gameplay` flags + `gDosGraphics`
-  global (`dos_mode.h`, `main.c`, `swos_settings.c`, `platform_sdl.h`).
+- Done: INI setting + `--dos-graphics`/`--dos-gameplay` flags + `_gDosGraphics`
+  global (`dos_mode.h`, `main.c`, `swos_settings.c`, `platform_sdl.h`). The INI
+  keys are now `[graphics] style = amiga | dos | 2020` and `[gameplay] style`
+  (the original `[dos]` section is gone).
 - Done: `src/dos_graphics.c` loader module (palette / planar-sprite / pitch-map).
 - Done: hook **1 (palette)** — `platform_sdl.c::refresh_palette_from_copper`.
-- Done: hook **2 (pitch)** — `pitch.c::dos_load_pitch` + `_FixupAndColorPitchFile`
-  short-circuit + `animated_patterns.c` DOS gates. Row offset settled (42×55 from 0).
+- Done: hook **2 (pitch)** — `pitch.c::dos_load_pitch` + `FixupAndColorPitchFile`
+  skipping Steps 1/1b (originally a full short-circuit, and `animated_patterns.c`
+  DOS gates — both since removed, see hook 2). Row offset settled (42×55 from 0).
 - Done: hook **3 (sprites, players/keepers/bench)** — `color_sprites.c::
-  _DosOverlaySprites` overlays DOS team1/team3/goal1×2/bench at amiga 227..1219.
+  dos_prepare_sprites` (was `_DosOverlaySprites`) overlays the two teams' kit
+  files + goal1×2 + bench at amiga 227..1219.
+- Done: kit PATTERN per team (`f2d7e31`) — TEAM1/2/3.DAT chosen by shirt type.
 - Done: **DOS per-team kit-colour recolour** (`2569105`) — `dos_prepare_sprites()`
   loads the DOS sprites into the table *before* the Amiga kit conversions, so both
   teams recolour correctly (pristine-decode reset per match).

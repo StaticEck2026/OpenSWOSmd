@@ -5,7 +5,7 @@ sulk, and what changes the speed.
 
 Everything is one routine — `DrawAnimatedPatterns()` in
 `src/animated_patterns.c:379` (ported from `SWOS2.s:53273`), called once per
-frame from the game loop (`src/game_loop.c:704`), after the sprites are
+frame from the game loop (`src/game_loop.c:728`), after the sprites are
 positioned and before `DrawSprites`. There is no crowd entity, no crowd
 sprites and no crowd actor list: **the crowd is pitch tiles**.
 
@@ -25,7 +25,7 @@ pairs**:
 | odd  | fans sitting (static) |
 | even | fans standing / jumping (animated) |
 
-Only indices 1..22 are fan tiles (`MAX_FAN_TILE_INDEX`, `include/display.h:583`);
+Only indices 1..22 are fan tiles (`MAX_FAN_TILE_INDEX`, `include/display.h:618`);
 anything else at the chosen cell is skipped.
 
 Animating a cell is therefore just **adding or subtracting one `TILE_SIZE`**
@@ -105,7 +105,7 @@ Decided at `:430-448`:
 
 - `cameraY > 440` -> the **bottom** stand is on screen, else the **top** one.
 - `fansSidesSwapped` flips that mapping. It is set from the parity of the top
-  team's name in `src/pitch.c:534-541`, and it is the same flag that decides
+  team's name in `src/pitch.c:549-556`, and it is the same flag that decides
   which stand wears which kit colours.
 - If `teamScoredGamePtr` matches the stand on camera you get the cheer phases
   (states 2/3/5); if not, state 4.
@@ -116,12 +116,12 @@ celebrate in the away end.
 
 ### 3.2 `showFansCounter` — the pre-kick-off cutaway
 
-Set to 100 at match start for non-training games (`src/match_setup.c:976`),
+Set to 100 at match start for non-training games (`src/match_setup.c:993`),
 decremented once per frame here, cleared when `ST_STARTING_GAME` is dismissed
 (`src/game_timers.c:170`). While it is non-zero it is also the **highest
 priority camera state**: `MoveCamera` returns immediately (`src/move_camera.c:83`),
 which is what holds the camera on the stands while the crowd does its 50/50
-wave. `CrowdResetMatchState()` (`src/sfx_crowd.c:49`) zeroes it along with the
+wave. `CrowdResetMatchState()` (`src/sfx_crowd.c:47`) zeroes it along with the
 goal counters.
 
 ## 4. Which cells get picked
@@ -172,7 +172,7 @@ tile back to odd, and clears the 8 slots — i.e. sits the whole ground down at
 once. Called from:
 
 - `src/game_timers.c:395` — after a goal restart, when the goal camera was active
-- `src/highlight.c:764,1002` — replay start and end
+- `src/highlight.c:777,1078` — replay start and end
 
 `InitAnimatedPatterns()` (`src/match_setup.c:326`) just fills the 8 slots with
 `0xFFFF` at match setup.
@@ -182,8 +182,8 @@ once. Called from:
 During a replay (`replayState != 0`) the routine derives nothing — it reads
 `animPatternsState` (1..7) out of the recording and jumps straight to that
 label (`:466-476`). The state word is written per frame into `.HIL`
-(`src/highlight.c:711`) and into the `.SRP` frame head
-(`src/replay_v2.c:474`), which is one reason the frame head must be taken
+(`src/highlight.c:724`) and into the `.SRP` frame head
+(`src/replay_v2.c:487`), which is one reason the frame head must be taken
 *with* the sprites: `DrawAnimatedPatterns` sets the crowd state for the frame it
 is about to draw (docs/REPLAY_FORMAT_V2.md).
 

@@ -3,6 +3,16 @@
 Status (2026-07-11): **investigation + plan. Implementation (P3) pending.**
 Prereq: AGA mixed-depth banks are decoded 4bpp — see [AGA.md](AGA.md).
 
+> **Status (2026-09-30): AGA work is PARKED (since 2026-07-30) — SDL first; don't resume without the owner.**
+> Much of §3 has since landed in the shared tree: `DetectBankPlanes` is used by the Amiga
+> `0x7000`/`0x8000` branches of `src/image_cmd.c`, and `blitDispatch` stores each sprite at
+> its real depth (`spriteNumPlanes`: 4 for 16-colour sprites, 8 for `soccer_s`) instead of
+> zero-padding to 8. The band path runs in the rig (`src/pitch_scroll_test.c`), and on AGA
+> the plane23 (spr2+3) band is skipped (`#if !defined(AGA)` in
+> `BuildSpriteBandAndGeneralRenderStacks`) because the 8-plane fetch steals spr3's DMA
+> slot — [AGA.md](AGA.md) §11c, [AGA_TEST.md](AGA_TEST.md) §5c. The `sprites.c:NNNN`
+> line numbers below are from 2026-07-11 and have drifted; find the functions by name.
+
 Reference: SWOS's hardware-sprite/bob switching (and the ENGINE9000 debugger capture
 of the DMA budget quoted in §1) is analysed in this video —
 <https://www.youtube.com/watch?v=GeVrtYfFa_Y>.
@@ -119,10 +129,11 @@ changes). So the stored sprite data + mask must serve both:
 
 ## 4. Verifying on Amiga (now possible)
 
-Build the Amiga AGA build, then FS-UAE + gdb:
+Build the Amiga AGA build (toolchain: the benbaker76 fork of vscode-amiga-debug, see
+`.claude/CLAUDE.md` "Building"), then FS-UAE + gdb:
 ```
 scripts/amiga/amiga_gdb.sh up
-python3 scripts/amiga/gdb_proxy.py cmd "print field_56 of a player"   # band vs bob
+python3 scripts/amiga/amigascope/gdb_proxy.py cmd "print field_56 of a player"   # band vs bob
 python3 scripts/swos_harness.py where                                  # drive into a match
 ```
 Watch `Sprite` vs `Blitter` DMA (fewer bobs = more players on sprite DMA), and

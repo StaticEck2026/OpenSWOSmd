@@ -146,6 +146,16 @@ sudo chown -R swos:swos /srv/swos-matchmaker
 # 3. The certificate, copied where the swos user can read it: §10.
 ```
 
+**Or let the script do it.** `scripts/swos-matchmaker-service.sh {install|restart|remove|status}`
+is what us.swos.eu actually uses: it builds nothing itself, but copies the binary built in a
+checkout (`REPO_DIR`, `RUN_USER` at the top of the script -- edit them for your machine) to
+`/srv/swos-matchmaker/bin/swos-matchmaker`, creates the `/srv/swos-matchmaker` folders and
+ledger, writes the unit below (with `ExecStart` pointing at that copy), copies the recordings
+player and sets up nginx for it (§12), and restarts the service. The password-protected admin
+page (`tools/matchmaker-admin/README.md`) runs pull, build, install and restart from a browser.
+The manual steps below are the same thing by hand, with the checkout itself in
+`/srv/swos-matchmaker`.
+
 The unit — every argument spelled out, one per line, so a change is one line:
 
 ```ini
@@ -414,8 +424,14 @@ this is the most common reason a match will not start. Both players need:
   version is on the main menu's bottom line, the window title and `--version`;
 - **the same rules** — a **tester build** (`SWOS_TEST_NO_INJURIES_CARDS=1`, "test build: no
   injuries or cards" on its version line) cannot play a **release** build;
-- **the same gameplay style** — AMIGA or DOS, in OPTIONS;
-- **the same screen width.**
+- **the same arcade mode and fire-hold lockout** (`[gameplay] fire_hold_lockout`).
+
+Not needed any more: **the same gameplay style** — since 2026-09-29 a game plays its
+HOST's style (AMIGA or DOS, picked when the host OPENs it) and the joiner borrows it until
+they leave, without touching their `SWOS.ini`; the view goes with the style. And **not the
+same screen width** — the two agree one simulation width (docs/NETPLAY.md §5, "One
+simulation width"). Only a view pinned with `--view` on the command line can still be
+refused (ONE OF YOU PINNED THE VIEW).
 
 What each refusal means is in §11.
 
@@ -607,7 +623,8 @@ accepted for that key only (§13).
 | **THE OTHER PLAYER HAS ANOTHER VERSION** / BOTH OF YOU NEED THE SAME BUILD | different commits | both download the same build; compare the version line |
 | **YOUR BUILDS PLAY BY DIFFERENT RULES** / ONE OF YOU HAS A TEST BUILD | tester build v release build | both use tester, or both release (§8) |
 | **YOU PLAY BY DIFFERENT RULES** / CHECK FIRE_HOLD_LOCKOUT IN SWOS.INI | one has the original's fire-hold lockout on | `[gameplay] fire_hold_lockout`, the same on both. (AMIGA v DOS is NOT refused: the joiner plays the host's style) |
-| **YOUR SCREEN WIDTHS ARE DIFFERENT** / BOTH OF YOU NEED THE SAME ONE | different widths | set the same `[video]` width |
+| **ONE OF YOU PINNED THE VIEW** / RUN WITHOUT --VIEW | the same style, but one side started with `--view=` pinning the other view | run without `--view` (SWOS.ini has no view setting any more: `[gameplay] style` sets it) |
+| **YOUR SCREEN WIDTHS ARE DIFFERENT** / BOTH OF YOU NEED THE SAME ONE | from an old build only: widths are no longer refused (§8) | both update to the same build |
 | **THE HOST ALREADY HAS A PLAYER** | someone else joined first | host another game |
 | **THE SERVER'S RELAY HAS CLOSED** / FIND EACH OTHER AGAIN | a relay session closes after about a minute with no traffic | go back to the lobby and join again |
 | **THIS SERVER CANNOT RELAY A BROWSER GAME** | a browser is in the match and the server lacks `--websocket` | restart the server with `--websocket` (§4) |
@@ -677,7 +694,8 @@ cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
 ```
 
 Then the admin page's Rebuild builds it with the server (`scripts/run_matchmaker.sh
---build-only --with-playback`), and `install` or `restart` copies it into place AND sets up
+--build-only --with-playback`), and `scripts/swos-matchmaker-service.sh install` or `restart`
+copies it into place AND sets up
 nginx: a `location /playback/` snippet, included beside the `/recordings/` block, tested,
 reloaded and checked (docs/PLAYBACK.md, "On the server"). If it cannot, the run ends with a
 WARNING saying what to add by hand. Without emsdk the build says so and skips the player.
@@ -759,8 +777,9 @@ trip to it, its relay and its browser gate — with two CPU players in real matc
 
 ```bash
 MM_HOST=your.server.name scripts/relay_test.sh                       # two natives, 2 matches
-make WASM=1 NETPLAY=1 OUTDIR=dist/web-netplay                        # a web build WITH netplay,
-                                                                     # kept apart from the release one
+make WASM=1 NETPLAY=1 OUTDIR=dist/web-netplay                        # a web build for the test,
+                                                                     # kept apart from dist/web (netplay
+                                                                     # is on by default for WASM now)
 WEBDIR=dist/web-netplay MM_HOST=your.server.name scripts/wasm_netplay_test.sh   # browser v browser
 PAIR=web-native WEBDIR=dist/web-netplay MM_HOST=... scripts/wasm_netplay_test.sh # browser v native
 TLS=1 WEBDIR=dist/web-netplay MM_HOST=your.server.name scripts/wasm_netplay_test.sh # ... over wss://
@@ -795,7 +814,7 @@ PAIR=mac-web scripts/wasm_netplay_test.sh         # the Mac's native build v a b
 
 ## 14. Related
 
-- **docs/NETPLAY.md** — the design: §6 the MULTIPLAYER menu and the handshake, §7
+- **docs/NETPLAY.md** — the design: §6 the direct-IP menu, the handshake and the lobby, §7
   matchmaking, the relay and the recorder, §8 the browser.
 - **docs/REPLAY_FORMAT_V2.md** — the `.SRP` a recorder keeps, and `--srp-resim`.
 - **`third_party/matchmaker/OPENSWOS.md`** — what OpenSWOS changed in the server.

@@ -15,11 +15,14 @@ Everything here is derived from the reversed Amiga original
 (`SWOS2.s` → this C port). Where the DOS release differs, the DOS value is given
 alongside; the Amiga value is the reference.
 
-> **Document version 1.8** — 2026-09-03. Five rounds of independent
+> **Document version 2.0** — 2026-09-30. Five rounds of independent
 > re-verification against the port sources (the last two including blind
 > implementation tests), then a sixth check of a different kind: replaying
 > recorded DOS matches against the port frame by frame (docs/TESTS.md). That
-> pass corrected three DOS values here.
+> pass corrected three DOS values here (1.8) — and, as the rig kept going, a
+> run of port defects that this document had faithfully copied (2.0: goalkeeper
+> diving-contact thresholds, nearest-player tie order, three AI fire gates, the
+> goalpost arms, the Y-quadrant leading bound, and more).
 > See [Revision history](#revision-history) before editing.
 
 ---
@@ -430,14 +433,14 @@ read:
 
 | Word | Field       | Meaning                                                        |
 |------|-------------|----------------------------------------------------------------|
-| 0    | `field_0`   | "try the clean catch" tick threshold on diving contact (§15.5)  |
-| 1    | `field_2`   | second threshold on the same path — always ≥ 424, so the test it feeds never changes sign (§15.5) |
+| 0    | `field_0`   | unused by gameplay (see `field_2A`)                             |
+| 1    | `field_2`   | unused by gameplay (see `field_2C`)                             |
 | 2    | `field_4`   | unused by gameplay                                              |
 | 3    | `speed_unk` | keeper positioning speed                                        |
 | 4    | `speed_unk2`| keeper "no save attempted" run speed                            |
 | 5-20 | `index[16]` | dive-reach index (0..7) sampled by `(tick & 0x3C) >> 2`          |
-| 21   | `field_2A`  | unused by gameplay                                              |
-| 22   | `field_2C`  | unused by gameplay                                              |
+| 21   | `field_2A`  | "try the clean catch" tick threshold on diving contact (§15.5)  |
+| 22   | `field_2C`  | controlled-vs-scattered parry band on the same path (§15.5)     |
 | 23   | `field_2E`  | unused by gameplay                                              |
 | 24   | `field_30`  | catch-vs-parry threshold in `PL_GOALIE_CATCHING_BALL` (§15.4)    |
 | 25   | `field_32`  | unused by gameplay                                              |
@@ -830,8 +833,11 @@ Two ordering facts to preserve:
    * **Invisible sprites are not tested at all.** The sorted list is rebuilt only
      by `InitDisplaySprites()`, which drops everything with `visible == 0`; such
      a sprite keeps its last `onScreen` until the list is rebuilt.
-   * **`viewWidth` is the render width, not a world constant** — the only
-     resolution-dependent value in the whole simulation.
+   * **`viewWidth` is 336 in both releases — a constant, not the render
+     width.** Only the height edge follows the display (`272` here, `200` on
+     DOS). An earlier revision said "the render width"; that was this port's
+     widescreen bug, since fixed — see §25.4, which also lists the camera and
+     referee literals that are functions of the same view.
 
    **A port with its own artwork cannot match the original's `onScreen`
    exactly.** The metrics are authored data that differ per frame and the test is
@@ -1058,7 +1064,7 @@ Both are recomputed each time that team is updated, **before** `UpdatePlayers`.
 ### 7.1 `UpdateControlledPlayer` — nearest eligible player to the ball
 
 ```
-for i in 10..0:
+for i in 0..10:
     p = team.spritesTable[i]
     p.ballDistance = (p.x - ball.x)^2 + (p.y - ball.y)^2      /* always update */
 
@@ -1090,10 +1096,15 @@ Key points:
 * `ballDistance` is refreshed for **every** player including skipped ones —
   many other systems read it.
 * The distance comparison is **unsigned**, and `best` starts at `0xFFFFFFFF`.
-* The loop runs **10 → 0** and the comparison is strict (`>=` skips), so on a tie
-  the *higher* index — the first one visited, i.e. the outfield end of the table
-  — keeps the slot. The keeper (`spritesTable[0]`) is visited last and can only
-  win outright.
+* The loop visits **0 → 10** and the comparison is strict (`>=` skips), so on a
+  tie the *lower* index — the first one visited — keeps the slot; the keeper
+  (`spritesTable[0]`) is visited first. The asm's counter runs *down*
+  (`move.w #10,d6` … `dbf d6`) while the table pointer runs *up*
+  (`movea.l (a1)+,a2`); translating the counter into the index reverses the
+  walk, which is invisible until two players tie on `ballDistance` (the replay
+  rig caught exactly that — docs/TESTS.md). The same holds for §7.2, §12.2's
+  `GetClosestNonControlledPlayerInDirection` and §14.2's last-man search.
+  *(Revisions before 2.0 said 10 → 0 here, copying a port bug.)*
 * `team.ballOutOfPlay` gates the actual switch. It is set when the ball is
   released (pass/shot/throw) and cleared once someone takes possession, which is
   what makes SWOS switch player only when the ball leaves your feet.
@@ -1119,7 +1130,7 @@ if (playingPenalties) {                        /* penalties: forced shooter */
     return
 }
 
-for i in 10..0:
+for i in 0..10:                                /* ascending — see §7.1 */
     p = team.spritesTable[i]
     if (gameStatePl == ST_GAME_IN_PROGRESS && !p.onScreen) continue
     if (p.sentAway)                                        continue
@@ -1617,7 +1628,9 @@ if (--player.playerDownTimer == 0) -> PL_NORMAL, snap dest
 /* human released fire early -> convert to a "weak" tackle */
 if (player.tacklingTimer >= 0 && team.playerNumber != 0 && !team.firePressed) {
     player.tacklingTimer = -player.tacklingTimer
-    if (player.tacklingTimer > -2) player.tacklingTimer = -1
+    if (player.tacklingTimer >= -2) player.tacklingTimer = -1
+        /* `cmpi.w #$FFFE / blt` skips only when STRICTLY below -2, so -2
+           folds to -1 as well */
 }
 
 if (player.speed == 0) -> finalize
@@ -1627,7 +1640,10 @@ if (player.speed <= 0) { player.speed = 0; SetPlayerDowntimeAfterTackle(); final
 /* off-pitch damping */
 if (x < 73 || x > 598)                     -> speed -= speed>>3 ; finalize
 if (y < 129 || y > 769) {
-    if (x in [275,396]) { speed >>= 5 ; speed |= 1 ; finalize }   /* into the goal */
+    if (x in [275,396]) { speed >>= 4 ; speed |= 1 ; finalize }   /* into the goal */
+        /* FOUR `lsr`s, /16 (SWOS2.s:30738-30741). The asm comment on the `ori`
+           says "/= 32" and is wrong in both releases' listings; revisions
+           before 2.0 said >>= 5, copying a port that followed the comment. */
     if (y < 121 || y > 777) -> speed -= speed>>3
     finalize
 }
@@ -1653,10 +1669,11 @@ if (player.speed >= 512) PlayerTacklingTestFoul(player, team)      /* §14.2 */
 
 `tacklingTimer` semantics: `0` at launch, then incremented every update while it
 is still `>= 0` — for **both** human and CPU tacklers. Only a *human* team
-(`playerNumber != 0`) that has released fire negates it, clamping to `-1`. So
-`-1` means exactly one thing: **a human released fire on the first update after
-launching** → weak tackle. Everything else — a human still holding, a human who
-released later, and *every CPU tackle* — is a strong tackle.
+(`playerNumber != 0`) that has released fire negates it, folding `-1` and `-2`
+to `-1`. So `-1` means exactly one thing: **a human released fire within the
+first two updates after launching** → weak tackle. Everything else — a human
+still holding, a human who released later, and *every CPU tackle* — is a strong
+tackle.
 
 ### 8.7 Recovery states
 
@@ -1744,9 +1761,12 @@ if (player.x outside [81,590] or player.y outside [129,769]) {
 
 /* --- lead the receiver onto a curling pass (human teams only) --- */
 if (team.playerNumber != 0
-    && (team.longPass || team.leftSpin || team.rightSpin)
+    && (team.longPass || team.longSpinPass || team.leftSpin || team.rightSpin)
     && ball.speed >= 512 && team.passingToPlayer)
 {
+        /* `tst.l TEAMGENERALINFO_LONGPASS` is a LONG test on a word field, so
+           it spans longSpinPass (the next word) too — here, in the lead below,
+           and in §9.1's jog test. Test the pair. */
     if (ball.direction < 0) { team.ballX/Y = player.x/y }
     else {
         diff = (uint8)(ball.fullDirection - player.fullDirection)
@@ -1755,7 +1775,7 @@ if (team.playerNumber != 0
         } else if (diff <= 4 || diff >= 252) {         /* dead in line     */
                 team.ballX/Y = player.x/y
         } else {                                       /* lead the runner  */
-                lead = team.longPass ? -32 : -64
+                lead = (team.longPass || team.longSpinPass) ? -32 : -64
                 if ((int8)diff >= 0) lead = -lead
                 idx = (((ball.fullDirection + lead + 4) & 0xFF) >> 3) << 1
                 team.ballX = player.x + kBallFriction[idx]
@@ -1889,12 +1909,12 @@ teleport phase:
 ### 8.10a The bench and the substitution decision
 
 `BenchCheckControls()` runs once per frame from the game loop
-(`src/bench_subs.c:242`) and owns the whole substitution state machine; the
+(`src/bench_subs.c:251`) and owns the whole substitution state machine; the
 menu *drawing* is a separate pass (`DrawBenchAndSubsMenu`) and is out of scope
 here. §8.10 is the tail of this system: the walk on and off the pitch.
 
 **When the bench may be opened.** The gate list runs in this exact order and is
-only reached while `inSubstitutesMenu == 0` (`bench_subs.c:279-311`):
+only reached while `inSubstitutesMenu == 0` (`bench_subs.c:287-319`):
 
 ```
 if (inSubstitutesMenu != 0) -> the menu is already up: read the owning team's
@@ -1929,16 +1949,20 @@ playerCoachNumber == 0`).
 1. `bench1Called` / `bench2Called` — set by the `W` / `Q` keys (§6.5) and
    checked *before* the alternation, so the keys work for either side at any
    time. `MainKeysCheck` refuses them during replay playback and for a
-   CPU-only team (`src/game_loop.c:319`, `:335`).
+   CPU-only team (`src/game_loop.c:327`, `:341`). *(DOS mode also opens the
+   bench from the second fire button, which the Amiga does not have —
+   `src/match_step.c`.)*
 2. The stick gesture, tested on **one team per frame**, selected by
-   `frameCount & 1` exactly as §5.1 (`bench_subs.c:322`): odd frame = top team,
-   even = bottom. The input read is that team's already-decoded
+   `frameCount & 1` exactly as §5.1 (`bench_subs.c:362`): odd frame = top team,
+   even = bottom. *(DOS alternates on its own `benchPickTeamCounter`, which
+   advances only when this check runs — a different phase, not a different
+   constant.)* The input read is that team's already-decoded
    `TeamGeneralInfo.direction` / `.firePressed` if it has a joystick player;
    for a coach-only team it re-polls player 1's stick (or player 2's when
    `playerCoachNumber == 2`).
 
 ```
-gesture (per team; bench_subs.c:361-419):
+gesture (per team; bench_subs.c:398-456):
   direction held (>= 0):
       if (blockWhileHoldingDirection) return         /* one event per press */
       if (prevDirection >= 0) {
@@ -1957,7 +1981,7 @@ Because `tapCount` starts at 0 and the first press only records
 shorter than 15 frames. Any of the eight directions works — it is not
 specifically "down".
 
-**Opening the bench** (`bench_subs.c:421-513`) sets:
+**Opening the bench** (`bench_subs.c:458-549`) sets:
 
 ```
 benchTeam = the calling team ; benchTeamGame = its TeamGame
@@ -1991,7 +2015,7 @@ nothing ever writes 3, so `state3HandleFirePress` and the `field_B` test in
 | `4`   | marking / swap-two-players menu. A fire held for exactly 8 frames toggles `markedPlayer` (§17.3); two short presses on two different rows swap their `PlayerInfo` **and** their 110-byte `Sprite` records (ordinals swapped back). |
 
 Cursor movement in state 0 is blocked while `gameState == ST_KEEPER_HOLDS_BALL`
-(`bench_subs.c:680`, `:698`) unless this is a training game — so with the keeper
+(`bench_subs.c:724`, `:742`) unless this is a training game — so with the keeper
 holding the ball the bench opens but only the marking/formation entry is
 reachable.
 
@@ -2001,15 +2025,15 @@ names the phase; §8.10 is the consumer, `bench_subs.c` is the producer.
 | value | set by | meaning |
 |-------|--------|---------|
 | `0`  | `InitGameRestoreTeams` (§23) and §8.10 when the sprite finally stops | idle — no substitution in flight |
-| `1`  | `selectPlayerToSubstituteMenuHandler` on the confirming fire press (`bench_subs.c:865`) | the outgoing player is walking to the touchline exit `(plLeavingX, plComingYTmp) = (39, 449)` |
+| `1`  | `selectPlayerToSubstituteMenuHandler` on the confirming fire press (`bench_subs.c:925`) | the outgoing player is walking to the touchline exit `(plLeavingX, plComingYTmp) = (39, 449)` |
 | `2`  | §8.10 when that destination is reached | he is walking the last stretch to the bench, `(plComingX, plComingY) = (26, 449)` |
 | `-1` | §8.10 on the teleport (arrival while already `2`, **or** `injuryLevel == -2`) | the same sprite has been snapped to `(plSubstitutedX, plSubstitutedY) = (39, 449)` and is now the *incoming* player running on |
 
 Supporting globals, all written by the commit press
-(`bench_subs.c:889-906`) and all read by §8.10 and §20.1:
+(`bench_subs.c:954-962`) and all read by §8.10 and §20.1:
 
 ```
-teamThatSubstitutes = benchTeam                       /* read by ball_physics.c:617 */
+teamThatSubstitutes = benchTeam                       /* read by ball_physics.c:652 */
 substitutedPlSprite = benchTeam->spritesTable[plToBeSubstitutedPos]
 substitutedPlSprite->cards = 0                        /* recycle the sprite       */
 substitutedPlX/Y    = his position at the moment of the press (recorded only)
@@ -2029,7 +2053,7 @@ man coming on. `kSubstitutedPlayerSpeed` is `0x600` (1536) for every leg.
 * `waitForPlayerToGoInTimer` is set by `substitutePlayer()` and counted down at
   the top of `BenchCheckControls`. While non-zero it holds the camera on the
   bench with margin 51 (§20.1) and freezes the restart state machine
-  (`src/game_timers.c:276`).
+  (`src/game_timers.c:290`).
 * `cameraLeavingSubsTimer = 50` and `leavingSubsMenu = 1` are set by
   `leaveSubsMenu()` on every exit. `leavingSubsMenu` pins the camera to
   `(211, 449)` (§20.1) until `DrawBenchAndSubsMenu` sees the bench clear the
@@ -2042,7 +2066,7 @@ man coming on. `kSubstitutedPlayerSpeed` is `0x600` (1536) for every leg.
 
 **What the commit actually does to the squad.** Note the split: the *menu*
 press only starts the walk and books the counters; the squad edit happens in
-`substitutePlayer()` (`bench_subs.c:931`), which `BenchCheckControls` calls
+`substitutePlayer()` (`bench_subs.c:992`), which `BenchCheckControls` calls
 once, on the first frame that `substituteInProgress` is negative:
 
 ```
@@ -2066,8 +2090,16 @@ Consequences a porter must reproduce:
 
 * The swap is **by slot**, so the incoming player inherits the outgoing man's
   pitch slot, sprite and tactics position; the outgoing man ends up in the
-  bench slot carrying `position = 0xFF`, which `isThisPlayerOkToSelect`
-  (`bench_subs.c:774`) rejects — he can never come back on.
+  bench slot carrying `position = 0xFF` — he can never come back on. Note
+  *where* he is refused: not by `isThisPlayerOkToSelect` (`bench_subs.c:809`),
+  whose negative-position path returns the slot's byte offset
+  `(benchPlayerIndex + 10) * 61` — positive, which every caller reads as
+  "selectable" — so the cursor **does** stop on him; it is the fire press
+  (`firePressedInSubsMenu`, `position < 0 -> return`) that refuses him. Its
+  other refusals (`skip`, two yellows, the substitution limit) return −1 and
+  make the cursor skip the slot. *(Revisions before 2.0 said
+  `isThisPlayerOkToSelect` rejects him; a port that does that moves the cursor
+  differently from the original — the replay rig caught it, docs/TESTS.md.)*
 * `markedPlayer` indexes the team's own slots. Substituting the marked player
   clears the mark to `-1`; any other substitution leaves it pointing at the
   same slot (now occupied by the incoming player). The second test in
@@ -2084,16 +2116,21 @@ Consequences a porter must reproduce:
 * Goalkeeper replacement: bench slot 11 is the reserve keeper. Committing him
   bumps `team1GoalkeeperReplaced` / `team2GoalkeeperReplaced` (used only by the
   bench drawing to keep the GK jersey sprite). When `gameMaxSubstitutes > 5`,
-  picking slot 11 forces `plToBeSubstitutedPos = 0` (the keeper) and skips
-  `findInitialPlayerToBeSubstituted`; when `gameMaxSubstitutes <= 5` the
-  selection cursor is locked for that slot (`bench_subs.c:812`, `:1171`).
+  picking slot 11 forces `plToBeSubstitutedPos = 0` (the keeper), skips
+  `findInitialPlayerToBeSubstituted` (`bench_subs.c:872`) and locks the
+  selection cursor on him (`cmpi.w #5,(gameMaxSubstitutes) / bhi exit`,
+  `bench_subs.c:1261`). When `gameMaxSubstitutes <= 5` — every real game — the
+  reserve keeper is an ordinary substitution: the man coming off is pre-selected
+  by position as below and the cursor moves freely. *(Revisions before 2.0 had
+  the lock on the `<= 5` side, copying a port bug that froze the cursor for
+  every goalkeeper substitution.)*
   *(`gameMaxSubstitutes > 5` is unreachable from every menu and from all 89
   shipped presets, which clamp 0..5; only a hand-edited `.HIL` header can produce
   it. Implement the branch or not, as you prefer.)*
 
 **The two limit variables have misleading names.** They come from
 `InitializeInGameTeamsAndStartGame(d1 = minSubs, d2 = maxSubs)`
-(`src/game_init.c:1000`):
+(`src/game_init.c:1040`):
 
 ```
 maxSubsPerTeam     = the menu's MIN SUBSTITUTES  = how many substitutions a team may MAKE
@@ -2101,10 +2138,10 @@ gameMaxSubstitutes = the menu's MAX SUBSTITUTES  = how many players sit ON THE B
 ```
 
 `team1NumSubs` / `team2NumSubs` count substitutions made and are zeroed at
-match setup alongside `substituteInProgress` (`src/match_setup.c:845, 863`). Once
+match setup alongside `substituteInProgress` (`src/match_setup.c:939, 957`). Once
 `teamNumSubs == maxSubsPerTeam`, `isThisPlayerOkToSelect` returns −1 for
 **every** bench entry, so the cursor's scan-forward-then-scan-back loop
-(`bench_subs.c:686-715`) walks to slot 6, back down, and parks on entry 0.
+(`bench_subs.c:723-760`) walks to slot 6, back down, and parks on entry 0.
 The bench still opens; the user can still change formation and marking; no
 bench player can be reached. There is no message and no separate "limit"
 branch — the cursor simply cannot leave entry 0.
@@ -2112,9 +2149,9 @@ branch — the cursor simply cannot leave entry 0.
 **Injuries do not force or bias a substitution.** `PlayerTackled` (§14.3) puts
 the victim on the ground for 60..130 frames and sets
 `PlayerInfo.isInjured` / `injuriesBitfield`, which costs him speed for the rest
-of the match (`kInjuriesSpeedHandicap`, `src/ball_possession.c:668`) — but
+of the match (`kInjuriesSpeedHandicap`, `src/ball_possession.c:671`) — but
 nothing opens the bench, nothing pre-selects him, and he plays on.
-`findInitialPlayerToBeSubstituted` (`bench_subs.c:1319`) picks the man to come
+`findInitialPlayerToBeSubstituted` (`bench_subs.c:1408`) picks the man to come
 off by **position only**: exact position match > positional group
 (DEF/RB/LB, or MID/RW/LW) > first player with fewer than 2 yellows. It never
 looks at injury state. `PlayerInfo.position` is:
@@ -2138,7 +2175,7 @@ all three candidates at once, each latched on its first hit, so every tier
 resolves to the **lowest slot index** that qualifies. The one place the engine *would* respond to an injury —
 `substitutedPlSprite->injuryLevel == -2`, which short-circuits the walk
 straight to the teleport (§8.10) and draws a red cross beside the player in the
-subs menu (`bench_subs.c:1931`) — is unreachable: no code path in SWOS2.s or in
+subs menu (`bench_subs.c:2136`) — is unreachable: no code path in SWOS2.s or in
 this port ever writes `-2` to `Sprite.injuryLevel` (the only writers are `clr.w`
 and the `kInjuryRecoveryTime` lookup). Treat it as a designed-but-unused hook.
 
@@ -2231,7 +2268,8 @@ if (player == team.controlledPlayer && team.playerHasBall)
 /* a human's pass receiver running onto a curling ball is slowed to a jog
    so the ball can catch up */
 if (team.playerNumber && player == team.passToPlayerPtr && team.passingToPlayer
-    && (team.longPass || team.leftSpin || team.rightSpin) && ball.speed) {
+    && (team.longPass || team.longSpinPass || team.leftSpin || team.rightSpin)
+    && ball.speed) {
     diff = (int8)(ball.fullDirection - (int8)player.fullDirection)
     if (diff in [-7,7])  player.speed = (|diff| > 5) ? 512 : 256
 }
@@ -2374,15 +2412,16 @@ Two more identity tests are *not* on `animationTable`:
 
 * **The ball** is switched between `ballStaticFrameIndices` and
   `ballMovingFrameIndices` by comparing `Sprite.frameIndicesTable` directly
-  (§10.1, `src/ball_physics.c:518, 524`), resetting `frameIndex = 0` only on a
+  (§10.1, `src/ball_physics.c:541, 547`), resetting `frameIndex = 0` only on a
   change. Those two lists are in `src/swos_amiga_data_imports.c`, not
   `sprite_data.c`.
 * **The keeper's "caught ball" pose** (§15.5) is detected by **`imageIndex`**, not
-  by a table: `imageIndex ∈ {0x3C4, 0x3C6, 0x3D0, 0x3D2, 0x3D4, 0x36C, 0x36E, 0x3D2}`
+  by a table: `imageIndex ∈ {0x35E, 0x360, 0x3E0, 0x3E2, 0x3D2, 0x3D4, 0x36C, 0x36E}`
   — i.e. the four named `SPR_GOALIE{1,2}_CAUGHT_BALL_{RIGHT,LEFT}` constants
-  (`0x3C4/0x3C6/0x3D0/0x3D2`) plus four unnamed literals `0x3D2, 0x3D4, 0x36C,
+  (`0x35E/0x360/0x3E0/0x3E2`) plus four unnamed literals `0x3D2, 0x3D4, 0x36C,
   0x36E` — selects `kGoalKeeperRecoveryStepAlt (192)` instead of the
-  base 112 (`src/update_players.c:1018-1029`). A port that renumbers its sprites
+  base 112 (`src/update_players.c:1032-1046`). *(Revisions before 2.0 gave the
+  port's old, wrong names `0x3C4/0x3C6/0x3D0/0x3D2` here; see §25.4.)* A port that renumbers its sprites
   must re-derive this set; a port that keeps only the *table* identity cannot
   reproduce it, because `goalieCatchingBallAnimTable` is not what is being tested.
 
@@ -2570,25 +2609,32 @@ SIDE NET/POST:
 ```
 if (bz > 19)                       -> no contact
 if (bx <= 295 || bx > 372)         -> no contact (outside the post band)
-if (bz <= 15) {
-    if (bx in [302,366])           -> no contact (through the mouth)
-    else                           -> POST HIT
-} else {                           /* between bar height and net top */
-    jitter = ((currentGameTick & 0x1F) << 4) - 0x100      /* -256..+240 */
-    if (|ball.deltaY| is large) {
-        if (the ball is travelling away from this goal) -> no contact
-        mirror destY ; reset spin timers ; ball.destX += jitter
-    } else {
-        ball.deltaZ = -ball.deltaZ ; restore saved z ; savedY += 1.0
-    }
-    -> speed reduction
+if (bz <= 15 && bx in [302,366])   -> no contact (through the mouth)
+
+jitter = ((currentGameTick & 0x1F) << 4) - 0x100          /* -256..+240 */
+strong = (ball.deltaY < -0x5000 || ball.deltaY > 0x5000)  /* full 16.16 */
+
+if (strong) {                      /* either height — loc_10984C */
+    if (the ball is travelling away from this goal) -> no contact
+                                   /* by <= 449: deltaY >= 0 ; else deltaY < 0 */
+    mirror destY ; reset spin timers ; ball.destX += jitter
+} else if (bz <= 15) {             /* the SIDE of a post — loc_109810 */
+    mirror destY ; reset spin timers ; ball.destY += jitter
+} else {                           /* level with the crossbar — loc_109878 */
+    ball.deltaZ = -ball.deltaZ ; restore saved z ; savedY += 1.0
 }
 
-POST HIT: identical body, then
 speed reduction:  play the woodwork sample
                   ball.speed -= ball.speed >> 2          /* ×0.75 */
                   restore saved x/y
 ```
+
+Three arms, not two (SWOS2.s:14829-14869; the DOS listing is identical). The
+jitter is the same expression in each; what separates them is *where* it is
+added. Revisions before 2.0 routed a weak-Y ball at post height into the
+crossbar arm, copying a port bug: a ball resting against the side of a post then
+crept a pixel down the pitch every frame instead of rattling along the goal line
+(found by the replay rig, docs/TESTS.md).
 
 ### 10.6 Out of play
 
@@ -2636,7 +2682,9 @@ playerXQuadrantOffset = ((qx - xRef - 51) * 5) / 15
 /* Y: 6 thresholds -> 0..6, contributing 5 per step; `i` holds 6 on fall-through */
 yq = 0 ; i = 0
 while (i < 6 && (uint16)qy >= (uint16)ballYQuadrantLimits[i]) { yq++; q += 5; i++ }
-yRef = (i == 0) ? ballYQuadrantLimits[0] : ballYQuadrantLimits[min(i,6) - 1]
+yRef = (i == 0) ? 129                            /* the word BEFORE the array =
+                                                   ballXQuadrantLimits[4] */
+                : ballYQuadrantLimits[min(i,6) - 1]
 ballYQuadrantDead     = yq
 playerYQuadrantOffset = ((qy - yRef - 45) * 5) / 15
 
@@ -2646,10 +2694,20 @@ ballQuadrantIndex = q                        /* 0..34, = xq + 5*yq */
 with
 
 ```
-ballXQuadrantLimits[5] = { 183, 285, 387, 489, 129 }  /* only [0..3] are
-                                                         thresholds — see §25.4 */
+ballXQuadrantLimits[5] = { 183, 285, 387, 489, 129 }  /* only [0..3] are X
+                                                         thresholds; [4] is the
+                                                         Y loop's leading bound */
 ballYQuadrantLimits[6] = { 220, 312, 403, 495, 586, 678 }
 ```
+
+Both loops read their `i == 0` reference from the word *before* their own
+table, by the original's `sub.w -4(a1)` with `a1` one past the base: for X that
+is a pad word (`81`), for Y it is `ballXQuadrantLimits[4] = 129` — so the
+"padding" 5th X entry is in fact the first Y bound (the DOS build spells it out:
+`ballYQuadrantLimits dw 129, 220, ...`). Revisions before 2.0 used
+`ballYQuadrantLimits[0] = 220` there, copying a port bug that put every
+outfield player's target 30 units too far up the pitch whenever the ball was
+in the top Y band.
 
 Both threshold comparisons are **unsigned**. `ballNextX/Y` is unclamped, so a
 hard shot can predict off-pitch: a negative predicted position reads as a huge
@@ -2899,7 +2957,7 @@ play the pass sample (except during a throw-in while the ball is dead)
 ```
 
 `GetClosestNonControlledPlayerInDirection(dir, team)` scans the team's 11
-sprites `10 → 0` and picks the one nearest the ball that is not the controlled
+sprites `0 → 10` (ties to the lowest slot, §7.1) and picks the one nearest the ball that is not the controlled
 player, not sent off, in `PL_NORMAL`, and whose `fullDirection` is within ±16
 (as a signed byte difference) of `dir * 32`. So the pass target is chosen by
 **which teammate lies along the stick direction from the ball**, then by
@@ -3335,7 +3393,7 @@ down 30 frames, a good one 9. `kComputerTacklingDownTime` is a flat `3`, but its
 name is a red herring: the table is chosen by `tacklingTimer == -1`, which the
 CPU can **never** produce (only a human team negates the timer — §8.6). In
 practice the flat-3 table is used *only* for a human who tapped and released fire
-instantly — the "stab" tackle — and CPU tacklers get the normal skill-indexed
+within the first two updates — the "stab" tackle — and CPU tacklers get the normal skill-indexed
 30..9 down-time.
 
 **Winning the ball** — §8.6 calls one of two routines when the slide reaches the
@@ -3410,6 +3468,8 @@ if (victim in the central band x in [193,478], y in [129,769]) {
 ref = (336, tackler team defends top ? 129 : 769)
 nearest = the tackling team's outfielder (not the tackler, not the keeper)
           with the smallest squared distance to ref, starting from the victim
+          /* slots scanned 0..10 with `<=`, so a tie goes to the HIGHEST slot
+             and also beats the victim (src/tackle_foul.c) */
 if (nearest == victim)  {          /* last man! the odds are SWAPPED here,
                                       and the playerCardChance gate is SKIPPED */
         if (Rand() < 32)  -> yellow attempt          /* 12.5 % */
@@ -3708,7 +3768,7 @@ can be read as arithmetic:
 
 ```
 /* zone flags — recomputed ONCE per team update, before the player loop
-   (update_players.c:245-266), from the ball's integer position only */
+   (update_players.c:262-284), from the ball's integer position only */
 ballInUpperPenaltyArea = (ball.x in [193,478] && ball.y in [129,216])
 ballInLowerPenaltyArea = (ball.x in [193,478] && ball.y in [682,769])
 ballInGoalkeeperArea   = ((ballInUpperPenaltyArea || ballInLowerPenaltyArea)
@@ -3718,16 +3778,16 @@ ballInGoalkeeperArea   = ((ballInUpperPenaltyArea || ballInLowerPenaltyArea)
            ballInGoalkeeperArea implies ballIn*PenaltyArea. */
 
 /* height flags — set in the §8.2 preamble that the keeper also passes through
-   (update_players.c:337-355), on team, from ball.z: */
+   (update_players.c:355-372), on team, from ball.z: */
 ballAbove17 = (ball.z > 17) ; ball12To17 = (12 < ball.z <= 17)
 ball8To12   = (8 < ball.z <= 12)
 
-/* "this keeper's own half" (update_players.c:433-441) — the test is on the
+/* "this keeper's own half" (update_players.c:450-458) — the test is on the
    KEEPER's Y, not the ball's, and y == 449 belongs to the TOP half: */
 inOwnHalf = (team == topTeamData)    ? (keeper.y <= 449)
           : /* bottomTeamData */       (keeper.y >  449)
 
-/* "this keeper's penalty area" (update_players.c:455-461) — selected by TEAM: */
+/* "this keeper's penalty area" (update_players.c:469-477) — selected by TEAM: */
 ballInMyBox = (team == bottomTeamData) ? ballInLowerPenaltyArea
                                       : ballInUpperPenaltyArea
 
@@ -3986,7 +4046,7 @@ holds the **keeper's** team, and `GetPlayerPointerFromShirtNumber` indexes
 `a6->inGameTeamPtr->players[sprite.playerOrdinal - 1]`. So the value fed into
 `idx` is the finishing rating of *the defending side's* player wearing the
 attacker's shirt number. The C port reproduces this exactly
-(`src/update_players.c:707` passes `team`, the keeper's team). This is almost
+(`src/update_players.c:725` passes `team`, the keeper's team). This is almost
 certainly an original-SWOS bug, but it is *behaviour*: it shifts the whole
 one-on-one distribution, and a port that "fixes" it to the attacking squad will
 not match Amiga SWOS. Implement the wrong lookup.
@@ -4191,9 +4251,9 @@ keeper.speed = max(0, keeper.speed - step)
    /* The four named ids are 0x35E, 0x360, 0x3E0, 0x3E2 — the symmetric set
       {base+5, base+7, base+19, base+21} taken from goalie 1's dive base 0x359
       and goalie 2's base 0x3CD, the same four offsets DoGoalkeeperSprites uses.
-      See §25.4: both C ports currently mis-define these four names, which
-      collides one with the literal 0x3D2 and puts two outside every dive
-      sequence. */
+      Before 2026-07-30 this port mis-defined these four names, which
+      collided one with the literal 0x3D2 and put two outside every dive
+      sequence (§25.4). */
 
 /* did the diving body intercept the ball this frame? */
 if (!live)                                           -> done
@@ -4259,7 +4319,13 @@ if (goalkeeperSavedCommentTimer >= 0) opponent.passingKickingPlayer = NULL
 if (!ballInGoalkeeperArea) opponent.stats.goalAttempts++
 ResetBothTeamSpinTimers()
 
-d1 = ((currentGameTick & 0xF0) >> 4) - skillTbl.field_0
+d1 = ((currentGameTick & 0xF0) >> 4) - skillTbl.field_2A
+        /* The asm writes these two reads as `sub.w SPRITE_DIRECTION(a0)` and
+           `sub.w SPRITE_SPEED(a0)` — Sprite equates applied to the GoalieSkill
+           pointer, i.e. byte offsets 42 and 44 (SWOS2.s:29998-30009), which are
+           field_2A / field_2C, NOT the table's first two words. Revisions before
+           2.0 said field_0 / field_2, copying a port that took the names at face
+           value (found by the replay rig, docs/TESTS.md). */
 if (d1 < 0) {
     if (|keeper.x - ball.x| <= 6) {
         /* CLEAN CATCH off the dive */
@@ -4269,17 +4335,12 @@ if (d1 < 0) {
         GoalkeeperClaimedTheBall(...)
     } else -> scattered parry
 } else {
-    d1 -= skillTbl.field_2
+    d1 -= skillTbl.field_2C
     if (goalkeeperSavedCommentTimer >= 0) (d1 < 0) ? controlled parry : scattered parry
     else                                  (d1 < 0) ? scattered parry  : controlled parry
-        /* IN PRACTICE THIS FOUR-WAY IS A TWO-WAY. d1 is at most 14 here (it is
-           a 0..15 nibble that already survived `- field_0 >= 0`), and every
-           field_2 is 424..1408 (§24.7), so d1 is ALWAYS negative after the
-           subtraction. Net:
-                goalkeeperSavedCommentTimer >= 0  =>  controlled parry
-                goalkeeperSavedCommentTimer <  0  =>  scattered parry
-           Keep the arithmetic — it is what the engine does — but do not go
-           looking for a tick dependence here, there isn't one. */
+        /* A genuine tick-dependent four-way: with tick nibble n, n < field_2A
+           tries the clean catch, field_2A <= n < field_2A + field_2C is the
+           "d1 < 0" band, and the rest is the other arm. */
 }
 
 controlled parry: lastKeeperPlayed = lastPlayerPlayed   /* ONLY on this arm */
@@ -4316,12 +4377,16 @@ both: ball.y = keeper.y ± 1 (away from the keeper's own goal)
                                                             plays it too */
 ```
 
-`field_0` is the gate that decides whether a diving keeper even *tries* the
-clean catch, and it is **not** monotone in skill: it is `0x63` (99) for skill 7
-and `7 - skill` for skills 0..6. Since `d1` starts as a 0..15 nibble, a skill-7
-keeper takes the `d1 < 0` arm on **every** tick (so it always attempts the catch
-and only the 6-pixel X test can deny it), a skill-6 keeper takes it 1 tick in 16,
-and a skill-0 keeper 7 in 16. Implement the table values, not the intuition.
+`field_2A` is the gate that decides whether a diving keeper even *tries* the
+clean catch: `3, 4, 5, 6, 6, 7, 8, 9` for skills 0..7 (§24.7), so on the 0..15
+tick nibble a skill-0 keeper tries on 3 ticks in 16 and a skill-7 keeper on 9 —
+and the 6-unit X test can still deny it. `field_2C` (`5` for skills 0..3, `6` for
+4..7) is the width of the next band: a keeper who has not been beaten
+(`goalkeeperSavedCommentTimer >= 0`) makes a controlled parry on those ticks and
+a scattered one on the rest; a beaten keeper gets the reverse. Skill 7: 9 catch
+attempts, 6 controlled, 1 scattered; skill 0: 3, 5 and 8. The penalty table
+(`field_2A = 2`, `field_2C = 0`) leaves no controlled band at all for an
+unbeaten keeper.
 
 **`GoalkeeperDeflectedBall`** (the punch/parry from a catch attempt):
 
@@ -4424,7 +4489,7 @@ sees `PlayerInfo.position == 0` and stores
 that matter downstream:
 
 ```
-field_0 = 2   field_2 = 1244   speed_unk = 992   speed_unk2 = 240
+field_2A = 7  field_2C = 6     speed_unk = 992   speed_unk2 = 240
 field_30 = 10  field_3A = 10
 index[16] = { 0,1,1,2,2,2,2,2,2,2,2,2,2,3,4,5 }
 ```
@@ -4775,18 +4840,26 @@ if (AI_DecideWhetherToTriggerFire(a5, team, d7) == FIRE) return    /* shot armed
 
 /* shooting gates */
 if (a5.direction == 2 || a5.direction == 6) {         /* facing E or W          */
-    if (team == topTeamData) { if (ball.y < 740) -> no fire }
-    else                     { if (ball.y > 158) -> no fire }
+    if (team == topTeamData) { if (ball.y >= 740) -> no fire }
+    else                     { if (ball.y <= 158) -> no fire }
 }
         /* 740 / 158 are the SIX-YARD-BOX Y bounds (§8.2's ballInGoalkeeperArea
-           uses the same two numbers). So a CPU player facing straight across the
-           pitch will only shoot from inside the opposing 6-yard box — a tap-in
-           from the byline. Anywhere else, a sideways facing refuses. */
+           uses the same two numbers; the top team attacks y = 769, the bottom
+           team y = 129). So a CPU player facing straight across the pitch does
+           NOT shoot from inside the opposing 6-yard box — there the fallback
+           turns him toward goal instead; anywhere else the gate passes.
+           Both branches in the asm target the REJECT label (SWOS2.s:32052-32059);
+           revisions before 2.0 had them the other way round, copying a port
+           bug that shot from six yards out while facing across the goal. */
 if (a5.direction < 0)                 -> no fire   /* no facing yet             */
 if (d6 > 28800)                       -> no fire                  /* > 170 units */
 if (d6 >= 12800 && (aiRand & 3))      -> no fire                  /* 3/4 refuse  */
 tolerance = (d6 <= 3200) ? 0x32 : 0x0F                            /* 50 : 15     */
-if (|(int8)(a5.direction*32 - d5)| > tolerance) -> no fire
+e = (int8)(a5.direction*32 - d5)
+if (e > tolerance || e <= -tolerance) -> no fire
+        /* ASYMMETRIC: fires on -tolerance < e <= tolerance. The asm's second
+           test (`neg.b d1 / cmp.b d1,d2 / bgt fire`) is strict, so e exactly on
+           the negative bound does not fire. */
 if (aiResumePlayTimer) return
 if (team.passKickTimer >= 13) return
 team.AI_afterTouchStrength = 0
@@ -4893,14 +4966,22 @@ if (a4 && a4.ballDistance - a5.ballDistance >= 50) { swap controlledPlayer and
 if (!a4)                                -> steer by the fine angle
 if (either team is human)               -> steer by the fine angle
 /* CPU vs CPU with a pass target: occasionally rotate randomly */
-if (the player is outside the central box x[273,398] y[159,739]) {
+if (player.x in [273,398] && (player.y <= 158 || player.y >= 740)) {
+    currentAllowedDirection = -1          /* in the goal-mouth corridor AND
+                                             already deep in a box: unforced */
+} else {
     if (currentGameTick & 0x18) { currentAllowedDirection = d7 ; return }  /* 75% */
     /* so the random-rotate below is reached 25% of the time (mask 0x18 is
        zero for 8 of every 32 tick values) */
     rotate = aiRandomRotateTable[(aiRand & 2) >> 1]        /* -32 or +32 */
     currentAllowedDirection = (((player.fullDirection + rotate + 128 + 16) & 0xFF) >> 5)
-} else currentAllowedDirection = -1
+}
 ```
+
+The position test's x arms branch *to* the gate and its y arms branch *past* it
+(SWOS2.s:32460-32469); revisions before 2.0 had the y sense inverted (a central
+box `y[159,739]` giving −1), copying a port bug. The DOS build has no position
+test at all: every player reaches the gate.
 
 "Steer by the fine angle" (`derive_allowed_dir_from_full_angle`) is reached **only**
 from this section, and is a different leaf from §16.4's `aim-at-goal`: it steers by
@@ -4927,12 +5008,15 @@ Beware the three similar names, which are three *different* routines:
 | copy-facing | the `!plVeryCloseToBall` arm of both §16.4 leaves | `a5.direction` unchanged |
 
 The long-range decision (`decide_immediate_turn_or_gate`, reached from §16.4's
-tree and from §16.5) fires a long ball when the goal angle is within one 8-way
-step of the current facing:
+tree and from §16.5) fires a long ball when the goal angle's 8-way bucket is the
+current facing or **one step clockwise** of it:
 
 ```
 bucket = ((d5 + 16) & 0xFF) >> 5
-if (((bucket - d7) & 7) in {0,1,7}) {
+if (((bucket - d7) & 7) in {0,1}) {
+        /* The asm also compares against $FFFF (SWOS2.s:32234-32240), but after
+           `andi.w #7,d0` that arm can never be taken. Revisions before 2.0
+           read it as 7 and gave the AI a counter-clockwise arm it lacks. */
     team.AI_afterTouchStrength = (d6 <= 115600) ? 1 : 2
     team.currentAllowedDirection = d7 ; team.normalFire = 1
     aiResumePlayTimer = 15
@@ -4949,7 +5033,8 @@ if (((bucket - d7) & 7) in {0,1,7}) {
 
     t = (currentGameTick & 0x1C) >> 2                    /* 0..7 */
     bx = ball.x
-    if (bx >= 193 && bx <= 478) {                        /* central corridor */
+    if (bx >= 193 && bx < 478) {                         /* central corridor;
+                                            `cmpi.w #478 / bcs`: 478 is NOT in it */
         if (t == 0) d0 = 0
         else if (t < 5) /* keep d0 */ ;
         else d0 = -d0
@@ -4970,7 +5055,7 @@ if (((bucket - d7) & 7) in {0,1,7}) {
 ```
 
 The three X bands are nested tests, not a `switch`: the second is only reached
-when the first fails, so its true range is `[118,192] ∪ [479,553]`. The tick
+when the first fails, so its true range is `[118,192] ∪ [478,553]`. The tick
 bucket splits 8 ways but the arms only distinguish `0`, `1..3 / 1..4`, and the
 rest — so the CPU's curve on a given long ball is a 3-way choice that changes
 every 4 frames, which is what stops its crosses being identical.
@@ -5390,10 +5475,15 @@ ST_STARTING_GAME           showFansCounter = 0; PrepareForInitialKick()
 ST_CAMERA_GOING_TO_SHOWERS PrepareForInitialKick()
 ```
 
-all four then zero `stoppageEventTimer`. For the other six in-range states the
-handler does nothing — yet the dispatcher still returns, so holding fire during
-e.g. `ST_FIRST_HALF_ENDED` **freezes** the stoppage countdown rather than
-skipping it. Do not wire fire to "advance the transition" for all ten.
+all four then zero `stoppageEventTimer` and return. For the other six in-range
+states the handler does nothing and **falls through** into the stoppage
+countdown below (the last `cmpi/bne` arm lands on `game_interrupted`,
+SWOS2.s:25267), so holding fire during e.g. `ST_FIRST_HALF_ENDED` changes
+nothing — the countdown runs as if fire were up. Do not wire fire to "advance
+the transition" for all ten, and do not return after the handler either.
+*(Revisions before 2.0 said the dispatcher returns and fire **freezes** the
+countdown; that was a port bug — a held button delayed `PlayersLeavingPitch` by
+as long as it was held — found by the replay rig.)*
 
 The countdown itself lives at the top of the dispatcher:
 `if (stoppageEventTimer) { stoppageEventTimer -= lastFrameTicks;
@@ -5574,6 +5664,8 @@ ActivateReferee():                   /* called when a foul earns a card */
     dest = (foulX + 28, foulY + 5)
     jitter = Rand() >> 3 ; if (foulX >= 336) jitter = -jitter
     entry.y = (foulY <= 449) ? cameraY + 287 : cameraY - 20   /* off-screen edge */
+        /* 287 = viewH + 15 (DOS: 215 at 200 lines); the -20 is measured from
+           the top edge and is the same in both releases — §25.4 */
     pos = (dest.x + jitter, entry.y)
     speed = kRefereeSpeed (1024) ; visible = 1
     set the "coming" animation ; refState = 1
@@ -5670,7 +5762,8 @@ else if (playingPenalties) target = (336, 107)               ; margin = 0
 else if (waitForPlayerToGoInTimer) -> bench camera           ; margin = 51
 else if (leavingSubsMenu)  target = (211, 449)               ; margin = 37
 else if (inSubstitutesMenu) -> bench camera. The margin DEFAULTS to 37; 51 and 0
-                               are reachable only while cameraY is in [303,323]:
+                               are reachable only while cameraY is in [303,323]
+                               (= 449 - viewH/2 ± 10; DOS [339,359] — §25.4):
                                51 if a substitution is walking on, 0 if neither
                                goal sprite is on screen, else 37.
                                (There is no separate "goal camera" target.)
@@ -5942,10 +6035,13 @@ test are both correct for their site. The boundary arms use the truthy form
 arm's first act is to *set* the global to `-1`, and each boundary is only reached
 once. Code that needs "is the shoot-out actually happening" uses
 `penaltiesState < 0` instead — the camera's full-time behaviour is the example
-(`src/move_camera.c:242`: at `ST_GAME_ENDED`, a negative `penaltiesState` keeps
-the camera on the ball instead of centring it for the result). A port that
+(`src/move_camera.c:245`, `SWOS2.s:14364-14366`: at `ST_GAME_ENDED`, a negative
+`penaltiesState` — the shoot-out has been played — **centres** the camera on
+`(336, 449)` for the result; otherwise it stays on the ball, §20.3). A port that
 collapses the tri-state to a boolean loses that distinction and will centre the
-camera just before a shoot-out.
+camera at the end of every match in which a shoot-out was merely *available*.
+*(Revisions before 2.0 had this sentence the wrong way round; §20.3's table was
+right.)*
 
 All four "not enabled" defaults are `0`; a friendly or league match leaves every
 one of them zero, so minute 90 goes straight to `winningTeamPtr = NULL` on a draw.
@@ -6432,7 +6528,8 @@ kLowerRightCornerBallDestDelta[16] = {-250,-1000, 1000,-1000, 1000,   0, 1000,10
 ### 24.4 Quadrant tables
 
 ```c
-ballXQuadrantLimits[5]  = { 183, 285, 387, 489, 129 };   /* [4] is padding  */
+ballXQuadrantLimits[5]  = { 183, 285, 387, 489, 129 };   /* [4] = Y band 0's
+                                                             leading bound (§10.8) */
 ballYQuadrantLimits[6]  = { 220, 312, 403, 495, 586, 678 };
 
 playerXQuadrantsCoordinates[15] = { 98, 132, 166, 200, 234, 268, 302, 336,
@@ -6582,7 +6679,7 @@ teamPlOfs24Table[30]   = { 8, 0x0400, 0x70, 0x0320, 0x0090,
 
 /* read in ONE place only: the diving-contact parry/catch resolution of §15.5,
    when (penalty || playingPenalties). It does NOT replace team.shotChanceTable
-   anywhere, so only field_0 / field_2 of this table are ever used — index[]
+   anywhere, so only field_2A / field_2C of this table are ever used — index[]
    and field_30 / field_3A below are dead. */
 penaltyGoalieSkillTable[30] = { 1, 0x0400, 0xB0, 0x0400, 0x0100,
                                 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
@@ -6601,9 +6698,11 @@ the comment above the table), so the asymmetry never has an effect.
   twelve times in 16.
 * `field_30` — the catch-vs-parry threshold in the `PL_GOALIE_CATCHING_BALL`
   state (§15.4), same comparison. Skill 0 holds on to 5 in 16, skill 7 holds 12
-  in 16. The **diving** contact path uses `field_0` / `field_2` instead (§15.5);
-  these have very different values in the same table (skill 7: `0x63` vs `12`),
-  so do not interchange them.
+  in 16. The **diving** contact path uses `field_2A` / `field_2C` instead
+  (§15.5; skill 7: `9` / `6` against `12`), so do not interchange them.
+  `field_0` / `field_2` (words 0 and 1) are not read by gameplay at all — the
+  asm's `SPRITE_DIRECTION`/`SPRITE_SPEED` equate names on that path make them
+  look as if they were.
 * `index[16]` — the dive-reach selector, sampled by `(currentGameTick & 0x3C) >> 2`.
   The distributions are strongly skewed: skill 7 draws index `0` on 13 of the 16
   ticks (and `1, 2, 3` on the rest), while skill 0 draws index `7` on 13 of 16.
@@ -6663,6 +6762,27 @@ match.
 | result banner, half/full    | 250           | 275         |
 | result banner, stoppage     | 150           | 165         |
 | movement delta scale        | 1/1           | 41/64       |
+| player-down timer, tackle / jump header (`_gsPlayerDownTimer`; `PlayerTackled` stays 50) | 50 | 55 |
+| shoot-out keeper free frames (`_gsPenaltiesKeeperFree`) | 50 | 55 |
+| throw-in hide-result gate (`_gsThrowInHideResult`) | 50 | 55 |
+| bench camera return (`cameraLeavingSubsTimer`) | 50 | 55 |
+| subs-menu held-direction repeat (`_gsSubsMovementDelay`) | 2 | 4 |
+| `stoppageEventTimer`: shower pan and both extra-time transitions (`_gsStoppageShowerPan`) | 100 | 110 |
+| `stoppageEventTimer`: `FirstHalfJustEnded` / `PlayersLeavingPitch` | 250 | 275 |
+| `stoppageEventTimer`: `GoToHalftime` | 700 | 770 |
+| `stoppageEventTimer`: `GameOver` | 1500 | 1650 |
+
+The last nine rows were measured against DOS recordings by the replay rig
+after 1.8 and are applied by the same `ApplyGameStyle()` (`src/dos_gameplay.c`).
+Not every literal of a family scales: `StartingMatch`'s and `EndFirstHalf`'s
+100 and `EndOfGame`'s 150 are the same in both releases, so the §21.4 table is
+the Amiga column and only the rows above change. `ApplyGameStyle()` also
+selects the DOS release's retuned 4-4-2, 4-3-3 and Sweep formations. The
+remaining DOS differences are not constants but behaviour (the dive-reach index
+is `tick & 15` and then one entry lower, not `(tick & 0x3C) >> 2`; no
+shoot-out winner and no `ST_GAME_ENDED` after a shoot-out; the stats overlay
+does not stop `currentGameTick`; and more) — docs/DOS_GAMEPLAY.md and the
+`_gDosGameplay` sites in `src/` hold the list.
 
 The last row is the key one: at 70 Hz every `deltaX`/`deltaY` out of
 `CalculateDeltaXAndY` is multiplied by `41/64` so players cover the same ground
@@ -6726,7 +6846,7 @@ from the source files listed:
 | 12 built-in `TeamTactics` blocks (370 bytes each) | `src/tactics_data.c`     |
 | `kTeamsStartingCoordinates[44]` (tunnel line-up)  | `src/match_setup.c`      |
 | Every scalar listed in §24.1                | `src/swos_amiga_data_imports.c` |
-| Skill / injury / card tables                | `src/swos_data_bulk_imports.c`  |
+| Skill / injury / card tables                | `src/swos_data_bulk_imports.c` and `src/swos_amiga_data_imports.c` (e.g. `kInjuriesSpeedHandicap`, `playerCardChance`, `kPlayerTacklingDownTime`) |
 | 33 `AnimTable` objects + the 266 frame-index lists they point at | `src/sprite_data.c` |
 | Per-image sprite metrics (`centerX`, `centerY`, `pixWidth`, `nlines`) — required for §5's `onScreen` | the sprite-extraction command streams, decoded by `src/image_cmd.c` |
 | `playersPositionsByTactics` (formation slot orders, needed by §23's `ApplyTeamTactics`) | `src/tactics_data.c` |
@@ -6825,15 +6945,16 @@ These are faithfully preserved in this port because gameplay depends on them:
 * **`kComputerTacklingDownTime` is selected by `tacklingTimer == -1`**, not by
   whether the team is CPU — and since only a *human* team ever negates that
   timer, the "computer" table is in fact used **only** by a human who taps and
-  releases fire instantly, never by the CPU (§14.1).
+  releases fire within two updates, never by the CPU (§14.1).
 * **`aiLongKickTable[1] == -999`**, which after `& 7` is `1`.
 * **`playerDownTimer` for a tackle is set to `0xFF`** and the slide is actually
   ended by friction, not by the timer.
-* **`ballXQuadrantLimits` has a 5th word (129)** that is never read — only
-  entries `[0..3]` are used as thresholds. Separately, the `i == 0` case reads
-  the *pad word before* the array (`81`) via the original's `-4(a1)` addressing,
-  which is a different value again; the pseudo-code in §10.8 spells that special
-  case out.
+* **`ballXQuadrantLimits` has a 5th word (129)** that is not an X threshold —
+  only entries `[0..3]` are. It is read, though, by the *Y* loop: its `i == 0`
+  case reads the word before `ballYQuadrantLimits` via the original's `-4(a1)`
+  addressing, and that word is this one. The X loop's `i == 0` case likewise
+  reads the pad word before its own array (`81`). The pseudo-code in §10.8
+  spells both out. *(Revisions before 2.0 called the 129 "never read".)*
 * **The keeper's "beaten" latch is a signed counter** (`±5`), and its sign — not
   its magnitude — is what the parry logic reads.
 * **Several globals look load-bearing and are not.** `patternsGoalCounter` is the
@@ -6851,10 +6972,12 @@ These are faithfully preserved in this port because gameplay depends on them:
   number is resolved inside the *keeper's* team. This shifts the whole
   finishing-vs-goalieSkill distribution and must be reproduced.
 
-**One place where the C ports themselves are wrong, and a port should not copy
-them.** `src/update_players.c:185-188` (identically in both the SDL and Amiga C
-trees) defines the four caught-ball sprite ids as
-`0x3C4 / 0x3C6 / 0x3D0 / 0x3D2`. The original ids are
+**One place where this port was wrong — fixed 2026-07-30 (2e57a8e), kept here
+because a port copied from older sources may still carry it.**
+`src/update_players.c` used to define the four caught-ball sprite ids as
+`0x3C4 / 0x3C6 / 0x3D0 / 0x3D2` (in both the SDL and the Amiga trees, which were
+still separate then). The original ids — now what it defines
+(`SPR_GOALIE{1,2}_CAUGHT_BALL_*`, `src/update_players.c:203-206`) — are
 `0x35E / 0x360 / 0x3E0 / 0x3E2` — the symmetric set `{base+5, base+7, base+19,
 base+21}` from goalie 1's dive base `0x359` and goalie 2's base `0x3CD`, which is
 the same four offsets `DoGoalkeeperSprites` uses. The wrong values make `0x3D2` a
@@ -6865,7 +6988,7 @@ outside every goalkeeper dive sequence (`0x359..0x374`, `0x393..0x3AE`,
 `kGoalKeeperRecoveryStepAlt (192)` and slides roughly 70 % further after the
 catch (§15.5). Use the original ids.
 
-**A second place, now fixed rather than filed — it bit in widescreen.** The
+**A second place, also fixed — it bit in widescreen.** The
 `onScreen` cull in `src/sprites.c` used to key off the *live* render width. On
 the Amiga that is always 336, and this port at 4:3 matched; but a widescreen
 render can make it 650, and §5's rule that auto player-selection ignores
@@ -6903,10 +7026,15 @@ are, and why the DOS release's differ:
 | pan range | `672 - viewW` | 336 | 352 |
 | camera target Y max | `664 - (viewH - 200)` | 592 (`0x250`) | 664 |
 | camera position Y max | `880 - viewH` | 608 (`0x260`) | 680 |
+| referee entry below the camera (§19) | `viewH + 15` | 287 | 215 |
+| bench-camera Y window (§20.1) | `449 - viewH/2 ± 10` | 303..323 | 339..359 |
+| end-of-game / highlights camera X | `(672 - viewW) / 2` | 168 | 176 |
 
-The right-hand column is swos-port's own named constants (`kCenterX`,
+In the first six rows the right-hand column is swos-port's own named constants (`kCenterX`,
 `kBottomStartLocationY`, `kPitchMaxX`, `kCameraMaxY`), reached by the same
-formulas — so these are not Amiga magic numbers, they are one model evaluated
+formulas; the last three were read from the DOS listing (`swos.asm`) by the
+replay rig and live in `include/display.h` as `SIM_REFEREE_ENTRY_BELOW`,
+`SIM_CAMERA_BENCH_Y_LO/HI` and `SIM_CAMERA_CENTRE_X` — so these are not Amiga magic numbers, they are one model evaluated
 at two resolutions.
 
 ### 25.5 Determinism
@@ -6917,7 +7045,11 @@ input-level re-simulation port needs. They are *not* requirements for playing ba
 a HIL/RPL recording; see the second block below for why:
 
 * `currentGameTick` must increment exactly once per simulation frame and be the
-  only source of the dozens of `tick & mask` decisions.
+  only source of the dozens of `tick & mask` decisions — **except** that the
+  Amiga's VBlank interrupt does not advance it while paused **or while the
+  statistics overlay is up** (`showingUserStats`, SWOS2.s:5613-5619), whereas
+  `currentTick` always advances. One skipped tick shifts the phase of every
+  mask for the rest of the match. (DOS tests only `paused`.)
 * **`currentTick` too.** It is a second counter, and it is *also* read by
   gameplay — `currentTick & 2` decides whether the ball-control skill bonus is
   added to a controlled ball's speed (§12.4). On the Amiga both counters are the
@@ -6977,6 +7109,13 @@ matter:
   the state hash, and it requires both the original per-image sprite metrics and
   a fixed cull width — in which case cull against a fixed 336 × 272 window and
   let the renderer draw wider; the cull and the draw need not share a width.
+  This port now does both: GGPO rollback netplay (docs/NETPLAY.md; the saved
+  state is the registry in `src/sim_state.c`, `onScreen` included) and
+  input-level re-simulation of a live match's `.SRP` (`--srp-resim=<file>`,
+  docs/REPLAY_FORMAT_V2.md). Cross-machine netplay also found that a declaration of
+  `CalculateDeltaXAndY` with the wrong return type (`int16_t` for its
+  `uint16_t`, `0xFFFF` = "not moving") made two compilers disagree about the
+  sentinel — declare it once, in `include/math68k.h`.
 
 ---
 
@@ -6984,6 +7123,7 @@ matter:
 
 | Version | Date       | Sections touched | Change |
 |---------|------------|------------------|--------|
+| 2.0     | 2026-09-30 | §2.4, §5, §6.3, §7.1, §7.2, §8.6, §8.9, §8.10a, §9.1, §9.4, §10.5, §10.8, §12.2, §12.4, §14.1, §14.2, §15.5, §15.7, §16.4, §16.5, §18.3, §19, §20.1, §21.3, §24.4, §24.7, §24.10, §24.12, §25.4, §25.5, Known gaps | The replay rig kept going after 1.8 and fixed a run of port defects in the Amiga path that this document had faithfully described; each was checked against `data/SWOS2.s` again for this revision. **`CORRECTION:`** §15.5/§2.4/§24.7 — the diving-contact catch/parry thresholds are `GoalieSkill.field_2A`/`field_2C` (byte offsets 42/44, spelled `SPRITE_DIRECTION`/`SPRITE_SPEED` in the asm), not `field_0`/`field_2`; the "four-way is really a two-way" note is withdrawn — it is tick-dependent. §7.1/§7.2/§12.2 — the nearest-player scans visit slots **0 → 10** (ties to the lowest slot), not 10 → 0. §16.4 — the sideways-facing shot gate refuses *inside* the opposing six-yard box (`ball.y >= 740` top / `<= 158` bottom), not outside it; the fire tolerance is `-tol < e <= tol`; the long-ball bucket test is `{0,1}` (the `$FFFF` arm is dead after `& 7`); x = 478 is outside the central spin band. §16.5 — the CPU-vs-CPU random-rotate position test had its y sense inverted. §10.5 — the goalpost block has **three** arms (a weak-Y ball at post height reverses `destY` and adds the jitter to `destY`), not two. §10.8/§24.4/§25.4 — the Y quadrant loop's `i == 0` reference is `129` (`ballXQuadrantLimits[4]`, read by adjacency), not `ballYQuadrantLimits[0]`. §8.6 — the out-of-pitch goalmouth slide is `speed >>= 4` (four `lsr`s; the asm comment's "/32" is wrong), and a released tackle timer of `-2` also folds to `-1`. §8.9/§9.1 — `tst.l` on `longPass` also covers `longSpinPass`. §8.10a — `isThisPlayerOkToSelect` returns a positive offset for a substituted-off player (the cursor stops on him; the fire press refuses him), and the reserve-keeper cursor lock is on the `gameMaxSubstitutes > 5` side. §18.3 — a fire press in the six unhandled end-of-game states falls through into the countdown; it does not freeze it. §21.3 — a negative `penaltiesState` at `ST_GAME_ENDED` *centres* the camera (the sentence was reversed; §20.3 was right). **`ADDED:`** §24.10 — nine more DOS retune rows (player-down, shoot-out keeper, throw-in banner, bench camera, subs repeat, four `stoppageEventTimer` reloads) and the list of behavioural DOS splits; §25.4 — three more view-derived literals (referee entry 287, bench window 303..323, end-of-game camera X); §25.5 — the stats overlay stops `currentGameTick` on the Amiga, and this port now does rollback netplay and `.SRP` re-simulation; §14.2 — the last-man search's tie order; §8.10a — the DOS bench alternation and second fire button. **`CLARIFIED:`** §5 — the `onScreen` width is a constant 336; §9.4/§15.5/§25.4/Known gaps — the caught-ball ids and the RNG-seed writes were fixed in the port on 2026-07-30; source line numbers refreshed. Two edits made without a version bump between 1.8 and this row are recorded here too: §12.4 (2026-09-17, cd9dc97) — the ball contest's `wonTheBallTimer` goes to the side that *lost* the roll; §6.3 (2026-09-13, 478cee2) — the computer team's tackle clearing the human's fire counter is an original bug the port fixes by default (`--fire-hold-lockout=on` / `[gameplay] fire_hold_lockout` restores it). |
 | 1.8     | 2026-09-03 | §21.1, §24.10, §25.2, §25.4, §25.5 | First round checked by **measurement** rather than by reading: the recorded-game replay rig (docs/TESTS.md) replays a DOS match frame by frame against the port and compares 900+ named globals per frame, so a wrong constant shows up as a divergence at a specific frame. **`CORRECTION:`** §24.10/§21.1 — **frames per in-game second is 70 on DOS, not 54.** Every earlier revision said 54, taken from a swos-2020 comment. The recording reaches game-minute 1 at frame 702 and minute 2 at frame 842 = 140 frames per game-minute; the accumulator decrements by `gameLenSecondsTable[0] = 30` per frame and reloads by `N`, so 60 seconds take `2N` frames and `N = 70`. 54 would give 108 frames/minute, swos-2020's alternative 69 would give 138. swos-port's independent decompile says 70 as well. §24.10 — the `41/64` delta scale must be the **shift chain** `d - (d>>2) - (d>>4) - (d>>5) - (d>>6)`, not `* 41 / 64`; §25.2 already warned that these shifts round toward −∞ while C division rounds toward zero, but the table's own note said "integer, truncating" and so specified the wrong one. Every negative delta came out one unit short and the trajectory forked within a few frames; against swos-port's reference vectors the shift form scores 10/10 and the division form 4/10. **`ADDED:`** §24.10 — the two DOS result-banner lengths (275 half/full, 165 stoppage, against the Amiga's 250/150), which gate the §21.4a stopped-state dwell and the §16 AI's `resultTimer != 0` test. §25.5 — **`currentTick` is a second gameplay-read tick counter** (`currentTick & 2` gates the ball-control speed bonus), and **`lastGameTick` must be reset when a match starts, to one behind `currentGameTick` rather than equal to it**: `lastFrameTicks` steps `resultTimer`, `stoppageEventTimer`, `endGameCounter`, `refTimer` and `inGameCounter`, so left over from the menus it steps all five by an arbitrary amount, and set equal it makes frame 0's delta 0 and lands every timer-driven transition in the match a frame late. §25.5 also now separates the tick's *value* from its *phase* — `lastFrameTicks` is a difference, the `tick & mask` AI decisions read the absolute value, and fixing the first by starting the tick at 1 silently rotates all of the second. Both were live defects in this port, found because two runs of the same recording diverged at different frames. §25.5 now names the rig as the way to check the section rather than trust it. §25.4 gains a **second place the C ports were wrong**, found the same way and now FIXED: the `onScreen` cull tested the live render width, so a widescreen render admitted players the Amiga would have culled and §5's auto-selection rule then picked a different man — CPU behaviour changed with the window size. Two defects, both corrected: the cull window is a **constant 336 wide** in both releases (measured from the DOS recordings, whose screen is 320 — on-screen out to x 335, off from 336), and the routine ended each iteration with an unconditional `onScreen = 1` that undid the cull for anything the renderer drew. §25.5's own advice (cull to a fixed window and draw wider) is now what the code does, and the port now carries the separation it needs (`_sim_view_width`/`_sim_view_height`, include/display.h); docs/TESTS.md carries the worked example that proves the chain from a recording's own data. §25.4 also gains the **camera-constant derivation**: §20's and §21's literals (168, 592, `0x88`, `0x250`, `0x260`) are not magic numbers but one model — `(672-viewW)/2`, `664-(viewH-200)`, `viewH/2`, `672-viewW`, `880-viewH` — evaluated at 336x272, and the same formulas reach swos-port's DOS constants (`kCenterX` 176, `kBottomStartLocationY` 664, `kPitchMaxX` 352, `kCameraMaxY` 680) at 320x200. |
 | 1.7     | 2026-07-29 | §1.3, §1.3a, §2.3, §2.4, §4, §5, §8, §8.10, §8.10a, §11.2, §11.3, §13.2, §14.4, §15.1–§15.5, §15.7 (new), §16.2, §16.4, §16.5, §16.6, §19, §20.2, §21.1, §21.2, §21.3, §21.4, §22, §24.6, §24.7, §25.4, §25.5, Known gaps | Fifth and final round before release. Three agents: a release-gate audit of every v1.6 addition, a precision pass over the goalkeeper (§15), and a **second blind implementation** — a fresh agent, given only this document, which wrote and compiled 3488 lines of C covering §13–§22 and reported every point the text failed it. Between them they found one clock-stopping omission, one empty branch, one no-op arm and eleven elided expressions. **`CORRECTION:`** §21.1/§21.2 — **nothing in the document ever cleared `gameSeconds` back from `-1`.** Each of the four boundary minutes is entered *twice*: the first pass arms the injury-time wait, and only the second pass writes `gameSeconds = 0` and blows the whistle. A port following the old text reached 45:00, whistled, kicked off the second half correctly and then **never advanced the clock again**, because `UpdateTime`'s first test sent every later frame back into "last minute in progress". This was the worst defect in the document. §15.1/§24.7 — `shotChanceTable` is **never** repointed for a penalty; `penaltyGoalieSkillTable` is read at exactly one site (the diving-contact parry), so its `index[]` and `field_30`/`field_3A` are dead and every other penalty decision still uses the keeper's own skill table. §15.2 — "the keeper's `destY` is *always* clamped" was false (four paths skip it), the opening sentence contradicted the body (the *cascade* is gated on `live`, the routine is not), and branch D's far arm has a **second** burst-out test the document showed once. §15.5 — the scattered-parry Y scatter is `((tick & 0x1F) << 4) - 256`, i.e. `-256..+240` in steps of 16, **not** a symmetric ±256, and the second speed subtraction reuses the pre-subtraction value (final speed `×5/8`, not `×9/16`); the four-way parry decision collapses to two, because `d1 - field_2` is always negative. §16.6 — both AI spin arms **do** assign `currentAllowedDirection`; as written they computed a value and discarded it, and since §16.1 has already centred the stick, §12.5 then took the lofted-straight arm — every CPU curled shot became a lofted straight one. §16.6's single "distance to goal" rule for `AI_afterTouchStrength` is wrong: there are six per-call-site rules, on two different partitions of `d6`. §16.5's mid-range gated tree belongs to **§16.4** (it is the "no fire" fallback), not to "nobody near the ball" — it had been filed under the wrong branch since v1.4. §14.4's cards — the sending-off path does **not** increment `player.cards`, and does set `bookedPlayer`/`lastTeamBooked`/`refTimer`, all three of which §19 requires. §19 — the card decoder's `entry == 1` / `entry == 2` arms are **unreachable** given the three tables (which contain only `0`, `9` and `-1`), so `SPR_YELLOW_CARD`/`SPR_RED_CARD` are dead and the visible card comes from the referee's *own* animation; also "a 5-state machine" listing six states. §20.2's `(0,0)` note still ended with an out-of-bounds claim v1.6 had already corrected. **`ADDED:`** §15.2's **midrange positioning body** — an empty branch until now, and the most common save situation in the game; the keeper's wrong-half threshold (`y > 449`, strict on one side only); §15.3's penalty side-guess as two explicit tick masks (and why variant 1's slower dive speed is the "guessed wrong" speed); §15.5's diving-contact overlap windows in full, with `pixWidth` named as asset data; the `kKeeperEaseBallTable` easing expression; §13.2's two-step static-header turn, and that the *stick* rather than the facing decides where the header goes; §11.2's raw initialisers (`d1`/`d2`/`d3`/`d6` are read before the document assigned them) and §11.3's key fact that **the integrators have no ground and no `z` termination** — adding one silently turns dipping shots from "on target" into "off target", which is exactly what it did to the blind implementer; §16.4's "not deep" test (the 6-yard-box Y bounds) and the four leaves of its fallback tree; §16.5's long-ball spin bias in full (three X bands × a 3-bit tick bucket); §16.2's keeper's-ball facing set (`{1,3}` left of centre, `{5,7}` right) and the `aiTurnDirection` oscillator's real mechanics (it reverses only when `playerTurnFlags` blocks the step, and issues no direction on the frame it reverses); §21.3's five match-option globals with `extraTimeState`/`penaltiesState` as a **tri-state**, not a boolean; §22's goal-attempt tracker as code, including that the arm and the clear use *opposite* team assignments and differ by `>` vs `>=` at the centre line; `PlayerInfo.position`'s 0..7 role encoding, without which §8.10a's three-tier selector cannot be written; §8.10's phase `-1` hand-off to the idle-target path, without which the incoming substitute walks *away* from the pitch; `numYellowCards` as a five-value **state** rather than a count; §1.3a rows for `gameSeconds`, `endGameCounter`, `secondsSwitchAccumulator`, `refState`, `refTimer`, `aiCounter`, `aiResumePlayTimer`, `aiTurnDirection`, `field_84` and `isGoalAttempt`; §15.7 — a **worked example** that walks one keeper frame end to end and names, at every step, which unfixed variable decides the next branch. **`CLARIFIED:`** §16.6 — the CPU's stick is consumed **one team update late** and that is correct, because `ApplyBallAfterTouch` sits in `UpdatePlayers`' preamble while the AI writes the stick inside the per-player dispatch; §22 — `strikeDestX` is deliberately stale, so do not refresh it; §15.3 — the one-on-one duel resolves the attacker's shirt number inside the **keeper's** squad (an original-SWOS bug that is nonetheless behaviour, and must be reproduced); §4/§25.5 — the RNG rules are *simulation*-determinism requirements, not replay-playback requirements; §25.4 now records the one place the C ports themselves are wrong. |
 | 1.6     | 2026-07-29 | §1.3, §1.3a (new), §4, §8.3, §8.10a, §11.3, §12.6, §14.3, §15.2, §16.2, §18.1, §20.1, §20.2, §21.1, §21.3, §24.2a (new), §24.6, §25.5, Known gaps | Round 4 completed (it had been cut short by a session limit). Three agents: an audit of the round-3 additions, an independent source-first pass over the least-reviewed sections, and a **blind implementation** — an agent allowed to read only this document, which wrote and compiled a 2052-line simulation from it and logged every point the text failed it. **`CORRECTION:`** the v1.5 RNG seeding block invented a third line, `randXorKey = kRandomTable[randXorIndex]`, that no code path performs — `randXorKey` starts at 0 and is written only inside `Rand()`'s own rekey arm, so following it XORed every value before the first wrap with the wrong key; seeding also happens on game-**mode** entry, not per match, and the state does start zeroed. §21.3's minute-90 resolution was written as an if/else-if chain when the away-goals block **falls through** to extra time and penalties if the adjusted totals are also level — as documented, a level second leg could never reach extra time. Minute 120 is not "the same as minute 90" (no extra-time arm, no score snapshot, no half-played mark). §11.3's sample-at-ball paths zero `strikeDest*` rather than setting it to the ball position, and the two `deltaX` arms have an already-past-the-keeper early exit. §20.1's subs-menu margin defaults to 37, not 0; §20.2's `cameraDirection < 0` yields `(0,0)` rather than an out-of-bounds table read; every non-tracking camera branch also zeroes both velocity accumulators. §14.3's severity upgrade is an **unsigned** byte compare (0x20..0xE0 read as -128..-32 signed, which inverts the rule). §24.6's "all indexed 0..7" heading was false for eight of its tables. `forceLeftTeam` has **eight** read sites, not six, and the eighth is disguised as `== ST_GOAL_OUT_LEFT`. **`ADDED:`** §24.2a — `kKickSpinFactor` and `kPassingSpinFactor`, which appeared exactly once in the whole document (at their use site) and in no table section, making aftertouch, chips, long passes and all of §16.6 unimplementable; this was the worst blocker found. §1.3a — a set/stepped/cleared lifecycle table for every load-bearing shared global, which is the class of defect that cost the blind implementer the most time (a missing *writer* presents as your own bug, not as missing text). The `inGameCounter` increment (read by §8.8's freeze gate, previously zeroed twice and stepped nowhere — omit it and no off-ball player repositions again after the first corner). `StopAllPlayers()`'s full eight-field clear, including `ballInPlay`/`ballOutOfPlay`, which is what actually terminates the §18.3 hand-over. A definition for "toggle timers"; the corner-table selection (by foul spot, not by state); the `aiThrowInDirections` rotate semantics; and the squared-distance note on the keeper's rush-out test. **`CLARIFIED:`** §25.5 — the `onScreen` cull also decides which sprites a newly *made* recording contains, even though playback is unaffected. Both previously UNVERIFIED items are resolved: `gameMaxSubstitutes > 5` is unreachable from every menu and all 89 shipped presets, and `substitutedPlX/Y` has no reader at all. |
@@ -7016,15 +7156,17 @@ has **no reader at all** — it is recorded at the commit press and never read.
 
 | Open question | Why it is open |
 |---------------|----------------|
-| `goalkeeperSkipFlag`'s intent (§15.2) | The global exists in both trees, is read exactly once, is commented in `SWOS2.s:21560` as "when non-zero, goalkeeper processing is bypassed" — and has **no writer anywhere**. Whether the original had one that IDA failed to resolve, or it is vestigial, cannot be determined. Implement the read; its position fixes an ordering (§25.4). |
+| `goalkeeperSkipFlag`'s intent (§15.2) | The global exists in `SWOS2.s` and in the port, is read exactly once, is commented in `SWOS2.s:21560` as "when non-zero, goalkeeper processing is bypassed" — and has **no writer anywhere**. Whether the original had one that IDA failed to resolve, or it is vestigial, cannot be determined. Implement the read; its position fixes an ordering (§25.4). |
 | Whether the §15.5 contact window is the same width on the DOS sprite bank | The window is `pixWidth + 6` and `pixWidth` is per-image authored data from the loaded bank. The Amiga and DOS banks are different files, so a DOS-asset port has a different contact window by construction. Neither bank was dumped to compare. |
 
 Two source-side defects were found while verifying round 5 and are recorded in
 §25.4 / reported separately rather than silently patched: the four caught-ball
-sprite ids in `src/update_players.c:185-188`, and the little-endian `uint16`
-RNG-seed writes at `src/menus.c:3409, 3439, 3492, 3519`, which split
-`currentTick` across `seed`/`randXorIndex` the opposite way round from the m68k
-`move.w` they replace (and from the correct two-line version at `:2313-2314`).
+sprite ids in `src/update_players.c`, and the little-endian `uint16`
+RNG-seed writes in `src/menus.c`, which split `currentTick` across
+`seed`/`randXorIndex` the opposite way round from the m68k `move.w` they
+replace. **Both were fixed on 2026-07-30 (2e57a8e)**: the ids are now
+`0x35E/0x360/0x3E0/0x3E2`, and every seed site writes the two bytes explicitly
+(`seed = currentTick >> 8`, `randXorIndex = currentTick & 0xFF`).
 
 ### How to update this document
 

@@ -6,6 +6,14 @@ other half of "jailbreak": making edits **safe** — a missing, extra, or wrong
 entry must produce a **clear error at load time**, never a crash, silent
 corruption, or a confusing panic three menus later.
 
+> **Status (2026-09-30): still a design.** The editing half landed (the JSON is
+> loaded at run time and baked into C at build — `docs/DATA_PIPELINE.md`), but the
+> §4/§5 backlogs are open: there is no `scripts/validate_data.py`, no
+> `bin/data_json/manifest.json` and no data digest. The netplay handshake
+> (`src/p2p_link.c`) refuses a peer whose build stamp, rollback state layout
+> (`SimState_LayoutHash`) or rules (`P2P_RULE_*`) differ — it does **not** compare
+> the game data.
+
 The guiding rule (consistent with `.claude/CLAUDE.md` "panics are signals"): the
 panic philosophy says *don't mask internal bugs*. Customization adds a **data
 boundary** — so we add an **explicit validation layer at load** that reports
@@ -25,8 +33,8 @@ globals (silent corruption → a panic/crash elsewhere later). Known caps:
 | array | cap | meaning |
 |-------|-----|---------|
 | `allCountriesList[66]` | 66 | selectable countries (the master order) |
-| `careerContests[35]` | 35 | career competition index |
-| `tmdFileBuffer` = `TeamFileEx[80]` | 80 | European-cup team pool |
+| `careerContests[CAREER_CONTESTS_CAP]` | 48 | career competition index (was 35; `include/competition_data.h`) |
+| `tmdFileBuffer` = 87552 B (128 × `TeamFileEx`) | 128 | European-cup team pool (was 80; `src/career_team_buffers.c`) |
 | `TeamFileEx.players[16]` | 16 | players per team (**exact**, not a max) |
 | `teamSeedList[32]` | 32 | cup/cup2 static draw |
 | `CompetitionLeague.divisions[4]` | 4 | divisions per league |
@@ -145,7 +153,7 @@ is correct (the panic is a signal). The validator's job is to catch the
 3. Any cross-ref you introduce (`team_seed_list`, `comp_cup`, league links) must
    resolve — the validator checks the whole graph is closed (as the exporter
    already verifies: 0 dangling).
-4. Caps: `careerContests` ≤ 35; `teamSeedList` ≤ 32; etc.
+4. Caps: `careerContests` ≤ `CAREER_CONTESTS_CAP` (48); `teamSeedList` ≤ 32; etc.
 
 ---
 
@@ -259,6 +267,8 @@ too (same build).
 - `docs/DATA_JSON.md` — the external `bin/data` (teams/TMD/pool) JSON format.
 - `docs/DATA_INTERNAL_JSON.md` — the `competition_data.c` → JSON plan + the
   cross-reference model this validation protects.
-- `docs/DATA_BSON.md` — the Amiga fast-binary question (open); whatever the Amiga
+- `docs/DATA_PIPELINE.md` — the pipeline as built (runtime load + build-time bake).
+- `docs/DATA_BSON.md` — the Amiga fast-binary question (decided: the Amiga compiles
+  C baked from the JSON at build time); whatever the Amiga
   reads, JSON stays the single editable source, so validation lives at the JSON
   boundary on the host/SDL side.

@@ -1,5 +1,11 @@
 # Shaders — a plan for a GPU present path
 
+> **Status (2026-09-30): plan, not started.** No phase of §7 is in the code (no GL
+> context, no shadow LUT). What exists is the CPU overlay of §1 step 5,
+> configured by `[video] crt_mask = off | aperture | slot | scanlines`,
+> `crt_mask_strength` (0-100, default 45), `crt_vignette` and `crt_corners`
+> (0-100, default 0) in SWOS.ini (`src/swos_settings.c`); all effects default off.
+
 OpenSWOS draws into an **8bpp chunky frontbuffer** and has done since the port
 began (CLAUDE.md, "Graphics pipeline is 8bpp chunky end-to-end"). Everything the
 game does is palette indices; colour happens once, at the very end, in
@@ -25,14 +31,15 @@ Per frame, in `src/platform_sdl.c`:
 
 1. the game draws into the chunky frontbuffer (`_frontbufferBasePtr`, stride
    `FRONTBUFFER_ROW_STRIDE_BYTES`);
-2. **`chunky_to_rgba`** (line ~1231) expands every pixel through `_gamePalette`
+2. **`chunky_to_rgba`** (line ~1357) expands every pixel through `_gamePalette`
    into an ARGB8888 staging buffer — 336×272 = 91 392 lookups, ~366 KB written;
 3. one `SDL_UpdateTexture` uploads it to a streaming texture;
 4. `SDL_RenderCopyF` draws it with the sub-pixel scroll offset (`--subpixel`) and
    the integer pre-scale of `--scaling=smooth`, letterboxed to the window;
 5. `CrtEffects_Apply` (`src/crt_effects.c`, 211 lines, derived from
-   cannonball-se) blends a **generated overlay texture** — scanlines and an
-   aperture mask baked into RGBA by `build()` — over the result;
+   cannonball-se) blends a **generated overlay texture** — the `crt_mask`
+   (aperture / slot / scanlines), vignette and rounded corners baked into RGBA by
+   `build()` — over the result;
 6. `SDL_RenderPresent`.
 
 It is honest, portable and entirely CPU-side. Its ceiling is also obvious: step 5
@@ -132,7 +139,9 @@ presentation has to survive it, or it is a regression dressed as a feature:
 - `--subpixel` (the fractional scroll offset — it becomes a UV offset, which is
   *more* exact than the current quantise-to-output-pixel);
 - `--scaling=sharp|smooth` (the integer pre-scale becomes a sampling decision);
-- letterbox bars and the window icon;
+- letterbox bars and the window icon, and `[video] widescreen = stretch`
+  (`apply_picture_scaling`: a per-axis `SDL_RenderSetScale` instead of the
+  aspect-keeping logical size — the GL path must stretch the same way);
 - **`SWOS_PRESENT_CAPTURE` / `SWOS_SCREENSHOT_INTERVAL`** — they call
   `SDL_RenderReadPixels`, which a GL path must answer with `glReadPixels`, or
   every render test in the project goes blind (docs/TESTS.md,

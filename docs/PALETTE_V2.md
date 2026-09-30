@@ -1,5 +1,14 @@
 # Palette v2 — two banks, one shared block
 
+> **Status (2026-09-30): plan, step 1 of §7 done.** The shading options exist
+> (`[graphics] outfit_shading / shadow_shading / shade_step`, defaults true / true
+> / 2; `--outfit-shading`, `--shadow-shading`, `--shade-step`). Steps 2-5 (the
+> bank plane, two-palette upload, crowd LUT to the kit block, SwosGfx remapper)
+> are not in the code yet. Meanwhile the Jaguar tier gets its entries by
+> **donation** of the palette's duplicate entries (§1), not from the fixed
+> `201..239` pool alone (`src/jag_graphics.c`, "THE DONATION MAP"). The Jaguar
+> sprites are the default only on the web build (`[graphics] sprites = auto`).
+
 The 256-colour palette is the last thing in this port that is still allocated by
 convention rather than by rule, and it has now produced three bugs in a month:
 the replay "R" came out in the wrong colours, the 2020 stadium roof turned
@@ -157,7 +166,7 @@ for the Jaguar's own art, not for SWOS kit colours, and a near-white sock shaded
 to 37.5% comes out dark grey. That is a real complaint, not a taste.
 
 ```ini
-[jaguar]
+[graphics]               ; (planned here as [jaguar]; shipped under [graphics])
 outfit_shading = true    ; false = flat kit, exactly the Amiga look
 shadow_shading = true    ; false = one shadow colour
 shade_step     = 2       ; sixteenths per shade: 16, 16-N, 16-2N, 16-3N

@@ -15,15 +15,19 @@ the SWOS automation built on top of it.
 
 ## Where the tools live (moved 2026-07-19)
 
-`gdb_proxy.py` and `amiga_gdb.sh` were split out of `SWOS_C/scripts/amiga/` into
-their own repo — **AmigaScope** (github.com/benbaker76/AmigaScope), checked out
-locally at `/mnt/c/Projects/AI/AmigaScope`. Only the *transport* moved; the SWOS
+`gdb_proxy.py` and `amiga_gdb.sh` were split out of `SWOS_C/scripts/amiga/` (the
+pre-merge Amiga tree) into their own repo — **AmigaScope**
+(github.com/benbaker76/AmigaScope), checked out locally at
+`/mnt/c/Projects/AI/AmigaScope` and carried in this repo as the submodule
+`scripts/amiga/amigascope/`. `scripts/amiga/amiga_gdb.sh` is a shim that loads
+`scripts/amiga/amigascope.env` (FS-UAE binary, drives, Kickstart, ELF, SDL binary) and
+forwards to the submodule. Only the *transport* moved; the SWOS
 layers (`scripts/harness_lib.py`, `scripts/swos_plugin.py`,
 `scripts/swos_harness.py`) stayed here.
 
 `harness_lib.PROXY_CANDIDATES` resolves the proxy in this order:
 `$AMIGASCOPE_DIR/gdb_proxy.py` → `/mnt/c/Projects/AI/AmigaScope/gdb_proxy.py` →
-the pre-split in-tree path. Set `AMIGASCOPE_DIR` if your checkout is elsewhere.
+the submodule's `scripts/amiga/amigascope/gdb_proxy.py` → the pre-split in-tree path. Set `AMIGASCOPE_DIR` if your checkout is elsewhere.
 `swos_plugin.amiga_up()` derives `amiga_gdb.sh` from `dirname(proxy)`, so
 pointing the proxy at the repo fixes the Amiga side too.
 
@@ -168,7 +172,7 @@ If `load_career` returns rc 1 or reads look stale, it's #10 (wrong save dir).
 ### ⚠️ "Boot hangs / harness wedges" is a DAEMON BUG — diagnose it, don't blame WSL
 
 Every "boot is slow / harness hangs" we've chased has turned out to be a bug in
-the **daemon** (`scripts/amiga/gdb_proxy.py`), NOT WSL/gdb "degradation", NOT the
+the **daemon** (`scripts/amiga/amigascope/gdb_proxy.py`), NOT WSL/gdb "degradation", NOT the
 game, NOT the binary. Two have been root-caused and fixed; the symptom is always
 the same and the diagnosis takes ~30 s:
 
@@ -274,9 +278,12 @@ can be lifted to another project; everything SWOS-specific is in
 ## Why one mechanism drives both targets
 
 The menu system (`src/menu_system.c`) is shared C between the SDL and Amiga
-builds. The harness injects input at a single line in `_MenuProc`
-(`menu_system.c:1567`, right after `_MenuCheckControls` sets the input globals
-and before the `d7`/onSelect dispatch and the nav read). Setting the input
+builds. The harness injects input at a single point in `MenuProc`: the no-op
+`MenuInputInjectPoint()` (`src/menu_system.c`), called right after `MenuCheckControls`
+sets the input globals and before the `d7`/onSelect dispatch and the nav read. The
+harness breaks on it by **symbol** (`swos_plugin.INJECT_LINE`), because the old
+hard-coded `menu_system.c:1567` silently broke whenever code above it moved; read
+every `menu_system.c:1567` / "`1567` breakpoint" below as `MenuInputInjectPoint`. Setting the input
 globals there replicates real input for the whole frame — so the **same
 injection works on both targets**, no per-target input code.
 
@@ -425,23 +432,24 @@ background `up` task instead of waiting for its completion signal.
 ## Amiga `DBG=1` build (precise breakpoints)
 
 The release Amiga build is `-Ofast`, whose reordering makes line breakpoints
-imprecise and elides locals. The Makefile (`SWOS_C/Makefile`) has a **`DBG=1`**
+imprecise and elides locals. `Makefile.amiga` (formerly `SWOS_C/Makefile`) has a **`DBG=1`**
 mode that builds `-O0` (precise line breakpoints, every local/static live in
 memory). Struct/ABI layout is opt-independent, so save-format cross-target tests
 stay valid.
 
 ```sh
+# the benbaker76 fork of the extension (see .claude/CLAUDE.md "Building")
 export AMIGA_BIN=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/linux
 export PATH=$AMIGA_BIN/opt/bin:$AMIGA_BIN:$PATH
-rm -f /mnt/c/Projects/AI/SWOS/OpenSWOS/obj/* /mnt/c/Projects/AI/SWOS/OpenSWOS/out/*   # first WSL build only: stale Windows-path .d files break GNU make
-make -C /mnt/c/Projects/AI/SWOS/OpenSWOS DBG=1 DUMP_ASM=0 -j$(nproc)
+rm -f /mnt/c/Projects/AI/SWOS/OpenSWOS/obj/*.d   # first WSL build only: stale Windows-path .d files break GNU make
+make -C /mnt/c/Projects/AI/SWOS/OpenSWOS -f Makefile.amiga DBG=1 DUMP_ASM=0 -j$(nproc)
 ```
 
 Notes: keep `-fomit-frame-pointer` even in DBG (`-fno-omit-frame-pointer` ICEs
 GCC 15.1.0 in `dwarf2out_frame_debug_adjust_cfa`); `-g` still emits CFI so gdb
 unwinds. `-O0` emits a real `strncmp` that `-Ofast` inlined — provided in the
-`#if defined(__m68k__)` shim in `src/swos_io.c`. Release binary backed up as
-`uae/artifacts/SWOS2.release.bak`.
+`#if defined(__m68k__)` shim in `src/swos_io.c`. (The old note about a release binary
+backed up under `uae/artifacts/` predates the merge — `uae/` no longer holds anything.)
 
 ## Usage
 
@@ -499,9 +507,10 @@ aid; drive via menu state for precision). The plugin auto-detects the target:
   version.)
 - **Amiga** — interleaved bitplanes decoded planar→chunky→RGB. Handles **AGA**
   (8 planes / 256 colours) and **OCS** (4 planes / 16 colours), auto-detected via
-  the `bitPlane4Base` symbol (AGA-only). Layout (`src/include/display.h`): pixel
+  the `bitPlane4Base` symbol (AGA-only). Layout (`include/display.h`): pixel
   (x,y) bit p is at `base + y*PLANE_STRIDE*NUM_PLANES + p*PLANE_STRIDE + x/8`,
-  bit `7-(x%8)`, `PLANE_STRIDE=44`. The displayed base is the flag-selected
+  bit `7-(x%8)`, `PLANE_STRIDE=44` (OCS; the AGA FMODE build is 52 with a 4-byte
+  left margin — AGA.md §11). The displayed base is the flag-selected
   frontbuffer (`usePlaneOffsetFlag`→mask, `useAltBaseFlag`→Alt, else base).
   Palette is `gamePalette[]` (big-endian uint16, 12-bit `0x0RGB`; nibble×0x11 →
   8-bit). Camera offsets are assumed 0 (menus); in-match scrolling isn't decoded.
@@ -519,7 +528,7 @@ daemon's gdb, **before `run`**):
 ```
 cmd "set environment SDL_VIDEODRIVER dummy"
 cmd "set environment SDL_AUDIODRIVER dummy"
-cmd "break menu_system.c:1567" ; cmd "run" ; waitstop(200)
+cmd "break MenuInputInjectPoint" ; cmd "run" ; waitstop(200)
 ```
 
 No real SDL window → no WSLg window churn → the daemon stays stable across long
@@ -708,7 +717,7 @@ exercises the same `_InitCareer` path a human triggers.
 > Build it: `make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 SWOS_TEST_NO_INJURIES_CARDS=1`
 > Confirm: `nm bin/SWOS.x86_64 | grep -c verify_roundtrip` → `0`.
 >
-> **Cold-boot setup** (fresh daemon): `break menu_system.c:1567`, `run`, then let
+> **Cold-boot setup** (fresh daemon): `break MenuInputInjectPoint`, `run`, then let
 > the loader-intro auto-time-out to `_SWOSMainMenuInit` (~1–2 min; it ignores the
 > 1567 breakpoint until the main menu). Then `load_career("NAME.CAR")` +
 > `enter_career()` (runs `_StartContest` to enter the career UI — a plain data
@@ -733,9 +742,12 @@ free-running into a screen that waits for input.
    the original bug). The only keypress the chain needs is at the **chairman
    memo** (`_ChairmanMemosInit`, a plain modal) — `shortFire` on its Continue
    button. A conditional breakpoint
-   (`break menu_system.c:1567 if ((Menu*)currentMenu)->onInit == _ChairmanMemosInit`)
+   (`break MenuInputInjectPoint if ((Menu*)currentMenu)->onInit == ChairmanMemosInit`)
    catches *only* memo frames; a code breakpoint at the season increment
-   (`career_init.c:974`, `_InitializeNewSeason`) ends the drive. Skip-latch +
+   (`career_init.c:974`, `_InitializeNewSeason`) ends the drive. ⚠️ That line number is
+   still hard-coded as `SEASON_INCR_LINE` in `scripts/swos_plugin.py`, but in today's
+   `src/career_init.c` line 974 is inside `DIY_SelectCompetitionSlot4FromCurrentDivision`,
+   not the season increment — re-check it before trusting a season drive. Skip-latch +
    conditional-memo-bp = no blind free-run into an input-waiting screen, so no
    wedge.
 
@@ -847,7 +859,7 @@ cold-boot fresh each time.
   decode (planes=8/colors=256, palette format confirmed against
   `_WriteCopperPalette`'s AGA branch); runtime verification against an AGA build
   is pending because the **AGA game build itself isn't fully implemented yet** —
-  not a harness limitation.
+  not a harness limitation. (AGA work has been PARKED since 2026-07-30, SDL first.)
 - The injection is shared C, so it applies to **SDL** identically (native gdb
   writes always work); re-validate SDL after pointing the daemon at a runnable
   Linux ELF.

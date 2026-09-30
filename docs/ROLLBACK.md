@@ -158,9 +158,13 @@ inflated state hashes to what the sender packed; and every identity resolves. Tr
 
 - Both peers must run the same simulation — the same source and the same build flags. The
   portable encoding makes the *state* platform-independent; it cannot make two different
-  games agree. A session handshake has to check that before a packet is ever needed.
-- Both peers must play at the same simulation width until the width-invariance leak (§5)
-  is removed.
+  games agree. A session handshake has to check that before a packet is ever needed -- and
+  does: the link compares the commit, `SimState_LayoutHash` and the rules byte before a
+  match starts (docs/NETPLAY.md §6).
+- Both peers must play at the same simulation width. That no longer means the same screen:
+  the width-invariance leak (§5) is fixed, and two peers agree one simulation width
+  (`_sim_draw_width`, docs/NETPLAY.md §5 "One simulation width"). A resync between peers of
+  DIFFERENT screen widths is still refused (the HUD's local fields differ in the base).
 
 ### The crowd animation lives in the pitch tile map
 
@@ -319,6 +323,10 @@ Leave-one-out evidence is one-sided:
   tile column with `Render_CameraX()`, and the camera clamp in `SetCameraCoordinates`
   uses the view width; a 484-wide run and a 336-wide run of the same recording differ
   from frame 0. Netplay peers must run the same simulation width until that is removed.
+  **Since removed:** those decisions read the simulation draw width (`_sim_draw_width`,
+  `Sim_DrawCameraX()`), not the render width, and the HUD's display-placed fields are
+  `SIM_FIELD_LOCAL16/32`, out of the checksum (docs/NETPLAY.md §5, "One simulation width";
+  `scripts/netplay_width_test.sh`).
 
 ## 6. Across builds
 

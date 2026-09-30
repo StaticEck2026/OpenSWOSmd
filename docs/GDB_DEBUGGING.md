@@ -5,7 +5,10 @@ How to build, run, and debug **both** ports of SWOS from WSL2:
 - **Amiga build** — remote-debugged inside FS-UAE via `m68k-amiga-elf-gdb`.
 - **SDL Linux build** — native gdb session on the x86 binary.
 
-Both modes use the same `gdb_proxy.py` script so the command interface
+Both modes use the same `gdb_proxy.py` script (from the AmigaScope submodule,
+`scripts/amiga/amigascope/`; `scripts/amiga/amiga_gdb.sh` is this project's shim, which
+loads `scripts/amiga/amigascope.env` — FS-UAE binary, DH0/DH1, Kickstart, `:SWOS2` trigger,
+ELF — and forwards to the submodule's `amiga_gdb.sh`) so the command interface
 is identical — you start a daemon and send commands with
 `gdb_proxy.py cmd "<gdb command>"`. The proxy spawns the right gdb,
 attaches/launches appropriately, and listens on a Unix socket.
@@ -19,7 +22,12 @@ attaches/launches appropriately, and listens on a Unix socket.
 - **WSL2 with WSLg** (`echo $DISPLAY` / `echo $WAYLAND_DISPLAY` should
   return values). FS-UAE's window renders through WSLg.
 - **bartmanabyss.amiga-debug VS Code extension** installed under
-  Windows. It bundles both FS-UAE and `m68k-amiga-elf-gdb`. The
+  Windows — and it **must be the owner's fork,
+  [`benbaker76/vscode-amiga-debug`](https://github.com/benbaker76/vscode-amiga-debug),
+  not the marketplace build**: only the fork's FS-UAE accepts gdb writes (M/P/G), which
+  the harness needs. The two install under the same directory name and look identical;
+  if reads work and writes silently no-op, it is the stock build. It bundles both FS-UAE
+  and `m68k-amiga-elf-gdb`. The
   Linux binaries live at:
   - `C:\Users\<user>\.vscode\extensions\bartmanabyss.amiga-debug-1.8.2\bin\linux\fs-uae\fs-uae`
   - `C:\Users\<user>\.vscode\extensions\bartmanabyss.amiga-debug-1.8.2\bin\linux\opt\bin\m68k-amiga-elf-gdb`
@@ -73,8 +81,12 @@ provides `$DISPLAY` automatically — no Xserver setup needed.
 ## Run + attach: the reliable one-command path (use this)
 
 ```bash
-bash /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh up
+bash /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amiga_gdb.sh up
 ```
+
+(For this project `scripts/amiga/amigascope.env` points `FSUAE_BIN` at the modified
+FS-UAE at `/mnt/c/Projects/Linux/fs-uae/fs-uae`, not the extension's copy — see
+DEBUG_TOOLKIT.md "The two FS-UAE binaries".)
 
 `amiga_gdb.sh up` does the whole dance deterministically and prints `OK`
 (or `FAIL`) at the end. As of 2026-06-10 it's reliable: **4/4 cold boots
@@ -111,15 +123,15 @@ DEGRADED. 90s outwaits any boot. No FS-UAE change needed. (The old
 Then drive gdb as usual and check the live verdict any time:
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py cmd "info registers"
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py health    # OK / DEGRADED
-bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh status     # HEALTHY / DEGRADED / DOWN
-bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh down       # tear everything down
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py cmd "info registers"
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py health    # OK / DEGRADED
+bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amiga_gdb.sh status     # HEALTHY / DEGRADED / DOWN
+bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amiga_gdb.sh down       # tear everything down
 ```
 
 The daemon also prints its attach verdict to `/tmp/swos_gdb_daemon.log`
 (`[daemon] attach health: OK|DEGRADED (...)`), so a bad attach is never
-silent. Tunables are env vars (see the top of `amiga_gdb.sh`):
+silent. Tunables are env vars (see the top of `scripts/amiga/amigascope/amiga_gdb.sh`):
 `ATTACH_RETRIES`, `BOOT_TIMEOUT`, `SETTLE`, `PORT`, `ENTRY_PC`.
 
 ### Stop notifications (hands-free `watch`)
@@ -133,7 +145,7 @@ for a follow-up `cmd`/`poll`. Pipe it into any notifier:
 
 ```bash
 # one line per stop, with function + file:line (Ctrl-C / kill to stop):
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py watch
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py watch
 #   STOP OK stopped PC=0x259ebc | setCupPickList_Europe career_season.c:1148
 
 python3 .../gdb_proxy.py watch --once                  # exit after first stop
@@ -228,12 +240,12 @@ pgrep -af fs-uae | head -1   # expect: the running fs-uae process
 ### 2. Start the proxy daemon
 
 ```bash
-setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py daemon \
+setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py daemon \
        --mode amiga --host 127.0.0.1 \
   > /tmp/swos_gdb_daemon.log 2>&1 < /dev/null &
 disown
 sleep 3
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py ping     # expect: pong
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py ping     # expect: pong
 ```
 
 The daemon:
@@ -280,7 +292,7 @@ Every gdb client connect→disconnect burns it. So:
 ### Send a command, get the response
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py cmd "<gdb command>"
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py cmd "<gdb command>"
 ```
 
 `<gdb command>` is any normal CLI gdb input. The response is the
@@ -457,7 +469,7 @@ accepting new connections until FS-UAE is restarted.
 Clean teardown:
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py stop      # quits gdb, frees socket
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py stop      # quits gdb, frees socket
 pkill -f "fs-uae --amiga"                                     # closes FS-UAE
 ```
 
@@ -536,14 +548,15 @@ flag keeps pointer/long widths matching the Amiga struct layouts).
 
 ```bash
 cd /mnt/c/Projects/AI/SWOS/OpenSWOS     # repo root
-make clean      # only when crossing between Cygwin and WSL builds
 make -j4        # produces bin/SWOS (Linux ELF, debug info included)
+make X86_64=1 -j4   # or bin/SWOS.x86_64 (64-bit; what amigascope.env points the SDL daemon at)
 ```
 
-Requires `libsdl2-dev:i386` (for the 32-bit build). If you've been
-building in Cygwin on Windows, `make clean` is needed before the
-first WSL build — Cygwin .o files reference newlib symbols
-(`__getreent`, `__locale_ctype_ptr`) that won't link with glibc.
+Requires `libsdl2-dev:i386` (for the 32-bit build). Objects now go to
+`build/<os>/<arch>/` per target, so Cygwin and WSL builds no longer share
+`.o` files and no `make clean` is needed when crossing between them (it used to
+be: Cygwin .o files reference newlib symbols such as `__getreent` that won't
+link with glibc).
 
 ### Run + attach
 
@@ -551,18 +564,20 @@ The SDL workflow is simpler than Amiga: gdb directly launches the
 binary, no separate emulator step.
 
 ```bash
-setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py daemon \
+setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py daemon \
        --mode sdl \
   > /tmp/swos_gdb_daemon.log 2>&1 < /dev/null &
 disown
 sleep 2
-python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py ping         # expect: pong
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py ping         # expect: pong
 ```
 
-By default the SDL daemon uses `/mnt/c/Projects/AI/SWOS/OpenSWOS/bin/SWOS`
-and runs gdb with that directory as cwd (so the inferior finds its
+By default the SDL daemon uses `$AMIGASCOPE_BIN` (which
+`scripts/amiga/amigascope.env` sets to `/mnt/c/Projects/AI/SWOS/OpenSWOS/bin/SWOS.x86_64`;
+without that env the fallback is a stale pre-merge path, so pass `--bin` when launching
+the daemon by hand) and runs gdb with that directory as cwd (so the inferior finds its
 `data/`, `grafs/`, `sound/` subdirs). Override with `--bin
-/path/to/SWOS` if needed.
+/path/to/SWOS` (absolute — a relative path makes `run` silently no-op).
 
 At this point gdb is loaded with the binary but hasn't launched it
 yet. Start the SDL process under gdb control:

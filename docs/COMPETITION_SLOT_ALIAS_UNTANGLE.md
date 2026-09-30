@@ -1,5 +1,7 @@
 # Plan — Retire the comp-slot `SLOT_ALIAS` family + finish the `careerFileBuffer` overlay
 
+> Status (2026-09-30): **complete** -- the "PLAN ONLY" line below is the original header. Part A (S1-S6) landed (`e3d7278`, `6a504dd`, `c2c4d0b`, `3d85078`, `6f2ab40`): the SLOT_ALIAS `.equ` family is gone (see the note in `src/swos_competition_slots.c`). Part B landed through Phase 2b (`cd5c359`, `2734186`, `ac5ad49`): `careerFileBufferBuf` is retired and `src/swos_globals_career_overlay.c` holds just the two `uint16` scalars. Kept as the record of how; `SRC_FILES`/Amiga-commit steps in §10 predate the 2026-08-12 merge.
+
 Status: **PLAN ONLY (no code).** Written 2026-06-12 after the `.equ` untangle
 sweep (groups #1–#10: offerOrdinals, englishLeagues +64-bit fix, euroCup, sprite
 tables +sync-gap fix, and the whole diy\* overlay). Those were byte-identical,

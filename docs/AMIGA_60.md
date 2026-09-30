@@ -1,7 +1,8 @@
 # Amiga 60 Hz gameplay mode — design (implement later)
 
-**Status: DESIGN ONLY — not implemented.** This captures the agreed approach so it
-can be built later. It is the sibling of `docs/DOS_GAMEPLAY.md` (read §8 there first —
+**Status: DESIGN ONLY — not implemented** (re-checked 2026-09-30: no `amiga60` style, no
+`GameStyle_LogicHz`, no interpolation in the tree; only §9a's sub-pixel scroll shipped).
+This captures the agreed approach so it can be built later. It is the sibling of `docs/DOS_GAMEPLAY.md` (read §8 there first —
 especially §8.3/§8.4, which this doc extends).
 
 ## 1. Goal
@@ -68,10 +69,19 @@ motion smooth regardless.
 
 ## 4. What our match loop looks like today, and the split required
 
-`GameLoop()` (`src/game_loop.c:589`) currently does, per frame: advance logic (physics/
+`GameLoop()` (`src/game_loop.c`) currently does, per frame: advance logic (physics/
 AI/state) → `MoveCamera()` → `ScrollToCurrent()` → `DrawSprites()` → `waitVBlankSync()`
 → `Platform_VBlank()` (present + pace to `DosGameplay_TargetFps()`, `platform_sdl.c`).
 It is **frame-locked**: one logic step *is* one drawn+presented frame.
+
+> **Update (2026-09-30):** netplay has since split the loop body out, though not along
+> this doc's line: `GameLoop_Frame()` is one whole frame (logic AND drawing — the render
+> calls write match state: `DrawSprites` sets `onScreen`, `DrawAnimatedPatterns` calls
+> `Rand`), and `GameLoop_EndFrame(present)` is the vblank wait / swap / present, with
+> `present = 0` for a frame GGPO re-simulates (`src/netplay_match.c`). So a
+> `GameLoop_Logic()` with "no drawing" is harder than §4 assumes: those render-side state
+> writes would have to move into the logic half, or the draw run once per logic step, and
+> both the replay rig and `scripts/netplay_test.sh --all` must stay bit-identical.
 
 Decoupling requires splitting that into two callable halves:
 
@@ -124,7 +134,9 @@ Amiga-60 is a `_gGameStyle` value (see the enum plan below). Its tuning:
 
 ## 7. `_gGameStyle` enum + ini (shared with the DOS mode)
 
-Today it's just `_gDosGameplay` (bool: DOS-70 vs Amiga-50). Three modes → a small enum:
+Today it's just `_gDosGameplay` (bool: DOS-70 vs Amiga-50), set by
+`[gameplay] style = amiga | dos` (`src/swos_settings.c`; since a4f2689 the style sets the
+view too, and online a match plays the HOST's style). Three modes → a small enum:
 
 ```c
 typedef enum { GS_AMIGA_50 = 0, GS_DOS_70, GS_AMIGA_60 } GameStyle;  /* our numbering */
@@ -134,7 +146,11 @@ typedef enum { GS_AMIGA_50 = 0, GS_DOS_70, GS_AMIGA_60 } GameStyle;  /* our numb
 keep `_gDosGameplay` as a derived `(_gGameStyle == GS_DOS_70)` for back-compat with
 existing call sites.
 
-**ini (recommended shape — a `[gameplay]` section, one bundled selector):**
+**ini (recommended shape — a `[gameplay]` section, one bundled selector).** Written
+before the setting existed; the selector that shipped is `[gameplay] style = amiga | dos`,
+so `amiga60` would become a third `style` value rather than a new `mode` key, and the
+legacy `[dos] gameplay` fallback below no longer applies — there is no `[dos]` section
+any more; the art side is `[graphics] style = amiga | dos | 2020`:
 
 ```ini
 [gameplay]
@@ -218,7 +234,7 @@ authentic decoupled version.
 
 - `docs/DOS_GAMEPLAY.md` §8 — the speed_factor, the `CalculateDeltaXAndY_125` hook, the
   test-team preset table, and §8.4 (this decoupling insight in brief).
-- `src/game_loop.c` `GameLoop` (:589), `waitVBlankSync` (:162); `src/platform_sdl.c`
+- `src/game_loop.c` `GameLoop`, `GameLoop_Frame`, `GameLoop_EndFrame`, `waitVBlankSync`; `src/platform_sdl.c`
   `Platform_VBlank` / pacing; `src/move_camera.c` `MoveCamera`; `src/camera.c`
   `ScrollToCurrent`; `DrawSprites`.
 - swos-2020 — did not solve authentic high-FPS gameplay (abandoned `g_SpeedFactor`).

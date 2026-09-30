@@ -11,6 +11,11 @@ Gated behind an arcade flag (proposed `gArcadeMode`, set like `gDosGraphics` fro
 `[arcade] enabled=true` / `--arcade`). When off, nothing here is reachable and the
 normal build is unchanged.
 
+> **Status (2026-09-30):** built — `src/arcade.c` (SDL-only), flag `_gArcadeMode`
+> from `[arcade] enabled` in `SWOS.ini` (there is no `--arcade` command-line
+> switch). §1–§6 are the original spec; "Current implementation decisions"
+> below is what was built and supersedes it where they differ.
+
 > Source spec: `D:\Projects\SWOS\OpenSWOS\Arcade\ARCADE_MODE.md`.
 > Service-menu visual reference: NBA Hangtime
 > (`D:\Projects\Arcade\nba-hangtime\MAME\snap\nbahangt\*.png`).
@@ -46,6 +51,9 @@ When idle (no credits, no game in progress) the cabinet runs an **attract loop**
 - Pick the `.HIL` set by gameplay mode: 70 FPS DOS reels when DOS gameplay is on,
   50 FPS Amiga reels otherwise (a reel recorded at one rate plays back wrong at
   the other — see DOS_GAMEPLAY.md timing notes).
+  *(Superseded: each reel now self-describes its rate and plays at it, `c396c60`,
+  so one flat reel folder serves both modes — see "Current implementation
+  decisions".)*
 - **`.SRP` reels are accepted too** (`docs/REPLAY_FORMAT_V2.md`): drop a recording
   from `[replays] auto_save` into `bin/grafs_arcade/attract_mode/` and it joins the
   rotation. One carries its own tick rate, camera and **sound**, so it needs no
@@ -193,13 +201,19 @@ User-confirmed concrete requirements as we build it:
   the replay viewer) showing gameplay footage, with the **SWOS logo overlaid** and
   **flashing INSERT COIN at the bottom** — like a real arcade cabinet's attract
   loop. Reels live in `bin/grafs_arcade/attract_mode/` (random pick, fade in/out
-  between them; empty dir = no reels, handle gracefully). Reuses the existing
+  between them; empty dir = no reels, handle gracefully; `.HIL`, `.RPL` and `.SRP`
+  are all accepted; each reel plays at its own recorded rate, so the flat folder is
+  the recommended layout and the legacy `dos/`/`amiga/` subfolders are simply
+  scanned as well — `arc_scan_reels`). Reuses the existing
   (now widescreen-correct) HIL/RPL playback path. **The pitch art is NOT the
   attract background — the reels are.**
 - **Flashing "INSERT COIN"** for **player 1 and player 2** (both, bottom corners).
 - **Coin insert (MAME convention): key `5` = credit P1, key `6` = credit P2.**
-  Any credit interrupts attract → match.
-- **Arcade pitches** (`bin/grafs_arcade/SWCPICH1.png … SWCPICH7.png`) are the
+  Any credit interrupts attract → match. (Rebindable: `[arcade] key_p1_credit`,
+  `key_p2_credit`, `key_p1_start` (1), `key_p2_start` (2), `key_service` (F2), as
+  SDL key names.)
+- **Arcade pitches** (`bin/grafs_arcade/SWCPICH1.bmp … SWCPICH7.bmp`, plus
+  `SWCPICHR.bmp` for RANDOM in the pitch selector) are the
   **match playing field**, chosen at random **when a game starts** (not in
   attract). Full 672×880 RGB → quantised to a per-pitch 256-colour palette, loaded
   into the 8bpp pitch pipeline. (SDL-only direct load, not DOS `PITCH*.BLK`/`.DAT`.)
@@ -218,8 +232,9 @@ User-confirmed concrete requirements as we build it:
   Africa, `team.082` S.America, `team.083` N&C.America, `team.084` Asia,
   `team.085` Oceania. Full cell→team table below.
 - **Attract audio** is selectable (service-menu **ATTRACT AUDIO**, `[arcade]
-  attract_audio=music|sfx`): **MUSIC** plays `HERO.SNG` (the title theme) over the
-  reels; **SFX** lets the reels' own recorded crowd/SFX play with no music. On
+  attract_audio=music|sfx|music+sfx`, default `music+sfx`): **MUSIC** plays
+  `HERO.SNG` (the title theme) over the reels; **SFX** lets the reels' own
+  recorded crowd/SFX play with no music; **MUSIC+SFX** mixes both. On
   entering **country (flag) select** it switches to **`MENU.SNG`** (the menu music).
   Note: music and SFX share one RJP1 player, so in MUSIC mode the reels' SFX
   triggers are suppressed (`_gArcadeSfxSuppressed`) — otherwise a reel sound event
@@ -315,9 +330,10 @@ A coin-op high-score system, **one table per game mode**, all in `src/arcade.c`
   entry → insert + save → flash the updated table; otherwise just show the table. The
   whole run + run-over is **modal** (`s_arcModalRunOver`): coins still accumulate for
   the next game, but start/service can't interrupt a run in progress.
-- **Attract display** (`arc_show_highscores`): between attract reels (and in the
-  no-reels idle), the SWOS logo fades in/holds/**fades out**, then each game mode's
-  high-score table is shown in turn (with flashing INSERT COIN / CREDIT–PUSH START). A
+- **Attract display** (`arc_fg_advance`, driven once per attract frame from
+  `Arcade_DrawAttractOverlay`): over the attract reels (and in the no-reels idle),
+  the SWOS logo holds/**fades out**, then each game mode's high-score table
+  cross-fades in and out in turn (with flashing INSERT COIN / CREDIT–PUSH START). A
   coin/start/service request returns to the attract loop to act on it.
 - **Persistence**: `ARCADE.HI` (a small human-readable text file next to `SWOS.ini`),
   keyed by mode **name** so reordering modes doesn't scramble tables. Seeded with
@@ -356,7 +372,7 @@ the GAME OVER / high-score sequence.
 - **Debug**: the F10 force-name-entry path (`s_arcDebugForceNameEntry`) **skips** the
   countdown so it still lands straight on the name-entry / high-score test flow.
 - SDL-only, `#ifdef SWOS_SDL_BUILD` like the rest of `arcade.c`; no shared files
-  touched, so nothing to sync to the Amiga port.
+  touched, so the Amiga target is unaffected.
 
 ### Debug: F10 screen cycler
 

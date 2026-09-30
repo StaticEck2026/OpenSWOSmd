@@ -8,6 +8,9 @@ writer redesign (§9, optional, Amiga-shared). The plan text below is preserved
 for reference. (Was: the last untangle item remaining in the `careerFileBuffer`
 overlay after the careerTeam step-4 rework `aded568`; modeled on
 `docs/CAREERTEAM_STEP4_REWORK.md`.)
+(2026-09-30: verified -- `src/career_key_cache.c`, `KEY_CACHE_BUF_SIZE 8192`; the
+`sync_to_amiga_port.sh` steps below predate the 2026-08-12 merge, when that script
+became a tombstone.)
 
 Decision taken (2026-06-08): **design Tier 2 first** so the extraction and the
 overlap-removal land together as a clean struct rather than relocating the bug

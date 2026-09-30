@@ -1,5 +1,12 @@
 # Save-format trim candidates
 
+> **Status (2026-09-30): the gate below is now met, nothing trimmed yet.** The
+> legacy raw-dump path is retired and `opaque_data` is gone for every save type
+> (see `docs/SAVE_FORMAT_JSON.md`), and all eight cup scalars are still emitted
+> by `emit_comp_slot` / `load_comp_slot`. So the list may now be worked through,
+> re-verifying each field as described. The `diy_competition.c` line numbers
+> below are from 2026-06-10 and have drifted — grep the field name.
+
 Fields currently serialized by the JSON save (`src/save_format_json.c`) that are
 **redundant at runtime** — reset, derived, or recomputed during competition
 setup so the saved value is overwritten before it is ever read — yet are kept in
@@ -30,7 +37,7 @@ unconditionally overwritten before any read. Confirm with **either**:
 1. **Static:** find a setup/recompute function on the load path that writes the
    field unconditionally (constant or derived from an already-restored field).
    Cite the write site; make sure it actually runs on *resume*, not only on
-   *fresh creation* (e.g. `_DIY_RecomputeCompetitionDerivedFields` resets league
+   *fresh creation* (e.g. `DIY_RecomputeCompetitionDerivedFields` resets league
    progress to 0 — fine on creation, wrong on resume, so league-progress fields
    are NOT trimmable; see "Keep" below).
 2. **Live (preferred):** cross-target gdb read. Load a save whose field holds a
@@ -58,7 +65,7 @@ build): saved `1/30/7` read back as `0`/derived on the BE target.
 | `bracketScratch.secondLegCounter` | 0x32E | `cup_second_leg_counter`  | reset 0 (1688) |
 | `bracketScratch.groupSectionFlag` | 0x330 | `cup_group_section_flag`  | reset 0 (1687) |
 | `bracketScratch.matchCount`       | 0x332 | `cup_match_count`         | reset 0 (1690/4466) |
-| `bracketScratch.totalMatches`     | 0x334 | `cup_total_matches`       | derived from `numTeams` (`_DIY_RecomputeCompetitionDerivedFields` 1755; cup `playEachTeam==0 → 0`) |
+| `bracketScratch.totalMatches`     | 0x334 | `cup_total_matches`       | derived from `numTeams` (`DIY_RecomputeCompetitionDerivedFields` 1755; cup `playEachTeam==0 → 0`) |
 | `bracketScratch.curMonthIdx`      | 0x336 | `cup_cur_month_idx`       | reset 0 (1689/4465) |
 
 Emitted/loaded in `emit_comp_slot` / `load_comp_slot` (`src/save_format_json.c`).
@@ -73,7 +80,7 @@ recompute on resume:
   dropping it reinstates the single-leg-collapse bug.
 - **League-progress run** (`matchesPlayedCount` 0x1BE, `leagueCurrentSlot` 0x1C0,
   `leagueMatchProgress` 0x1C2, `leagueTotalMatches` 0x1C4, `leagueSectionState`
-  0x1C6–0x1CC) — incremented during league play; `_DIY_RecomputeCompetitionDerivedFields`
+  0x1C6–0x1CC) — incremented during league play; `DIY_RecomputeCompetitionDerivedFields`
   would reset progress to 0, so it must NOT run on resume → these must persist.
 - **Team-id arrays** (`leagueTeamIds`/`cupTeamIds`, BE byte-pairs),
   **`teamEntryOffsets`** (standings order), **`teamOffsetTable`** (symbolic

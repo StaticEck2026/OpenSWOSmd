@@ -1,5 +1,7 @@
 # careerTeam / currentTeam step-4 rework — design (read-only, pre-implementation)
 
+> Status (2026-09-30): **implemented** -- all four phases landed: range checks bound on `CAREER_TEAM_BUF_SIZE`, `DIYTeamStats.teamSelOffset` holds a team identity resolved by `diy_resolve_team()` / `diy_team_to_identity()` (the field kept its legacy name, not `teamIdentity`), and `careerTeam`/`currentTeam` live in `src/career_team_buffers.c`. The "DESIGN ONLY" line below is the original header; kept as the record of how.
+
 Status: **DESIGN ONLY — no code changed.** This is the plan for the final two
 careerFileBuffer-overlay residents that the byte-neutral extraction recipe
 (categories A, B1–B7, C) could not safely move. Review before implementing.

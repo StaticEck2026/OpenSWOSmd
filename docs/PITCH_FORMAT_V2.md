@@ -13,7 +13,9 @@ author sees the tiles they are animating, in Tiled, before we ever write an
 editor of our own.
 
 This is the design. Nothing here is implemented yet except the easing
-(`src/easing.c`), which is done and verified.
+(`src/easing.c`), which is done and verified. (Still true 2026-09-30: no `.tmj`
+loader or layer code exists in `src/`. Source line numbers below were written
+against an older tree and have drifted by up to ~30 lines; search for the name.)
 
 ---
 
@@ -23,11 +25,11 @@ Measured, not assumed — these are the facts that shape every decision below.
 
 | | today |
 |---|---|
-| grid | 42 x 55 of 16 x 16 tiles = **2310 cells**, `PITCH_POINTER_COUNT` (`src/pitch.c:35`) |
+| grid | 42 x 55 of 16 x 16 tiles = **2310 cells**, `PITCH_POINTER_COUNT` (`src/pitch.c:36`) |
 | file | `grafs*/SWCPICHn.MAP`, RNC v2: 2310 **big-endian u32 byte offsets** then the tile pixels (`src/pitch.c:225-241`) |
-| depth | inferred, not stated — `pitchTilePlanes()` guesses 4bpp vs 8bpp from the offsets (`src/pitch.c:242-266`). **There is no version field.** |
-| draw | `DrawChunkyPitch()` (`src/pitch.c:754`), whole visible area every frame, from `ScrollToCurrent()` (`src/camera.c:173`) |
-| order | pitch → simulation → adverts → `DrawAnimatedPatterns()` → `DrawSprites()` (`src/game_loop.c:673-706`) |
+| depth | inferred, not stated — `pitchTilePlanes()` guesses 4bpp vs 8bpp from the offsets (`src/pitch.c:253`). **There is no version field.** |
+| draw | `DrawChunkyPitch()` (`src/pitch.c:786`), whole visible area every frame, from `ScrollToCurrent()` (`src/camera.c:165`) |
+| order | pitch → simulation → adverts → `DrawAnimatedPatterns()` → `DrawSprites()` (`src/game_loop.c:674-729`) |
 | layers | **none.** One index space, one tile per cell, no flags, no priority |
 | alpha | **none.** `dstRow[px] = srcRow[col]`, unconditional; index 0 in a pitch tile is *grass*, not transparent (`src/pitch.c:445, 797`) |
 | over sprites | **nothing is drawn after `DrawSprites()`** except the bench menu and the stats HUD |
@@ -235,7 +237,7 @@ The question was whether the crowd should be driven by the event/trigger system.
   `patternsGoalCounter`, `showFansCounter` and `otherTeamScored` are all in the
   **SIM** tier of the rollback registry (`src/sim_state.c:541-544`);
 - the state word is written per frame into `.HIL` and into the `.SRP` frame head
-  (`src/replay_v2.c:474`), and a replay *reads it back* rather than deriving it.
+  (`src/replay_v2.c:487`), and a replay *reads it back* rather than deriving it.
 
 So if a data-driven animation system picked the crowd's cells, it would either
 have to reproduce the existing `Rand()` consumption bit for bit — or every

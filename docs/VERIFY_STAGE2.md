@@ -1,5 +1,15 @@
 # Stage-2 cross-target verification — `leagueStandings` field move (8f14738)
 
+> **Status (2026-09-30): done for Scenario 1 — kept as the protocol.** Stage 2 was
+> signed off in `4acca58` (2026-06-18, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md):
+> an SDL-written `AUTO_S03.CAR` (Serie A standings) round-tripped byte-identically
+> on SDL and loaded + re-saved on the Amiga build (FS-UAE) with identical
+> standings, driven by the Amiga gdb inferior-call harness rather than by hand —
+> so "Why creation is user-driven" below no longer fully holds. No record was found
+> of Scenarios 2 (national WC/Euro group) and 3 (club-cup group) being run.
+> `diy_ovr_row` is now used only inside `src/save_format_json.c`; the shared
+> accessor is `diy_standings_row`.
+
 ## What this verifies
 
 Roadmap step-3 stage-1 (`8f14738`) moved the league/group standings out of the

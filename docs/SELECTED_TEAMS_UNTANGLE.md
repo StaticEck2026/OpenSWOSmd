@@ -10,6 +10,9 @@ was build- + cross-target-save-validated earlier, and phase 3 changes no bytes.
 The `(uint8_t*)&selTeamsPtr + offset` identity-resolve sites are intentionally
 kept (teamSelOffset byte-offset identity). Original design pass below (kept for
 history), same discipline as `docs/CAREERTEAM_STEP4_REWORK.md`.
+(2026-09-30: the carrier is now spelled `_selectedTeams[100]` (`game_types.h`, with
+the `_selTeamsPtr`/`_selTeamNameBase`/... views as macros over it). "Amiga-synced"
+and the `sync_to_amiga_port.sh` step predate the 2026-08-12 merge.)
 
 ## Goal
 

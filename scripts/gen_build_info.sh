@@ -4,7 +4,7 @@
 # Every tester bug report used to start with "which build is this?", and there
 # was no way to answer it: nothing in the binary said. One macOS report cost a
 # whole session because the build predated the fix it was testing
-# (docs/TESTS.md, release provenance). So the stamp is generated here and shown
+# (docs/TRIAGE.md §5, "Never from a -dirty tree"). So the stamp is generated here and shown
 # on the main menu, in the window title, in SWOS.log and by --version.
 #
 # Called at PARSE TIME by both makefiles, so it runs on every build. Two things

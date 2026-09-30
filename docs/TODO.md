@@ -1,5 +1,12 @@
 # TODO — Remaining Untyped Data Structures
 
+> Status (2026-09-30): partly done. The structs proposed below now exist in
+> `include/game_types.h` — `TeamSelectionKeyCacheEntry` / `TeamSelectionKeyCacheMatchSlot`
+> (§1), `Competition` / `CompLeagueHeader` / `CompetitionLeague` (§2), `DIYCompetitionEx`
+> (§3), `TeamTactics` (§4) — but some raw-offset call sites listed here still use byte
+> offsets (see the per-section notes). Line numbers below are from 2026-05 and have
+> drifted; grep for the expression instead.
+
 These raw byte-offset accesses remain in the codebase because the underlying data
 structures have no corresponding struct definition in `game_types.h` or
 `data/SWOS2_IDA.h`. Each section describes the data layout as understood from
@@ -76,7 +83,14 @@ flag (`tst.w`, `move.w #1`, `clr.w`).
 - `src/diy_competition.c:2772-2789` — `resultPtr[0x0A]`, `resultPtr[0x0B]`, `resultPtr+0x0C/0x0E`
 - `src/career_status.c:3638-3641` — `team1[0x0B]`, `team1+0x10/0x12/0x14` (write result)
 
-**Suggested structs:**
+**Status (2026-09-30):** defined as `TeamSelectionKeyCacheEntry` (10 B) and
+`TeamSelectionKeyCacheMatchSlot` (12 B) in `include/game_types.h`, and used by
+`career_teams.c`, `career_status.c`, `diy_competition.c` and the stride walks in
+`menus.c`. Still raw: the game-list display in `menus.c` (`a6[5]`, `a4[0x0A]`, ... via
+`_gameListArray`) and the record builders in `diy_competition.c` (`a5[0x0A]`,
+`a5[0x0B]`, `resultPtr[0x0A]`).
+
+**Suggested structs (as originally proposed):**
 
 ```c
 typedef struct __attribute__((packed)) GameRecord {
@@ -150,6 +164,12 @@ entry base. `entry[0x18]` is the next division's equivalent offset.
 - `src/career_season.c:1292` — `a2[0x12]` (DIY link offset)
 - `src/career_season.c:1301` — `a2[0x18]` (next division's DIY link offset)
 
+**Status (2026-09-30):** `Competition`, `CompLeagueHeader` and a merged
+`CompetitionLeague` are in `include/game_types.h` (docs/STRUCT_CONSOLIDATE.md §4), and
+`career_season.c` reads `divisionsCount` through `CompLeagueHeader`. The per-division
+DIY link bytes are still raw: `entry[0x12]` in `src/career_init.c` and `a2[0x12]` /
+`a2[0x18]` in `processDiyLeagueQualificationEntry` (`src/career_season.c`).
+
 **Note:** IDA defines `Competition`, `CompetitionLeague`, `CompetitionCup`,
 `CompetitionCup2`, `Division`, and many variant structs in `SWOS2_IDA.h`. These
 could be imported to `game_types.h` to replace the raw offsets, but the variable-
@@ -189,7 +209,13 @@ point to these buffers. The extended area is populated by `_InitDIYLeagueFromRec
 | 0x338  | ?    | field_338             | |
 | 0x344  | ?    | field_344             | |
 
-**Files affected:**
+**Status (2026-09-30): done.** `DIYCompetitionEx` in `include/game_types.h` types the
+whole buffer (`minSubstitutes` 0x60, `pointsForAWin` 0x62, `matchData`,
+`cupAggregateScores`, `matchesPlayedCount` 0x1BE, ...); the `a0[0x60]` / `a0[0x61]` /
+`a0[0x1C0]` / `a5[0x66]` reads below are gone from `src/diy_competition.c`. See
+docs/DIYCOMPETITIONEX_AUDIT.md.
+
+**Files affected (as of 2026-05):**
 
 - `src/diy_competition.c:1665` — `a0[0x61]` (extendedFlag)
 - `src/diy_competition.c:7606,7851` — `a0[0x60]` (field_60)
@@ -226,25 +252,30 @@ The `TeamTactics` struct is partially defined in `SWOS2_IDA.h` (line 691) but do
 not cover the full layout. The internal structure includes position coordinates,
 priority tables, and animation data that vary by formation.
 
+**Status (2026-09-30):** `TeamTactics` (370 B) is now fully defined in
+`include/game_types.h`; offset 0x171 = 369 is its `ballOutOfPlayTactics` byte. The one
+access in `src/training_match.c` still reads it raw as `tacticsData[0x171]`.
+
 **Files affected:**
 
-- `src/training_match.c:570` — `tacticsData[0x171]` (posMapIndex)
+- `src/training_match.c:572` — `tacticsData[0x171]` (posMapIndex)
 
 ---
 
 ## Action Items
 
-1. **TeamSelectionKeyCache entries** — Define `CacheEntryHeader` (10 bytes) and
+1. **TeamSelectionKeyCache entries** — *(structs done; the menus.c game-list and
+   diy_competition.c record-builder sites still raw.)* Define `CacheEntryHeader` (10 bytes) and
    `GameRecord` (12 bytes) structs. Would clean up ~15 raw offset accesses across
    3 files. Note the shared-memory overlap with `careerForeignMarketPlayers`.
 
-2. **CompetitionRecord** — Import `Competition`, `CompetitionLeague`, `Division`
+2. **CompetitionRecord** — *(structs imported; the 3 DIY-link accesses still raw.)* Import `Competition`, `CompetitionLeague`, `Division`
    from `SWOS2_IDA.h` to `game_types.h`. Would clean up 3 accesses. The variable-
    length layout is inherent to the data format.
 
-3. **DIY Extended Buffer** — Add the most-accessed fields (0x60, 0x1C0) to a
+3. **DIY Extended Buffer** — *(done: `DIYCompetitionEx`.)* Add the most-accessed fields (0x60, 0x1C0) to a
    `DIY_CompetitionRuntime` struct or extend `DIY_Competition`. Full layout
    documentation requires more RE work.
 
-4. **TacticsData** — Single access point; low priority. Document the offset in a
+4. **TacticsData** — *(struct complete; the one access still raw.)* Single access point; low priority. Document the offset in a
    comment and move on.

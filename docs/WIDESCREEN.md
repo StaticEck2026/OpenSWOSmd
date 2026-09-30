@@ -1,5 +1,12 @@
 # Widescreen / Adaptive Aspect Ratio
 
+> **Status (2026-09-30):** current, with three later changes folded in below:
+> the globals lost their `g_` prefix (`_screen_width`, `_menu_draw_x_offset`,
+> `include/display.h`); the **simulation** view is pinned to 336x272 (320x200 for
+> the DOS view) whatever the render width, and the camera is split into a game
+> camera and a scaled render camera (see "Simulation vs render width" and
+> "Camera"); and `[video] widescreen` gained `stretch` (a4f2689).
+
 The SDL port renders at an aspect ratio that **matches the display**. On a 4:3
 monitor it shows 4:3, on 16:9 it shows 16:9, on a 21:9 ultrawide it fills the
 whole screen — no pillarbox/letterbox bars and nothing to configure. There is no
@@ -7,7 +14,7 @@ fixed "widescreen resolution"; the render width is derived from the monitor at
 startup.
 
 The classic Amiga build is unaffected: every widescreen quantity folds to zero /
-to the original 336-wide layout when `g_screen_width == SCREEN_WIDTH`.
+to the original 336-wide layout when `_screen_width == SCREEN_WIDTH`.
 
 ---
 
@@ -17,13 +24,25 @@ to the original 336-wide layout when `g_screen_width == SCREEN_WIDTH`.
 
 ```ini
 [video]
-; widescreen: true | false — true matches the render to your monitor's aspect
-;   ratio so it fills the screen (16:9 / 21:9 / ultrawide); false = classic 4:3
+; widescreen: true | false | stretch. true fills the display's shape, showing
+; more of the pitch at the sides; false draws the view's own width -- 336 the
+; Amiga way, 320 the DOS way -- with bars; stretch draws that same picture
+; pulled out to fill the display. ...
 widescreen=true
+; resolution: WxH drives the render ASPECT, or 'auto' for the desktop
+resolution=auto
 ```
 
-- **`true`** (default) — the render width tracks the monitor's aspect ratio.
-- **`false`** — forces the classic `SCREEN_WIDTH` (336) view.
+- **`true`** (default) — the render width tracks the display's aspect ratio
+  (`resolution=WxH` if set, else the desktop of `[video] screen`).
+- **`false`** — the view's own width: 336 (Amiga view) or 320 (DOS view),
+  pillarboxed.
+- **`stretch`** — that same own-width picture scaled per axis to fill the window
+  (`apply_picture_scaling` in `src/platform_sdl.c`: `SDL_RenderSetScale` instead of
+  the aspect-keeping `SDL_RenderSetLogicalSize`, recomputed every frame).
+
+Command line: `--widescreen=on|off|stretch`. The field is
+`PlatformInitOptions.widescreen` (`include/platform_sdl.h`: 1 / 0 / 2).
 
 There is no separate "ultrawide" mode. `true` already fills whatever display you
 have, up to the limit of the pitch (see below).
@@ -32,26 +51,29 @@ have, up to the limit of the pitch (see below).
 
 ## How it works
 
-### The render width: `g_screen_width`
+### The render width: `_screen_width`
 
-`g_screen_width` (an `extern int`, `src/display.h`) is the **live frontbuffer
-stride** — the width, in pixels, of the picture being drawn. It is *runtime*, not
+`_screen_width` (an `extern int`, `include/display.h`; formerly `g_screen_width`)
+is the **live frontbuffer stride** — the width, in pixels, of the picture being drawn. It is *runtime*, not
 compile-time.
 
 It is computed in `src/main.c`, **after `SDL_Init`** (so the desktop resolution
 is known) and before the window/texture are created:
 
 ```c
-if (gWidescreen) {
-    SDL_DisplayMode dm;                 /* SDL_GetDesktopDisplayMode */
-    int w = SCREEN_HEIGHT * dm.w / dm.h;   /* 272 * monitor aspect */
-    w = round-up-to-even(w);
-    w = clamp(w, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH);   /* [336 .. 672] */
-    g_screen_width = w;
-} else {
-    g_screen_width = SCREEN_WIDTH;      /* 336 */
-}
+/* dw x dh = [video] resolution, or the desktop mode of [video] screen */
+int w = SCREEN_HEIGHT * dw / dh;       /* 272 * display aspect */
+w = round-up-to-even(w);
+if (w > dw) w = dw & ~1;               /* never wider than the resolution asked for */
+w = clamp(w, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH);   /* [336 .. 672] */
+if (opts.widescreen != 1) w = SCREEN_WIDTH;         /* false / stretch: 336 */
+_screen_width = w;
 ```
+
+The DOS view (`[gameplay] style = dos`, or `--view=dos`) does the same at 200
+lines: `_dos_view_width = 200 * dw / dh`, clamped to `[320 .. 672]`, or 320 when
+`widescreen` is not `true`. It is applied at kick-off and undone after the match
+(`game_loop.c`), because the menus stay 336x272.
 
 Key constants (`src/display.h`):
 
@@ -60,12 +82,13 @@ Key constants (`src/display.h`):
 | `SCREEN_WIDTH` | 336 | Logical UI width — the menu/HUD layout width that gets **centered** in the wider frame. Never changes. |
 | `SCREEN_HEIGHT` | 272 | Frame height. Never changes (only the width is adaptive). |
 | `PITCH_VIEW_MAX_WIDTH` | 672 (`0x2A0`) | The pitch world width = the **maximum** useful render width. The camera clamp keys off the same `0x2A0`. |
-| `FRONTBUFFER_MAX_STRIDE_BYTES` | 672 | Frontbuffer arrays are **allocated** at this max, so any runtime `g_screen_width` fits. |
-| `g_screen_width` | 336 … 672 | The live render width (= frontbuffer stride). |
+| `FRONTBUFFER_MAX_STRIDE_BYTES` | 672 | Frontbuffer arrays are **allocated** at this max, so any runtime `_screen_width` fits. |
+| `_screen_width` | 336 … 672 | The live render width (= frontbuffer stride). |
+| `WIDESCREEN_WIDTH` | 480 | 16:9 reference; `HUD_WIDTH` caps the in-match HUD box at it on ultrawide. |
 
 Example widths the auto-fit produces:
 
-| Display | Aspect | `g_screen_width` |
+| Display | Aspect | `_screen_width` |
 | --- | --- | --- |
 | 1280×1024 | 5:4 | ~340 |
 | 1920×1080 | 16:9 | ~484 |
@@ -76,16 +99,17 @@ Example widths the auto-fit produces:
 Because the cap is the pitch width (≈2.47:1), a display wider than that will
 still get thin side bars — there is simply no more pitch to show.
 
-### Centering: `WIDE_MARGIN` and `g_menu_draw_x_offset`
+### Centering: `WIDE_MARGIN` and `_menu_draw_x_offset`
 
 The UI (menus, HUD, stats) is authored for the 336-wide frame. To place it in the
 centre of a wider frame we shift it right by:
 
 ```c
-#define WIDE_MARGIN ((g_screen_width - SCREEN_WIDTH) / 2)   /* 0 when not wide */
+#define WIDE_MARGIN ((_screen_width - SCREEN_WIDTH) / 2)   /* 0 when not wide */
 ```
 
-`g_menu_draw_x_offset` (`extern int`, `src/display.h`) is a **per-draw X shift**
+`_menu_draw_x_offset` (`extern int`, `include/display.h`; formerly
+`g_menu_draw_x_offset`) is a **per-draw X shift**
 added to the frontbuffer *write base* inside the low-level primitives:
 
 - `src/blitter.c` — `_FillRectangle`
@@ -96,23 +120,50 @@ It is set to `WIDE_MARGIN` in `_DrawMenu` (and persists across the menu's draws)
 and **reset to 0** in `src/game_loop.c` before the in-match *world* draw, so the
 pitch and players are never shifted.
 
-> Anything drawn through those primitives while `g_menu_draw_x_offset ==
+> Anything drawn through those primitives while `_menu_draw_x_offset ==
 > WIDE_MARGIN` lands in the centred 336 region; while it's 0 it lands at raw
 > coordinates.
 
+### Simulation vs render width
+
+The render width is NOT what the game plays at. SWOS's gameplay reads the view
+size — the `onScreen` cull decides which players auto-selection may pick — so a
+wider view used to change CPU behaviour. Now (`include/display.h`, "The
+SIMULATION view"):
+
+- `_sim_view_width/_height` — the view the simulation believes in: pinned to
+  336x272 in `main.c` (320x200 in the DOS view, `game_loop.c`) whatever the
+  display; the replay rig sets it from the recording.
+- `_sim_draw_width` — the width for the few decisions that depend on what is
+  DRAWN (margin sprites animating, crowd tiles, corner flags, bench): the render
+  width locally, 336 in the replay rig, and one agreed width in a netplay match
+  (`P2PLink_AgreedSimWidth`, docs/NETPLAY.md).
+
+So the extra columns are margin the simulation cannot use; every display plays
+the same game (docs/GAMEPLAY.md §25.4/§25.5).
+
 ### Camera
 
-The pitch world is 672 px wide. The view is `g_screen_width` px wide, so the
-camera can pan `672 - g_screen_width` px and still keep the view on the pitch.
+> **Changed since this section was written.** There are now two cameras
+> (`include/game_types.h`, "The two camera origins"): `_cameraX` is the GAME's,
+> clamped to the simulation range `0 .. 0x2A0-336` (both in `MoveCamera` via
+> `SIM_CAMERA_PAN_RANGE` and in `SetCameraCoordinates`, which now clamps by the
+> constant 336 — see the comment there for the tester bug the render-width clamp
+> caused); `Render_CameraX()` (`src/camera.c`) is where the picture is DRAWN
+> from, the game camera's range scaled onto the wide view's pan range
+> `0 .. 0x2A0-W`. The text below describes the original single-camera design.
 
-- `src/move_camera.c` — the X clamp uses `pitchWidth(0x2A0) - g_screen_width`. As
+The pitch world is 672 px wide. The view is `_screen_width` px wide, so the
+camera can pan `672 - _screen_width` px and still keep the view on the pitch.
+
+- `src/move_camera.c` — the X clamp used `pitchWidth(0x2A0) - g_screen_width`. As
   the view approaches the full pitch width (ultrawide), that pan range collapses
   (and would invert), so the camera **centres** the view on the pitch
   (`panRange / 2`) instead of clamping. At ~650 wide it pans only ~22 px — a
   near-static, full-pitch "tactical" view.
 - `src/display.c` — `_SetCameraCoordinates` is the chokepoint every camera setter
   funnels through (gameplay, **and** the kickoff/intro pan and panel restore,
-  which bypass `_MoveCamera`). It clamps `targetX` to `[0, 672 - g_screen_width]`
+  which bypass `_MoveCamera`). It clamped `targetX` to `[0, 672 - g_screen_width]`
   so even those direct setters stay on the pitch. Without this, the first frames
   at kickoff showed the stands / off-pitch surround on a wide view.
 
@@ -145,8 +196,9 @@ pitch fills the view.
 
 `src/statistics.c` `_DrawStatistics` lays the match-stats screen out on 336-frame
 coordinates (`_DrawGrid(16,…,304,…)`, `_DrawMenuTextCentered(168,…)`, the 80/256
-value columns). It is wrapped in `g_menu_draw_x_offset = WIDE_MARGIN`
-(save/restore) so the grid, labels, and numbers all centre together — the same
+value columns). It is wrapped in `_menu_draw_x_offset = WIDE_MARGIN`
+(save/restore; now `(_screen_width - viewWidth) / 2`, the view being 336 or the
+DOS 320) so the grid, labels, and numbers all centre together — the same
 mechanism as the menus. This covers both callers: the **S-key** in-match stats
 and the **full-time** summary.
 
@@ -166,21 +218,17 @@ and the **full-time** summary.
 
 ---
 
-## Amiga back-port
+## Amiga target
 
-Everything folds to a no-op on the Amiga build, where `g_screen_width ==
-SCREEN_WIDTH` (336), so `WIDE_MARGIN == 0` and `g_menu_draw_x_offset == 0`.
+Everything folds to a no-op on the Amiga build, where `_screen_width` is
+`#define`d to `SCREEN_WIDTH` (336) in `include/display.h` (as are
+`_sim_view_width` and `_sim_draw_width`, and `Render_CameraX()` is `_cameraX`), so
+`WIDE_MARGIN == 0` and `_menu_draw_x_offset == 0`.
 
-- **`src/display.h` is NOT in the file-sync list** (it carries the `CUSTOM_BASE`
-  Amiga hardware-address divergence). When back-porting, **manually** patch the
-  Amiga tree's `include/display.h` with: the `g_screen_width` fold to
-  `SCREEN_WIDTH`, `WIDE_MARGIN`, `PITCH_VIEW_MAX_WIDTH`,
-  `FRONTBUFFER_MAX_STRIDE_BYTES`, and `extern int g_menu_draw_x_offset;`.
-- All other touched files **are** synced and compile/no-op on m68k:
-  `main.c`, `menu_system.c`, `sprites.c`, `blitter.c`, `text_render.c`,
-  `move_camera.c`, `display.c`, `game_state.c`, `game_hud.c`, `statistics.c`,
-  `frontend.c`, `loader_intro.c`, `swos_globals.c`, `platform_sdl.c` (SDL-only),
-  `swos_settings.c` (SDL-only).
+> This section used to describe back-porting to a separate Amiga tree with a
+> file-sync list. Since the 2026-08-12 merge there is one `src/`/`include/`
+> tree; the `#ifdef SWOS_SDL_BUILD` folds in `include/display.h` are the whole
+> mechanism. `platform_sdl.c` and `swos_settings.c` are SDL-only sources.
 
 ---
 
@@ -188,19 +236,19 @@ SCREEN_WIDTH` (336), so `WIDE_MARGIN == 0` and `g_menu_draw_x_offset == 0`.
 
 - **The masked (transparent) menu-item background was the last un-centered draw.**
   Both `_BlitMaskedRectAltToFront` *and* `_DrawMenuItemBackgroundMasked` must add
-  `g_menu_draw_x_offset`. Missing it on the latter produced a corrupt EXIT/ABORT
+  `_menu_draw_x_offset`. Missing it on the latter produced a corrupt EXIT/ABORT
   button that "fixed itself" on redraw — because the masked bg is only used in
   some item states, the corruption was state-dependent.
 - **Direct camera setters bypass `_MoveCamera`.** Clamping only in `_MoveCamera`
   left the kickoff/intro frames off-pitch; the clamp belongs at the
   `_SetCameraCoordinates` chokepoint.
-- **The camera clamp inverts on ultrawide.** When `pitchWidth - g_screen_width`
+- **The camera clamp inverts on ultrawide.** When `pitchWidth - _screen_width`
   is small, `xMax - margin` goes negative; centre the view instead of clamping.
 - **Don't shift world sprites.** Only screen-fixed HUD sprites get `WIDE_MARGIN`;
   the players/ball/pitch must stay at raw camera-relative coordinates or the
   whole pitch would slide.
 - **Window size was never the issue.** SDL `SDL_RenderSetLogicalSize` letterboxes
-  the logical `g_screen_width × 272` inside the window/fullscreen, so getting rid
+  the logical `_screen_width × 272` inside the window/fullscreen, so getting rid
   of bars is about the *logical aspect*, not the window resolution.
 
 ---
@@ -214,3 +262,5 @@ SCREEN_WIDTH` (336), so `WIDE_MARGIN == 0` and `g_menu_draw_x_offset == 0`.
 | `4ff23d7` | Clamp the kickoff/intro camera to the pitch at `_SetCameraCoordinates` |
 | `58264a2` | Center the in-match score panel + clock |
 | `b3d6162` | Center the controlled-player name + end-of-game stats |
+| `22f370a` | Pin the simulation view to 336 (widescreen no longer changes CPU player selection) |
+| `a4f2689` | `widescreen = stretch`; the view follows `[gameplay] style` |

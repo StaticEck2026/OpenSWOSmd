@@ -16,6 +16,19 @@ document called them "SWOS++, not retail DOS" and treated a five-field
 exclusion list as permanent — that was wrong, and "Can we claim 100% accurate?"
 now has the correction.
 
+> **Status (2026-09-30):** live, and further along than the paragraph below
+> (kept as written at the time). The corpus is now **15** recordings (two v1.5
+> files added: `2xcpu-08030320`, `shootout-08200245`); the 14 that decode all
+> replay **to their last frame at `scalars`, `teams` and `info`** — 100.0% of
+> 297918 recorded frames — and 99.9% at `sprites`. **47** defects found and
+> fixed; the index is in [TESTS_RESULTS.md](TESTS_RESULTS.md), whose numbers are
+> the current ones (regenerate with `scripts/replay_matrix.sh`). Items 1–36 are
+> numbered below; 37–47 are the later `###` sections of section 5. The rig is
+> also the input source for the rollback, netplay and width rigs
+> (`scripts/rollback_test.sh`, `scripts/netplay_test.sh`,
+> `scripts/replay_widecheck.sh`, `scripts/netplay_width_test.sh`; docs/ROLLBACK.md,
+> docs/NETPLAY.md), which are documented there, not here.
+
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **two of them replay end to end at every level** —
 `zkz-11054632`'s 7314 frames and `zkz-11021807`'s 4064, every bound field on
@@ -60,13 +73,15 @@ stride.
 ## 1. Layout
 
 ```
-tests/dos/      13 x *.RGD.gz  (66 MB)  — imported from swos-port
+tests/dos/      15 x *.RGD.gz  (79 MB)  — 13 imported from swos-port, + 2 later
                 canada.diy, commentary.zip
-tests/amiga/    (planned — needs a dumper, see section 6)
+tests/amiga/    (planned — needs a dumper, see section 8)
 ```
 
-`tests/dos` is a verbatim copy of `swos-port/tests/data`. All 13 archives pass
-`gzip -t`.
+`tests/dos` started as a verbatim copy of `swos-port/tests/data` (13 archives,
+all passing `gzip -t`); `2xcpu-08030320` and `shootout-08200245` were added
+later (the latter by 03c311b) and are not in that folder, so the copy below
+does not restore them.
 
 The corpus is **untracked** (`.gitignore`) until the rig has proven it decodes
 and replays; only then do we decide between Git LFS and a fetch script. 66 MB of
@@ -128,11 +143,13 @@ Note our `TeamGame` (1018) is their first 1018 bytes — everything before
 | `zkz-11215003` | 1.1 | — | JUVENTUS v MANCHESTER UTD |
 | `zkz-12065730` | 1.5 | 1519 | ALIANZA ATLETICO v UNIVERSITARIO |
 | `zkz-12080203` | 1.4 | 31635 | FORT. DUSSELDORF v MSV DUISBURG |
+| `2xcpu-08030320` | 1.5 | 22500 | BRAZIL v ITALY |
+| `shootout-08200245` | 1.5 | 24553 | LEGIA WARSAW v WIDZEW LODZ |
 
 **Open:** the single v1.2 file resolves with no (header, frame) pair at all —
 brute-forced over headers 3560–3700 against frame sizes 6000–9000 requiring ten
 consecutive `frameNo`s, with no hit. It is also the largest file (112 MB). It
-may be a format variant or simply a damaged capture. One file out of thirteen;
+may be a format variant or simply a damaged capture. One file out of fifteen;
 parked.
 
 ### Header fields
@@ -678,7 +695,9 @@ and would mean what it says.
 ### What the rig has already found
 
 Thirty-six real defects so far, all fixed — plus the two in "The `onScreen`
-ceiling" below, which that measurement turned up on its own:
+ceiling" below, which that measurement turned up on its own. (Status
+2026-09-30: 47 now; 37–47 are written up as the `###` sections that follow,
+and TESTS_RESULTS.md, "What the rig has found", indexes all of them.)
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
    `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2 at frame 842
@@ -2524,6 +2543,10 @@ Nor is that the only pin: the rig also forces `_gDosGameplay = 1`, in `main.c`
 *and* again in `replay_test.c`, so **nothing in this document is evidence about
 Amiga mode**, which is what a tester actually runs. Both pins are worth an
 option; until then, read every result in this file as "DOS gameplay, 336x272".
+(Status 2026-09-30: the width has one now — `--replay-width=<N>` renders wider
+over the same simulation and `--replay-sim-width=<N>` sets `_sim_draw_width`;
+`scripts/replay_widecheck.sh` runs the corpus at 484/672 against 336. The
+gameplay pin is still there: `--replay-test` forces `_gDosGameplay = 1`.)
 
 The fix (`310c1a6`) gives animation its own per-frame visibility set in
 `sprites.c` — `Sprite` has a hard size assert (110 Amiga / 118 SDL) so the flag
@@ -2689,7 +2712,9 @@ Ranked by how early they stop a recording. See
    exactly-one bucket the `÷350` needs; 401 of the corpus's own 416 recorded
    player values reproduce (see "The player-price audit"). Not a porting defect
    — but it is the visible end of a real gap: **DOS-gameplay mode does not
-   switch the re-tuned formations** (`project_dos_tactics_gap`). The same
+   switch the re-tuned formations** (`project_dos_tactics_gap`) — *since closed:
+   `TacticsData_SelectRelease`, defect 30, "The formations are part of what
+   `--dos-gameplay` means"*. The same
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
@@ -2835,11 +2860,13 @@ unchanged with the check in.
 
 1. ~~Decide how the 66 MB is stored.~~ Still untracked; `tests/replay/` (the
    converted `.swr` files) is ignored too — regenerate rather than track.
-2. ~~`scripts/rgd_convert.py`~~ — done; 12 of 13 files decode and verify.
+2. ~~`scripts/rgd_convert.py`~~ — done; 12 of 13 files decode and verify (14 of
+   15 since the corpus grew).
 3. Resolve v1.2 (1 file, no (header, frame) pair found).
 4. ~~The C rig~~ — done; see section 5 for where each level reaches.
 5. Chase the open leads in section 5, cheapest level first.
-6. Inject bench / ESC / `userKey` so recordings that use them stay comparable.
+6. ~~Inject bench / `userKey`~~ — done (section 6b); ESC is still not injected,
+   and does not need to be (every ESC is on a recording's last frame).
 7. **The Amiga dumper.** Now the priority rather than a nice-to-have: the view
    geometry cap means a DOS recording can never validate sprite-level state
    against this port, and a divergence in DOS data always has to be triaged

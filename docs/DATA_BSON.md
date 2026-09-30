@@ -8,6 +8,15 @@ binary JSON encoding) and alternatives, and surveys **compression** options.
 
 TL;DR recommendation is in §6.
 
+> **Status (2026-09-30): decided — §3's "author JSON, export binary" is what
+> shipped.** Competitions, menus and tactics are baked JSON → C at build time
+> (`scripts/emit_competitions.py` / `emit_menus.py` / `emit_tactics.py` →
+> `src/competition_data.c` / `menu_data.c` / `tactics_data.c`), and the teams /
+> TMD / POOLPLYR binaries are regenerated from JSON by `scripts/emit_teams.py`
+> (RNC-packed). The Amiga parses no JSON, BSON or MessagePack at run time. See
+> `docs/DATA_PIPELINE.md`. The rest of this document is the analysis behind that
+> choice.
+
 ---
 
 ## 1. The problem: JSON parsing is too slow on m68k

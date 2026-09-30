@@ -1,6 +1,18 @@
 # MENUS.md — Consolidate the menu structs, move menus to JSON, cross-port the format
 
-**Status: PLAN + early implementation.** The bootstrap exporter
+> **Status (2026-09-30): mostly done, not all as planned.** The C loader
+> (`src/menu_load_json.c`, `SWOS_MENU_JSON`, default-on) is live and verifies
+> 47/47 byte-identical. The "flip" happened as a **build-time bake**, not by
+> deleting `menu_data.c`: `scripts/emit_menus.py` regenerates `src/menu_data.c`
+> from `bin/data_json/menus/*.json` at build (`docs/DATA_PIPELINE.md`), and the
+> Amiga compiles that C. The 76 scaffolding structs are still in
+> `include/menu_data.h` (§1d's model structs were not added); there is no
+> `menu_json_to_bin.py`, `menu_reloc.c` or `import_dos_menus.py`. The DOS-menu
+> import (§6) was done for SWOS 2020's online menus instead —
+> `scripts/import_swos2020_menus.py`, §10. §§0-9 below are the original plan,
+> kept as the record; §10 is current.
+
+**Original status: PLAN + early implementation.** The bootstrap exporter
 (`scripts/export_menus.py` → `bin/data_json/menus/*.json`, all 47 menus) and the
 name→address symbol registry (`scripts/gen_menu_symbols.py` →
 `src/menu_symbols.{c,h}`, 663 symbols, compiles clean) are **DONE** (migration
@@ -27,10 +39,10 @@ subfolder, kept separate from our own (Amiga-derived) menus so the two sets
 never collide and the import can be re-run without clobbering hand-tuned files.
 
 **Sources read for this plan:**
-- `src/menu_data.c` (9886 lines, 47 menu instances) + `src/menu_data.h` (3477
+- `src/menu_data.c` (9886 lines, 47 menu instances) + `include/menu_data.h` (3477
   lines, the generated structs).
 - `src/menu_system.c` `_UnpackMenu` / `_ActivateMenu` — the runtime parser (the
-  format's ground truth) — and `src/menu_system.h` (`Menu`, `MenuEntry`).
+  format's ground truth) — and `include/menu_system.h` (`Menu`, `MenuEntry`).
 - `C:\Projects\Amiga\SWOS-RE\IDAPro\Scripts\sws_menu.amiga.py` (Amiga menu
   beautifier) and `…\sws_menu_x86.idc` (DOS beautifier).
 - `C:\Projects\GitHub\swos-2020\src\menus\*.mnu` (104 DOS-side menu files in a
@@ -44,7 +56,7 @@ never collide and the import can be re-run without clobbering hand-tuned files.
 Every representation in this document (the C structs, the JSON, the Amiga
 binary, the DOS data, the swos-2020 DSL) is a different *spelling* of **one**
 packed byte-stream. That stream is defined by the runtime parser
-`_UnpackMenu(packed, dest)` in `src/menu_system.c:920`, which walks `packed`
+`UnpackMenu(packed, dest)` in `src/menu_system.c` (was `_UnpackMenu`), which walks `packed`
 and builds the runtime `Menu` header + a fixed-stride `MenuEntry[]` array.
 **Get this section right and the rest is mechanical.**
 
@@ -645,6 +657,13 @@ menus), the emitter records them and the run logs them — *don't* silently drop
 
 ## 7. File / tooling layout (where everything lives)
 
+> As planned. What exists today: `bin/data_json/menus/*.json`, `src/menu_symbols.c`
+> (+ `include/menu_symbols.h`), `src/menu_load_json.c`, `scripts/export_menus.py`,
+> and `scripts/emit_menus.py` (JSON → `menu_data.c`, in place of
+> `menu_json_to_bin.py`). `menus/dos/`, `menu_reloc.c`, `menu_json_to_bin.py` and
+> `import_dos_menus.py` were never made; imported menus live in `menus/swos2020/`
+> (§10). `menu_data.h` lives in `include/` and still has its scaffolding structs.
+
 | path | role |
 |---|---|
 | `bin/data_json/menus/*.json` | **the menu corpus** (one file per menu) — authoring source of truth |
@@ -681,21 +700,21 @@ diffing the packed bytes against the static struct (§2d/§3b).
 2. **✅ DONE — Bootstrap export** (`scripts/export_menus.py`) →
    `bin/data_json/menus/*.json` for all 47 menus + `_symbols.json`. No code-path
    change yet.
-3. **C loader behind `SWOS_MENU_JSON=1`** (§2d) — NEXT. Bring up menu-by-menu;
-   green = packed bytes match the static struct (pointers compared by symbol).
-4. **Flip the default to JSON**, delete the 47 `menu_data.c` initializers and the
-   76 scaffolding structs (§1d). `menu_data.h` keeps only enums + `MenuCmd_*` +
-   the 3 model structs.
-5. **Python `json→bin`** (§3): start with the generated-C fallback (3a-2,
-   byte-identical to today), then the relocatable blob + `menu_reloc.c` (3a-1).
-   Back-port to the Amiga tree (don't auto-commit it — see memory
-   `feedback_amiga_port_no_autocommit`).
-6. **DOS import** (`import_dos_menus.py`, §6b) — last, opportunistic; lands
-   geometry/structure for the overlapping menus, with a name-mapping pass for
-   the callbacks.
+3. **✅ DONE — C loader behind `SWOS_MENU_JSON`** (§2d; see the 2026-06-20
+   status note there). Now default-on (`SWOS_MENU_JSON=0` disables).
+4. **✅ DONE, differently — the flip.** `SWOS_MENU_JSON` is default-on, and
+   `menu_data.c` is **generated from the JSON** by `scripts/emit_menus.py` rather
+   than deleted; the 76 scaffolding structs stay (the emitter needs them as the
+   brace template — `docs/DATA_PIPELINE.md`, "Menu structural edits need a type
+   change").
+5. **✅ DONE as the generated-C route (§3a-2)** — `emit_menus.py` bakes JSON →
+   `menu_data.c`, which both targets compile from the one tree (merged
+   2026-08-12; nothing to back-port). The relocatable blob (§3a-1) was not built.
+6. **✅ DONE for SWOS 2020's online menus** — `scripts/import_swos2020_menus.py`
+   (§10), not `import_dos_menus.py`.
 
 Each step round-trips and, where it touches the packed bytes, builds all three
-Linux arches (memory `project_target_strategy`) before back-porting.
+Linux arches (memory `project_target_strategy`) and the Amiga target.
 
 ---
 
@@ -748,8 +767,10 @@ C++ `CodeGenerator` with a JSON backend.
 | `bin/data_json/menus/swos2020/<menu>.json` | one per menu, loaded at run time |
 | `include/swos2020_menus.h` | entry ordinals (`LogInMenu::header` -> `LogInMenu_header`), exported constants (`MatchMakingMenu_kGS_MaxRows`), `SWOS2020_MENUS(X)`, `SWOS2020_MENU_CALLBACKS(X)` |
 
-The default set is `MULTIPLAYER_MENUS` in the script: 29 menus, 1321 entries, 220
-handler names, from swos-2020 @ `22b96d3`. Re-run with
+The default set is `MULTIPLAYER_MENUS` in the script: 30 menus (the 29 online ones plus
+`credits`, since the CREDITS button, ac2a161), 1352 entries, 233 handler names, from
+swos-2020 @ `ebf1cc4` (the header's `Source:` line says which commit; the first import was
+29 menus / 1321 entries / 220 names @ `22b96d3`). Re-run with
 `python3 scripts/import_swos2020_menus.py [--swos2020 DIR] [menu ...]`. It overwrites
 the JSON — edit the `.mnu` in swos-2020, or stop re-importing that menu.
 
@@ -815,8 +836,8 @@ All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
 
 ### 10d. Running them
 
-- Handlers: `src/online_menus.c`, table `k_handlers`, SWOS 2020's names. Ported so far
-  (35 of 220): the login form (username/password input, the three toggles), LOGIN ->
+- Handlers: `src/online_menus.c`, table `k_handlers`, SWOS 2020's names. `--menu-selftest`
+  prints the current "N of 233 ported" (at first import: 35 of 220): the login form (username/password input, the three toggles), LOGIN ->
   matchmaking in SWOS 2020's own not-connected state (`setMatchMakingMenu_Standard`,
   `MMM_X_SERVER_NOT_CONNECTED`), SETTINGS and RANKINGS from there, and every menu's
   exit button. Handler code for the rest is in swos-2020 `src/game.cpp` (login, game
@@ -824,18 +845,23 @@ All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
 - `bin/SWOS.x86_64 --menu=swos2020/logInMenu` opens a menu before the main menu;
   leaving it lands on the main menu.
 - The main menu's **MULTIPLAYER** button (entry 14, `MultiplayerMenuSelected` in
-  `src/menus.c`) opens OpenSWOS's own JSON-only menu, `p2p/p2pMenu`
-  (`src/p2p_menu.c`): two players connect directly by IP address, no server in between
-  (docs/NETPLAY.md section 6). It was added as a structural row -- the two columns above
-  it moved from 20 to 18 pixels apart to make room -- and `SWOSMainMenuInit` hides it in
-  every build without netplay (`SWOS_NETPLAY`): the Amiga, the web, which has no UDP to
-  play over, and any SDL build made without `NETPLAY=1`.
-- `--menu-selftest` loads every JSON-only menu -- the 29 imported ones and `p2p/p2pMenu`
-  -- unpacks each into scratch memory and checks its entries' ordinals, rectangles, nav
-  links and text against its JSON, then prints the handler count. Result: **30 menus,
-  1336 entries, 0 failed** on x86_64 and on the 32-bit build.
+  `src/menus.c`) opens SWOS 2020's online flow, `swos2020/logInMenu` -- log in to a
+  matchmaking server (`src/mm_client.c`, docs/NETPLAY.md section 7). OpenSWOS's own
+  direct-IP menu, `p2p/p2pMenu` (`src/p2p_menu.c`, docs/NETPLAY.md section 6), still works
+  but is off the main menu: `--menu=p2p/p2pMenu` opens it. The button was added as a
+  structural row -- the two columns above it moved from 20 to 18 pixels apart to make
+  room -- and `SWOSMainMenuInit` hides it in every build without netplay (`SWOS_NETPLAY`):
+  the Amiga and any SDL build made without `NETPLAY=1`. (The web build has netplay on by
+  default since 2026-09-24, over the WebSocket gate.) **CREDITS** (entry 15,
+  `CreditsMenuSelected`) opens `swos2020/creditsMenu`; it is hidden on the Amiga.
+- `--menu-selftest` loads every JSON-only menu -- the imported ones (`SWOS2020_MENUS`),
+  `p2p/rateMatchMenu` (HOW WAS THE MATCH?) and `p2p/p2pMenu` -- unpacks each into scratch
+  memory and checks its entries' ordinals, rectangles, nav links and text against its
+  JSON, then prints the handler count. Result when written (29 imported + p2pMenu):
+  **30 menus, 1336 entries, 0 failed** on x86_64 and on the 32-bit build; it now checks
+  32 menus.
 - SDL only: `menu_load_json.c`, `online_menus.c`, `p2p_menu.c` and `p2p_link.c` are in
-  `SDL_ONLY_SRCS`. The Amiga compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu`
+  `SDL_ONLY_SRCS` (`Makefile.amiga`). The Amiga compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu`
   changes and has no JSON menus to load.
 
 ### 10e. Known differences and follow-ups

@@ -8,7 +8,7 @@ sprites out of it, and the whole port of it comes down to one question: **colour
 
 ```bash
 scripts/make_jag_graphics.py            # SwosGfx's BMPs -> bin/grafs_jag
-bin/SWOS.x86_64 --jag-graphics=on       # or [jaguar] graphics = true in SWOS.ini
+bin/SWOS.x86_64 --jag-graphics=on       # or [graphics] sprites = jaguar in SWOS.ini
 ```
 
 It is the **players and the ball**. The pitch, the HUD, the menus and every other
@@ -19,7 +19,8 @@ the 4bpp one the A1200 draws today, so the Amiga build does not take it.
 **The web build plays with it by default** and carries the banks in its preload
 (`--preload-file bin/grafs_jag`, ~0.5 MB): it is the better-looking half of what
 the web build is for, and a browser player has no command line to turn it on
-with. `[jaguar] graphics = false` in the in-browser `SWOS.ini` turns it off.
+with. `[graphics] sprites = amiga` in the in-browser `SWOS.ini` turns it off
+(`auto`, the default, keeps each platform's own choice).
 
 ## What the art does with colour
 
@@ -122,7 +123,9 @@ therefore **re-uses** entries instead of installing them:
   **shade 0 is the kit colour itself**, so a Jaguar kit is the colour the Amiga
   draws with shading under it;
 - an art colour takes the nearest entry when one is close enough and not already
-  spoken for, and only otherwise costs an entry from a small pool (201–239).
+  spoken for, and only otherwise costs an entry of its own — first a **donated**
+  duplicate (below), and only on a tier with genuinely free entries (AGA) the old
+  high pool (201–239).
 
 In practice: 59 of the art's colours found in the palette, 22 given spare
 entries. A very dark kit shades very little and a black one not at all — which is
@@ -142,12 +145,17 @@ neither write them nor re-use them:
 The first version of this tier installed the art's colours from entry 82 upward,
 straight through 0x70–0x7F, and the spinning R came out in the wrong colours.
 The stadium and crowd backgrounds are 8bpp art that reaches across the palette
-too, which is why the pool sits high and small. To check: `SWOS_JAG_DUMP=1`
+too, which is why the pool sat high and small — and in the DOS tiers even that
+was wrong: `grafs_2020` draws in every entry of 201–239 (the stadium roof turned
+yellow). So the tier now takes **donations**: the DOS palette carries 62 entries
+byte-identical to another (109, 110, 147, ... are all `#000000`, like entry 3);
+the art drawn in one is remapped to its twin, invisibly, and the entry is free
+(`src/jag_graphics.c`, "THE DONATION MAP"; docs/PALETTE_V2.md §1). To check: `SWOS_JAG_DUMP=1`
 prints the R bank's entries at kick-off — they must be what the game put there.
 
 ## With the DOS graphics
 
-`[dos] graphics` and `[jaguar] graphics` can both be on — DOS pitch and
+`[graphics] style = dos | 2020` and `[graphics] sprites = jaguar` can both be on — DOS pitch and
 backgrounds (`grafs_2020`, say) with Jaguar players. Two things make that work,
 and neither is automatic:
 
@@ -188,7 +196,8 @@ started in.
 
 ## Keeping it honest
 
-The tier is off by default and every part of it is behind that flag: with it off,
+The tier is off by default (except on the web build, above) and every part of it
+is behind that flag: with it off,
 `JagGfx_Enabled()` is false, the loader searches where it always did, the decode
 remap is a null pointer and the recolour is the 16-entry table the game built.
 

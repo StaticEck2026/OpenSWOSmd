@@ -1,13 +1,19 @@
 # STRUCT_CONSOLIDATE.md — Merging the competition struct variant families
 
 **Status: DONE.** All families collapsed to single merged structs in
-`src/game_types.h` (`CompetitionCup`, `CompetitionCup2`, `CompetitionLeague`,
+`include/game_types.h` (`CompetitionCup`, `CompetitionCup2`, `CompetitionLeague`,
 `Playoffs`, `Leagues`, `QualifyingGroup` + the `CompCupHeader`/`CompCupHeader2`/
 `CompLeagueHeader` headers); the old `*_4`/`*_8`/`*_2` variant names survive only
 in comments. `unkX` field naming finished (see `STRUCT_FIELDS_UNK.md`). Builds
 x86_64/armhf/aarch64, cross-target save-validated. Plan kept below for history.
 
-**Scope:** the per-instance variant struct families in `src/game_types.h`:
+> Update (2026-09-30): the type-2 names changed afterwards — `CompetitionCup2` is
+> now **`CompetitionTournament`** and `CompCupHeader2` is **`CompTournamentHeader`**
+> (`fbf391d`, 2026-06-18). The §9 `AnimTable` merge was **not** done:
+> `AnimTable_20`/`_12`/`_8` and the dead `plTacklingAnimTable_2` are still in
+> `include/game_types.h` / `src/sprite_data.c`.
+
+**Scope:** the per-instance variant struct families in `include/game_types.h`:
 `CompetitionCup_4` / `_6` / `_10` / `_6_2` / `_4_2` / `_6_2_8` / `_6_2_12` /
 `_6_2_64`; the `CompetitionCup2_*` family; `CompetitionLeague_1`..`_4` and the
 `CompetitionLeague_*_*` variants; `Playoffs_8`/`_4`; `Leagues_4`/`_2`/`_4_2_24`;

@@ -19,7 +19,7 @@ Two external trees drive this:
 | Piece | What it is | Where |
 | --- | --- | --- |
 | `CHARSET.RAW` | Amiga charset — 4-bitplane bitmap, RNC-compressed. DOS has its own charset in the DOS graphics set. | `bin/grafs*` |
-| **conversionTable** | `byte → sprite index`, indexed by `byte − 0x20`; separate small + big tables (big sprite = small + 57). | `src/swos_globals.c` (uint16; sprite table sized 1290 in `src/swos_amiga_data_stubs.c`) |
+| **conversionTable** | `byte → sprite index`, indexed by `byte − 0x20`; separate small + big tables (big sprite = small + 57). | `src/swos_globals.c` (uint16; sprite pointer table `_spriteGraphics` sized 1310 entries in `src/swos_amiga_data_stubs.c` — 1220 game slots + font-extension slots 1220..1303) |
 | **image-script** | Per-sprite cell rect: `0xC000\|idx, (x<<8)\|y, (w<<8)\|h`, terminated by `0xFFFF`. | `src/intro_menu_image_script_cmds.inc` |
 | `swos_font.py` | Injects new glyphs into free sheet cells; emits the C wiring. | `SWOS_Font/` |
 | `glyphs.txt` | Editable glyph art (`*`=ink, `-`=blank) — the source of truth after the first run. | `SWOS_Font/` |

@@ -1,5 +1,14 @@
 # Overlapped data regions
 
+> **Status (2026-09-30): reference, partly resolved.** #5 (league standings past
+> the struct end) is resolved — `DIYCompetitionEx.leagueStandings[64]` is a real
+> field (`8f14738`, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md); #8 is resolved
+> (`b993f43`); the `careerFileBufferBuf` overlay is retired
+> (`src/swos_globals_career_overlay.c` holds two plain globals). #1 is still not
+> modelled. The `game_types.h:NNN` line numbers below predate many edits (it now
+> lives at `include/game_types.h`) — grep the symbol. The "64-bit transition"
+> framing is historical (docs/64BIT_TRANSITION.md).
+
 ## What this is
 
 Several runtime structures in SWOS deliberately re-use the same memory
@@ -121,7 +130,8 @@ of cup setup for shuffled team indices.
 
 **Where:** Two separate buffers; they're contiguous in BSS on
 both Amiga and SDL (diyCompetitionStart is aliased at
-diyFileBufferCopyBuf + 0x420 — see `swos_globals.c:890`).
+diyFileBufferCopyBuf + 0x420 — see the "diyFileBufferCopy + diyCompetitionStart
+share one BSS run" comment in `src/swos_globals.c`).
 
 - diyFileBufferCopy: DIYCompetition base (0x60), then
   `BSS_00_2DB6A` (0x3A), then `diyTournamentTeamIds` (0x386)
@@ -167,6 +177,12 @@ past struct end" is intentional shared-memory overlay; it is **not**
 represented as a struct field; reached only via raw byte arithmetic
 in the table-clear routine.
 
+**RESOLVED (2026-06-13, `8f14738`):** the standings are now the real
+trailing field `DIYCompetitionEx.leagueStandings[64]` (offset 0x5C8 /
+0x5D0 on 64-bit), reached via `DIY_STANDINGS_OFFSET` / `diy_standings_row`,
+so they no longer overlay `cupTeamIds` or run past the struct. Verified
+across SDL↔Amiga saves 2026-06-18 (`4acca58`, docs/VERIFY_STAGE2.md).
+
 ### 6. `imageCmdWorkBuf` sprite-pool overflow
 
 **Where:** `imageCmdWorkBuf` global, originally 0xFFDC bytes on
@@ -179,9 +195,10 @@ more — ~230 KB of effectively-contiguous storage).
 
 **SDL port:** we don't have adjacent BSS — each global is its own
 linker symbol. `imageCmdWorkBuf` is sized at 2 MB in our port so
-sprite writes never overflow into adjacent globals. See
-`memory/project_sprite_pool_overflow.md` and the comment block in
-`src/swos_amiga_data_stubs.c:903-917`.
+sprite writes never overflow into adjacent globals (the Amiga target
+now sizes it 0x46000 in chip RAM for the 4-plane pool). See
+`memory/project_sprite_pool_overflow.md` and the comment block above
+`_imageCmdWorkBuf` in `src/swos_amiga_data_stubs.c`.
 
 This is a different shape of overlap (cross-symbol overflow rather
 than within-struct union), but the same root pattern: the Amiga
@@ -216,9 +233,9 @@ useful "scorer data" content. And the runtime might fault on writes
 to `.text` (most do).
 
 **Our port:** `team1Scorers[8]` and `team2Scorers[8]` are normal
-typed BSS globals in `src/swos_data_typed_stubs.c:835-836`. The
-intro-sequence code is `_ShowLoaderIntroSequence` in
-`src/loader_intro.c:317`, completely unrelated memory. Consumers in
+typed BSS globals (`_team1Scorers`/`_team2Scorers`) in
+`src/swos_data_typed_stubs.c`. The intro-sequence code is
+`ShowLoaderIntroSequence` in `src/loader_intro.c`, completely unrelated memory. Consumers in
 `game_state.c`, `goal_scored.c`, etc. use the named globals.
 
 This is the most aggressive overlap in the Amiga binary — *code*
@@ -326,7 +343,9 @@ and happened to be `2`. See `docs/64BIT_TRANSITION.md` §3
 "Concrete bite" and `memory/project_career_overlay_nameptr_gap.md`
 for the bug write-up and the conditional `.skip 4` workaround. The
 permanent fix is the broader 64-bit overlay alignment in
-`64BIT_TRANSITION.md` Phase 4.
+`64BIT_TRANSITION.md` Phase 4. *(Done: the overlay is retired and
+`competitionFileBuffer` is now the standalone `CompetitionSlotBuffer`
+`primaryCompetitionBuf`.)*
 
 ## Reference structs (IDA-reversed)
 
@@ -334,14 +353,14 @@ When the port's struct definition doesn't match the IDA reference,
 the IDA version is generally more complete. Quick reference for the
 DIYCompetitionEx region:
 
-`C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.h:2578-2613` —
+`data/SWOS2.h:2578-2613` (in this repo) —
 full `DIYCompetitionEx` layout including the `overlap` union and
 the trailing fields (`teamGrid[64]`, `teamOrder[32]`,
 `unselectedTeamCount`, `replayFlag`, `matchesPlayedInRound`,
 `totalMonthEntries`, `currentMonthIndex`, `cupMonthTable[12]`,
 `gap_586[94]`).
 
-`C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.h:592-601` —
+`data/SWOS2.h:592-601` —
 `DIYTeamStats` (18 bytes), the per-team record that `teamStats[24]`
 in the overlap union contains.
 

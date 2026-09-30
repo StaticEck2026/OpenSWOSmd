@@ -8,6 +8,17 @@ entries match `annotate_competition_teams.py` exactly; every `name[]` symbol
 resolves; the cross-reference graph is **closed** (180 ids, 90 refs, 0 dangling;
 `*Copy` derived). The C-side loader (phase 4) is next.
 
+> **Status (2026-09-30): phases 1-5 done; phase 6 decided.** The runtime loader is
+> in `src/save_format_json.c` (`DataJson_InstallCompetitionGraph`, the
+> `DataJson_LoadCompetition*` readers, `DataJson_SelfTest` via
+> `SWOS_DATA_JSON_SELFTEST=1`), default-on in the SDL build (`SWOS_DATA_JSON=0`
+> turns it off). `competition_data.c` is no longer hand-written: it is
+> **generated from this JSON** by `scripts/emit_competitions.py` at build time
+> (the "flip"), and the JSON is committed as its source of truth. The Amiga
+> compiles that generated C (§8's open question: the build-time bake won). The
+> current workflow is in `docs/DATA_PIPELINE.md`; this document is kept as the
+> design record.
+
 This extends the data→JSON migration (`docs/DATA_JSON.md`) from the external
 `bin/data` files (teams/TMD/pool) to the **internal** competition tables compiled
 into `src/competition_data.c`. The end goal is a fully data-driven SWOS:
@@ -28,8 +39,9 @@ bin/data_json/
   competitions/     the competition_data.c tables (this document)
 ```
 
-`bin/data_json/` is git-ignored and regenerable; it lives under `bin/` so the
-game can load JSON in place of the compiled data during testing.
+`bin/data_json/` lives under `bin/` so the game can load JSON in place of the
+compiled data. (It was git-ignored when this was written; `competitions/`, and
+`teams/` with it, are now tracked — see `.gitignore`.)
 
 ---
 
@@ -48,7 +60,7 @@ game can load JSON in place of the compiled data during testing.
 | `CompetitionCareer`   | 1 (`careerContests[35]`) | the master index: `{competition*, competitionCopy*, templateSize}` ×35 |
 | `EuroCupQualSeedBucketBlock`, `CountryNumbers`, misc `uint8/16` tables | a few | seeds / lookups |
 
-Struct definitions live in `src/game_types.h` (the merged
+Struct definitions live in `include/game_types.h` (the merged
 `CompetitionCup`/`CompetitionTournament`/`CompetitionLeague`/`Playoffs`/`Leagues`/
 `QualifyingGroup`/`CompetitionCareer`, and the `Competition`/`CompCupHeader`/
 `CompTournamentHeader`/`Round` building blocks).
@@ -199,10 +211,14 @@ like the teams `--verify`).
    Teams loader ✅ DONE — `DataJson_LoadTeamArray` in save_format_json.c reuses
    `load_team_file_ex_slice`/`s_team_file_fields`; `SWOS_DATA_JSON_SELFTEST=1`
    loads SCOTLAND.json → PASS (40 teams, RANGERS/Gascoigne verified). Competitions
-   loader + registry + auto-detect/fallback ← NEXT.
-5. **Switch default to JSON**; retire the static initializers (competition_data.c
-   → storage only). Game is data-driven.
-6. **Amiga path** — *open question* (see §8).
+   loader + registry ✅ DONE — `DataJson_InstallCompetitionGraph`, default-on
+   (`SWOS_DATA_JSON=0` falls back to the compiled tables).
+5. **Switch default to JSON** ✅ DONE, differently from planned: the static
+   initializers were not retired — `competition_data.c` is **regenerated from the
+   JSON** by `scripts/emit_competitions.py` at build (`make regen-data`), so the
+   JSON is the source and the `.c` a generated artifact (`docs/DATA_PIPELINE.md`).
+6. **Amiga path** ✅ decided — the Amiga compiles the same generated
+   `competition_data.c` (see §8).
 
 ---
 
@@ -218,7 +234,9 @@ structs for the Amiga.** Options still on the table:
   the Amiga, authored from the same JSON.
 - The host-export-binary pipeline (DATA_BSON.md §3).
 
-Deferred — decided after the SDL JSON path works. The SDL loaders (this document)
+**Decided (see `docs/DATA_PIPELINE.md`):** the build-time bake — JSON → C by the
+Python emitters, compiled natively on both targets; the Amiga parses no JSON.
+The SDL loaders (this document)
 are endianness-explicit and re-derive nothing from addresses, so whichever Amiga
 representation we pick, the JSON stays the single source of truth.
 

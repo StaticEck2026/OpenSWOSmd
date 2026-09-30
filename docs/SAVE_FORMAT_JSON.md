@@ -1,5 +1,16 @@
 # SWOS Save Format — JSON Migration Roadmap
 
+> **Status (2026-09-30): complete — kept as the record of how.** Every save kind
+> is structured JSON (`src/save_format_json.c`, `SAVE_JSON_SCHEMA_VERSION` 3, a
+> mismatch is refused). `.CAR`/`.SEA`/`.PRE`/`.DIY` are JSON-only (legacy raw
+> readers/writers deleted 2026-06-10/11); `opaque_data`, the `blobs` object, the
+> `{sym}/{str}/{raw}` pointer wrapper, `save_pointer_lut.c` and
+> `src/generated/amiga_address_map.c` are all gone. `.HIL`/`.TAC` still read
+> binary too (policy: `docs/SAVE_DATA.md`). Still raw-byte fields: the five
+> `*_competition_context` slot buffers ride as `FLD_BYTES` with the typed
+> `comp_slots` serializer overriding the cross-target-sensitive parts on load.
+> Functions named `_Foo` below are now `Foo` (e.g. `RebuildPointersAfterLoad`).
+
 Living roadmap and progress log for the JSON save-format migration.
 Update this file as each phase completes so we can resume any time.
 
@@ -25,6 +36,8 @@ Drop `src/mjson.{c,h}`.
 
 `make SWOS_SAVE_FORMAT_JSON=1` enables JSON writes. Loads always
 auto-detect — `{` as first non-whitespace byte → JSON, else legacy.
+*(Now: on by default; `=0` only switches `.HIL`/`.TAC` writes back to binary —
+the big saves are JSON regardless and refuse a non-JSON file.)*
 
 ## Top-level format
 
@@ -55,8 +68,10 @@ auto-detect — `{` as first non-whitespace byte → JSON, else legacy.
 "some_pointer": { "raw": 4294967295 }                 // sentinel value (-1, -2, 0xFC, ...)
 ```
 
-Symbol-name encoding goes through `g_amiga_addr_map` in
-`src/generated/amiga_address_map.c`. String-content encoding (next
+*(Retired: this wrapper and `g_amiga_addr_map` are gone; the only
+pointer-shaped fields left are the seasonInformations comp-name strings,
+emitted as a bare JSON string.)* Symbol-name encoding went through
+`g_amiga_addr_map` in `src/generated/amiga_address_map.c`. String-content encoding (next
 phase) covers comp-name string pointers that the LUT doesn't index.
 
 ## Progress checklist
@@ -109,21 +124,24 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       diy team-id lists, teamTacticsUSER A-F, the *Copy slot region.
       Each gets a named entry under `blobs` with a base64 payload.
       Future promotions replace each blob with a typed encoder.
-- [ ] Promote individual `*Copy` slot bodies (CompetitionCup /
-      CompetitionCup2 / CompetitionLeague variants) — currently
-      bundled in `blobs.comp_copy_region`.
-- [ ] Promote tmdFileBuffer (transfer market data) — needs
-      schema design.
-- [ ] Promote competition contexts (the slot state buffers).
+- [x] Promote individual `*Copy` slot bodies — superseded: the
+      `comp_copy_region` blob is gone; the `*Copy` records are rebuilt
+      from their static templates on load
+      (`reconstruct_comp_copy_region_from_templates`, schema v2) with
+      only the dynamic bytes saved.
+- [x] Promote tmdFileBuffer (transfer market data) — `tmd_teams`.
+- [~] Promote competition contexts (the slot state buffers) — partly:
+      still `FLD_BYTES` (`competition_context` etc.), with the typed
+      `comp_slots` / `comp_slot_stage` serializers layered on top.
 - [x] Verify byte coverage (`SWOS_SAVE_FORMAT_JSON_VERIFY=1` ran
       with `0 mismatches across 120366 bytes`) and remove
       `opaque_data` from the writer. Loader still decodes it for
       backwards-compat with saves written during the transition.
-- [ ] Promote `tmdFileBuffer` (transfer market data — large block
-      at the very start of careerFileBuffer)
-- [ ] Promote misc career flags/state (currentSeasonShowing,
-      youreSacked, retired, ...)
-- [ ] Verify opaque_data shrinks to empty / can be removed
+- [x] Promote `tmdFileBuffer` (transfer market data — large block
+      at the very start of careerFileBuffer) — `tmd_teams`
+- [x] Promote misc career flags/state (currentSeasonShowing,
+      youreSacked, retired, ...) — typed scalars in `s_career_scalars`
+- [x] Verify opaque_data shrinks to empty / can be removed — removed
 - [ ] Round-trip integration test (load legacy `.CAR` → save JSON →
       reload JSON → diff in-memory state, expect zero deltas
       outside the unresolvable-pointer fields)
@@ -208,8 +226,10 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 
 ## Testing notes
 
-- `make SWOS_SAVE_FORMAT_JSON=1` writes JSON, default `make` writes
-  legacy. Load is auto-detect either way.
+- ~~`make SWOS_SAVE_FORMAT_JSON=1` writes JSON, default `make` writes
+  legacy.~~ Default `make` writes JSON (see Status above).
+- `scripts/decode_save.py FILE.CAR` (`--standings` for league/group tables)
+  decodes a save with team names resolved.
 - Verify a written `.CAR` with `python3 -m json.tool FILE.CAR`.
 - Decode a specific field path with mjson's own test helpers, or
   with jq: `jq '.season_informations[0]' FILE.CAR`.

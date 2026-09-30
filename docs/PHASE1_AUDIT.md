@@ -1,5 +1,14 @@
 # Phase 1A — `base + offset` access audit
 
+> **Status (2026-09-30): complete — kept as the record of how.** Phases 1B–1F
+> landed 2026-05-23 (`4312556` 1B/1C, `26d3e71` 1D/1E, `101e464` 1E,
+> `397302b` 1F TeamSelectionKeyCache), followed by Phase 2 (type fixes) and the
+> 64-bit bring-up (docs/64BIT_TRANSITION.md). The `careerFileBufferBuf` overlay
+> Bucket 4 refers to is retired, and `CompetitionCup2_*` variants are now the merged
+> `CompetitionTournament` (docs/STRUCT_CONSOLIDATE.md). The tally and
+> `game_types.h:516` line reference are as of 2026-05-23 (the header is
+> `include/game_types.h`).
+
 Output of the Phase 1A audit: every `base + offset` access pattern
 that needs converting to `struct->field` in subsequent Phase 1B-1E
 work, plus a few that we should leave alone and why.

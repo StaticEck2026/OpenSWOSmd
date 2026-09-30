@@ -1,15 +1,25 @@
 # SWOS save file formats
 
+> **Status (2026-09-30): partly historical.** The "Format migration / read-support
+> policy" section is current. The `.CAR`/`.SEA`/`.PRE`/`.DIY` layout sections
+> below describe the **legacy raw-dump** format of the Amiga `careerFileBuffer`
+> overlay: its reader and writer are both deleted, and the overlay itself is gone
+> (`src/swos_globals_career_overlay.c` now holds only `careerFileBuffer` and
+> `numSelectedTeams`). Those four save kinds are JSON-only (`src/save_format_json.c`,
+> `schema_version` 3 — see `docs/SAVE_FORMAT_JSON.md`); the offsets are kept as a
+> map of which fields exist. The C functions have since lost their leading
+> underscore (`_LoadCareerFile` → `LoadCareerFile`); names below use the current form.
+
 This document describes the on-disk layout of every save file the game
 writes, with particular attention to fields that contain absolute
-pointers — these need rebuilding on load (see `_RebuildPointersAfterLoad`)
+pointers — these need rebuilding on load (see `RebuildPointersAfterLoad`)
 and are the things that have to be replaced when we eventually move to a
 structured (JSON / YAML / tagged binary) save format.
 
 All multi-byte integers are **big-endian** on disk (Amiga m68k convention).
 The SDL build uses the `BE_*` / `PACK_BE_U16` helpers in
 `src/endian_helpers.h` to read them; the macros are no-ops on a BE host so
-the same code compiles for the Amiga port.
+the same code compiles for the Amiga target. (This byte order now applies only to the binary `.TAC`/`.HIL`/`.EDT` records; the JSON saves are text.)
 
 ---
 
@@ -17,13 +27,13 @@ the same code compiles for the Amiga port.
 
 | Extension | Buffer | Save fn | Load fn | Format |
 |---|---|---|---|---|
-| `.CAR` / `.SEA` | `careerFileBuffer` (256 KB overlay) | `_SaveCareerFile` | `_LoadCareerFile` | Career save — header + selected-teams body |
-| `.PRE` | `competitionFileBuffer` (overlay at +93308) | `_SavePresetCompetitionFile` | `_LoadPresetFile` | Preset competition save |
-| `.DIY` | `competitionFileBuffer` (overlay at +93308) | `_SaveDIYFile` | `_LoadDIYFile` | DIY competition save (same layout as preset) |
-| `.TAC` | `editTacticsCurrentTactics` | `_WriteTacticsFile` | `_ReadTacticsFile` | Single 370-byte tactics record |
-| `.HIL` | `hilFileBuffer` | `_DoSaveHighlights` | `_LoadHilFile` | Match highlights ring — header + N goal frames |
-| `.EDT` | `teamFileBuffer` | `_WriteFile(aCustomsEdt)` (edit_tactics.c) | `_LoadFileEx(aCustomsEdt)` (teams.c) | Edited teams (`CUSTOMS.EDT`) — count word + N TeamFile records, **BE** (byte-swapped to host on load) |
-| `.CFG` (options) | small fixed buffer | `_SaveOptions` | `_LoadOptions` | Player options (game length, music, etc.) |
+| `.CAR` / `.SEA` | `careerFileBuffer` (256 KB overlay) | `SaveCareerFile` | `LoadCareerFile` | Career save — header + selected-teams body |
+| `.PRE` | `competitionFileBuffer` (overlay at +93308) | `SavePresetCompetitionFile` | `LoadPresetFile` | Preset competition save |
+| `.DIY` | `competitionFileBuffer` (overlay at +93308) | `SaveDIYFile` | `LoadDIYFile` | DIY competition save (same layout as preset) |
+| `.TAC` | `editTacticsCurrentTactics` | `WriteTacticsFile` | `ReadTacticsFile` | Single 370-byte tactics record |
+| `.HIL` | `hilFileBuffer` | `DoSaveHighlights` | `LoadHilFile` | Match highlights ring — header + N goal frames |
+| `.EDT` | `teamFileBuffer` | `WriteFile(aCustomsEdt)` (edit_tactics.c) | `LoadFileEx(aCustomsEdt)` (teams.c) | Edited teams (`CUSTOMS.EDT`) — count word + N TeamFile records, **BE** (byte-swapped to host on load) |
+| `.CFG` (options) | — | — | — | **No such file is written or read by this port** (see ".CFG — options" below); the six option words ride inside the career/preset/DIY JSON |
 
 ---
 
@@ -39,7 +49,7 @@ it during the "retire legacy reads" cleanup.**
 the legacy raw-memory-dump *reader* is dead after the overlay untangle (it loaded
 extracted fields into `.skip` holes / overflowed the now-standalone
 `competitionFileBuffer` → broken state). All three entry points
-(`_LoadCareerFile`, `_LoadPresetFile`, `_LoadDIYFile`) are now JSON-only and emit
+(`LoadCareerFile`, `LoadPresetFile`, `LoadDIYFile`) are now JSON-only and emit
 a graceful "unsupported format" error otherwise. A non-JSON career/preset/DIY
 file no longer loads — accepted (all current saves are JSON). The then-unreferenced
 `_LoadCompetitionFile` (legacy header verifier) and `_TranslateAmigaAddressesAfterLoad`
@@ -48,11 +58,11 @@ file no longer loads — accepted (all current saves are JSON). The then-unrefer
 LUT … RETIRED" below.
 
 **KEEP binary read/write — DO NOT retire.** `.TAC` (tactics), `.HIL`
-(highlights), `.EDT` (edited teams / `CUSTOMS.EDT`), and `.CFG` (options) are
+(highlights), `.EDT` (edited teams / `CUSTOMS.EDT`), and `.CFG` (options — no such file exists in this port today; see ".CFG" below) are
 small, fixed-layout binary records that the user/game exchanges as **binary**
 (`.EDT` is also shared with the wider SWOS community / the original game, so its
 on-disk BE layout is an interop format, not just our save). Their binary
-`_Read*`/`_Load*`/`_LoadFileEx` path **must be maintained** — these files are
+`_Read*`/`_Load*`/`LoadFileEx` path **must be maintained** — these files are
 still authored and consumed in binary form. A JSON variant may exist alongside
 (`SaveJson_LoadTactics` / `SaveJson_LoadHighlights` auto-detect by header), but
 the binary read path is NOT legacy and must not be removed. Do not fold
@@ -93,7 +103,7 @@ contains `inGameTeamPtr` (offset 10), `teamStatsPtr` (14), `spritesTable`
 (20), `shotChanceTable` (24), `controlledPlayer` (32), `passToPlayerPtr`
 (36), `passingKickingPlayer` (104), `lastHeadingTacklingPlayer` (72) —
 none of these should ever survive a round-trip. They are reset by
-`_InitializeInGameTeamsAndStartGame` when a match begins.
+`InitializeInGameTeamsAndStartGame` when a match begins.
 
 #### 54722 .. 56189 — Career counters and finance (1468 bytes)
 Single-field globals: `currentSeasonShowing`, `stayingInOldClub`,
@@ -133,7 +143,7 @@ careerTeam. Same runtime-pointer caveat.
 
 #### 63320 .. 63339 — `careerCompetitionSlotPtrTable[5]` ⚠ POINTERS
 **This is a 5-entry array of `uint8_t *` pointers**, populated by
-`_InitNewSeason` (career_init.c:1165) to point at:
+`InitNewSeason` (career_init.c:1165) to point at:
 
 ```
 [0] -> &competitionFileBuffer       (careerFileBufferBuf + 93308)
@@ -239,7 +249,7 @@ before save / runtime-rebuilt after load.
 | 93348 | `primaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load | ✅ |
 | 66280 | `tertiaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load | ✅ |
 | varies | cup-record `text[2]` at `(*Copy + 5 + nameOffset)` | 2× `uint32_t` (ptr) | careerContests table src→dest, both pointers | ✅ |
-| 55086 | `careerCupPickList[]` | `uint32_t *` | rebuilt for nat-selectors via `_Career_SetCupPickList_ForSelectedRegion(0)` | ✅ |
+| 55086 | `careerCupPickList[]` | `uint32_t *` | rebuilt for nat-selectors via `Career_SetCupPickList_ForSelectedRegion(0)` | ✅ |
 | trailing inside copy structs | `unk1[]` bytes | scalar lookup tables | n/a (not pointers) | ✅ |
 
 **Plus runtime-only fields that should be zeroed before save** (or after
@@ -254,13 +264,13 @@ data, but are not themselves part of the file. Loading a .CAR does not
 restore these — they're rebuilt on demand:
 
 - `diyCompetitionStart` (separate 4 KB BSS buffer outside the careerFileBuffer
-  overlay). Rebuilt by `_DIY_LoadCurrentCompetitionSlot` from
+  overlay). Rebuilt by `DIY_LoadCurrentCompetitionSlot` from
   `diyFileBufferCopy` (which itself comes from `competitionFileBuffer`
-  via `_Career_LoadCompetitionSlotStateFromBuffer`).
+  via `Career_LoadCompetitionSlotStateFromBuffer`).
   **VIEW SQUADS reads from this struct.** If we don't repopulate it
-  post-load, `_StatsViewSquads` reads zeros and panics on `_VerifyTeamLoaded(0)`.
+  post-load, `StatsViewSquads` reads zeros and panics on `VerifyTeamLoaded(0)`.
 - `topTeamData / bottomTeamData` (TeamGeneralInfo runtime structs).
-  Rebuilt by `_InitializeInGameTeamsAndStartGame` at match start.
+  Rebuilt by `InitializeInGameTeamsAndStartGame` at match start.
 - `diyFileBufferCopy / diyCompetitionStart` workspace buffers.
 - All sprite tables (`team1SpritesTable / team2SpritesTable / allSpritesArray`).
 
@@ -318,9 +328,15 @@ frame format.
 
 ## .CFG — options
 
-`_SaveOptions / _LoadOptions` write/read a small fixed-size buffer
-holding `gameLength`, `autoReplays`, `menuMusic`, `autoSaveHighlights`,
-`allPlayerTeamsEqual`, `pitchType`. All scalars. **No pointers.**
+Correction (2026-09-30): there is no `.CFG` file. `SaveOptions` /
+`RestoreOptions` (`src/menus.c`, SWOS2.s 69187/69198) only copy the six
+`uint16_t` words `gameLength`, `autoReplays`, `menuMusic`,
+`autoSaveHighlights`, `allPlayerTeamsEqual`, `pitchType` to and from the
+in-memory `saveGameLength` snapshot; no `_LoadOptions` exists and nothing
+in `src/` opens a `.CFG`. The six words are persisted as named fields
+(`game_length` … `pitch_type`) inside the career/preset/DIY JSON
+(`src/save_format_json.c`); SDL-side settings live in `SWOS.ini`.
+All scalars. **No pointers.**
 
 ---
 
@@ -331,7 +347,7 @@ holding `gameLength`, `autoReplays`, `menuMusic`, `autoSaveHighlights`,
 > the primary path. The JSON save format (`save_format_json.c`) serializes
 > pointer fields as semantic identities (competition id, string-pool key,
 > team index) and re-derives the runtime pointer on load via
-> `_RebuildPointersAfterLoad` — no address translation needed. So
+> `RebuildPointersAfterLoad` — no address translation needed. So
 > `src/save_pointer_lut.c`, `src/generated/amiga_address_map.c`, and the
 > dead `_TranslateAmigaAddressesAfterLoad` entrypoint were removed on
 > 2026-06-11. `tools/extract_amiga_addresses.py` /
@@ -370,7 +386,7 @@ following `ds.b/dc.b/dc.w/dc.l` directive, and emits filtered output.
 The curated needed-list lives in **`tools/needed_lut_symbols.txt`**.
 It's intentionally lean (~230 symbols): only the pointer-target
 symbols that **can't** be re-derived from a saved scalar identity
-in `_RebuildPointersAfterLoad`. That covers:
+in `RebuildPointersAfterLoad`. That covers:
 
   - Every `&<name>` referenced inside `src/competition_data.c` —
     static cup/league templates, *Copy slots, qualifying-group tables,
@@ -385,7 +401,7 @@ in `_RebuildPointersAfterLoad`. That covers:
   - **Name strings** (`aLeague_1`, `aPremierDivisio`, `aWorldClubChamp`, …
     ~1 K Amiga-style string symbols). Cup-record `nameSource` pointers
     target these, but on load they're re-derived by
-    `_Rebuild_CupRecordNameSourcePointers()` — it walks the
+    `Rebuild_CupRecordNameSourcePointers()` — it walks the
     `careerContests` table and copies the canonical pointer from each
     static cup template into its `*Copy`. No address-translation
     needed. Same approach extends to `*CompStringOffset` when those
@@ -505,7 +521,7 @@ flip from current-build addresses to canonical Amiga addresses). Bump
 distinguish:
 
 - v0x0012 — legacy raw-pointer save. Apply existing
-  `_RebuildPointersAfterLoad` heuristics (incomplete; only same-build
+  `RebuildPointersAfterLoad` heuristics (incomplete; only same-build
   loads are reliable).
 - v0x0013 — Amiga-canonical save. Translate every pointer field
   through the LUT on load.
@@ -546,11 +562,12 @@ v2 binary via a one-time `Amiga LUT → JSON` migrator.
   `b8c85c56 / 44c95c56 / …` trailers flagged in the .CAR section need
   per-record verification before they're declared real pointers.
 
-The JSON save format (`src/save_format_json.c`, `make SWOS_SAVE_FORMAT_JSON=1`)
-is now the primary path — pointer fields are emitted as semantic identities
-rather than raw address bytes, so saves round-trip across rebuilds and
-32/64-bit. Load auto-detects format from the file header so legacy `.CAR`
-dumps still open via the raw-load + `_RebuildPointersAfterLoad()` + LUT
-bridge. The LUT/rebuild path is now a backwards-compatibility fallback,
-not the long-term solution; cleanup is to delete it once every save type
-is proven on JSON.
+The JSON save format (`src/save_format_json.c`, on by default) is the only
+path for `.CAR`/`.SEA`/`.PRE`/`.DIY` — pointer fields are emitted as semantic
+identities rather than raw address bytes, so saves round-trip across rebuilds,
+32/64-bit and LE/BE. ~~Load auto-detects format so legacy `.CAR` dumps still
+open via the raw-load + LUT bridge~~ — that fallback is deleted (2026-06-10/11):
+a non-JSON career/preset/DIY file is refused with an "unsupported format"
+error (`src/file_io.c`). `RebuildPointersAfterLoad()` stays, re-deriving each
+pointer from its saved JSON identity. `.TAC`/`.HIL` still auto-detect JSON vs
+binary on load (see the policy section above).

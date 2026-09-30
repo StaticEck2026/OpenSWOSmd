@@ -5,12 +5,22 @@ port. Each is a grounded design sketch (with the relevant code already located),
 not yet implemented. The Amiga game stays the definitive base; these are opt-in
 enhancements.
 
+> Status (2026-09-30): features 1 and 2 have landed (notes under each); feature 3 is
+> partly done. The sketches below are kept as the original design record — the
+> file:line references in them are from 2026-06 and have drifted.
+
 ---
 
 ## 1. Copa Libertadores (South American Champions League)
 
 Add the **CONMEBOL** equivalent of the European Cup / Champions League — a
 continental club cup contested by South American league champions.
+
+> **Status: done** (f88b062, ca2dedc, a4dc0e1 and later fixes). Detailed design in
+> `docs/COPA_LIBERTADORES.md`. It went the preferred way: a pure-data competition in
+> `bin/data_json/competitions/tournaments.json`, installed at runtime by
+> `DataJson_InstallCompetitionGraph` on SDL and baked for the Amiga in
+> `src/competition_data_copa_baked.c`; the career side is `src/career_copa.c`.
 
 ### Why it's tractable
 The engine already runs **three continental club competitions**, all defined as
@@ -55,6 +65,15 @@ rather than a hardcoded record.
 
 Career mode currently runs a **fixed 20 seasons** then forces retirement. Make the
 length a **setting** (default 20; allow e.g. 35).
+
+> **Status: done** (b49a793). `num_seasons` in `bin/data_json/career_params.json`
+> (`_careerParams.num_seasons`, default 20, clamped to `CAREER_MAX_SEASONS` = 35 in
+> `include/career_params.h`) — a data knob, not the `[career] length` INI setting or
+> `--career-length` flag sketched below. `_seasonInformationsArray` is `[35]`, the three
+> `career_init.c` sites are parameterised, and the save writes 35 season rows
+> (`SAVE_SI_ENTRY_COUNT`) and stores `num_seasons`. The two `menus.c` final-season
+> checks (`CareerOverUpdateJobOffersEntry` and its caller) still compare with a literal
+> `19`.
 
 ### Current mechanism
 `currentSeasonShowing` (`career_status_flags.c`) counts seasons `0..19`;
@@ -101,6 +120,10 @@ verify it still feels balanced at 35.
 Adding or removing a country / league / cup / team should be a **simple, safe,
 no-recompile data edit**.
 
+> **Status: partly done.** The foundation below is live, and Copa Libertadores
+> (feature 1) is the first competition defined purely by data. The validation layer,
+> schema and `check_data.py`-style validator in "What's left" have not been built.
+
 ### Foundation already exists
 The `SWOS_DATA_JSON` data-drive is well underway:
 - `DataJson_InstallCompetitionGraph()` (`frontend.c`) rebuilds the normal-country
@@ -141,8 +164,9 @@ turns SWOS from a fixed dataset into a moddable platform.
 - Features 1 and 3 are tightly linked — do the data-drive first, then Libertadores
   rides it.
 - Anything touching the career save (1 and 2) needs a coordinated save-format
-  change on **both** the SDL and Amiga ports (per the roadmap in
-  `.claude/CLAUDE.md`), with a version bump and back-compat handling.
+  change that works on **both** targets (SDL and Amiga, one shared tree since the
+  2026-08-12 merge — see `.claude/CLAUDE.md`), with a version bump and back-compat
+  handling.
 - Translations: new competition/menu strings go through `docs/TRANSLATIONS.md`.
 
 ## Open questions

@@ -3,7 +3,8 @@
 Status: **DONE** (this header was stale). The tournament buffer is typed —
 `diyFileBufferCopy` is viewed through `DIYTournamentState` (`game_types.h`, with
 offset static-asserts), landed via the type-2 / cross-target-save work. Design
-notes below kept for history.
+notes below kept for history. (2026-09-30: step 7's "back-port to `SWOS_C`" predates
+the 2026-08-12 merge -- one tree builds both targets now.)
 Author context: fixes the 64-bit-only preset-WORLD-CUP bug (panic `0x8034`,
 ROMANIA×5 in every group, inflated PL column) by removing the overlap that
 causes it, rather than band-aiding the offset. This is roadmap **step 3

@@ -4,7 +4,8 @@ SWOS's game data — competitions, menus, teams — originated as hand-written C
 (`competition_data.c`, `menu_data.c`) and RNC-compressed binary files (`TEAM.NNN`,
 `*.TMD`, `POOLPLYR.DAT`). All of it is now **editable as JSON** under `bin/data_json/`,
 with tooling that converts each direction **losslessly** (round-trip / byte-identical), so
-you edit JSON and the change reaches the build — on both the SDL port and the Amiga port.
+you edit JSON and the change reaches the build — on both targets (SDL and Amiga build from
+the one `src/` tree since the 2026-08-12 merge).
 
 This is the umbrella doc for the whole pipeline. Deep-dives:
 - `docs/DATA_JSON.md` — the teams/TMD/POOLPLYR **binary** layouts + the RNC details.
@@ -18,15 +19,23 @@ This is the umbrella doc for the whole pipeline. Deep-dives:
 bin/data_json/
   competitions/   leagues, cups, tournaments, playoffs, qualifying, league_blocks,
                   career, country tables   →  src/competition_data.c     (committed source)
-  menus/          one *.json per menu + a manifest  →  src/menu_data.c     (committed source)
+  menus/          one *.json per menu + _symbols.json  →  src/menu_data.c  (committed source)
+  menus/swos2020/ imported SWOS 2020 menus — JSON-only, loaded at run time, never baked
+                  (docs/MENUS.md §10)
+  menus/p2p/      OpenSWOS's own JSON-only menus (p2pMenu, rateMatchMenu)
+  tactics/        <id>.json (+ <id>_original / <id>_dos variants)  →  src/tactics_data.c
   teams/          <COUNTRY>.json (→ TEAM.NNN), EUROCUP/EUROCWC/UEFACUP.json (→ *.TMD),
-                  POOLPLYR.json (→ POOLPLYR.DAT)     (local; bin/data is gitignored)
-  translations/   <lang>.json  (UI string localization)
+                  POOLPLYR.json (→ POOLPLYR.DAT)
+  translations/   <lang>.json  (UI string localization, docs/TRANSLATIONS.md)
+  career_params.json  career-mode balance knobs (below)
 ```
 
-`competitions/` and `menus/` are **committed** and are the source of truth for their `.c`
-files. `teams/` is local-only (the binary `bin/data/` is gitignored — it's your SWOS data),
-so its JSON is a local editable view, not a git source.
+`competitions/`, `menus/` and `tactics/` are **committed** and are the source of truth for
+their `.c` files. `teams/` and the binary `bin/data/` files are both tracked too
+(`.gitignore` re-includes them); `teams/` is the editable view that `emit_teams.py`
+regenerates the binaries from. Only `bin/data_json/menus/*.json` (top level) feeds
+`menu_data.c` — the `swos2020/` and `p2p/` subfolders are deliberately outside that
+wildcard.
 
 ---
 
@@ -34,13 +43,13 @@ so its JSON is a local editable view, not a git source.
 
 There are **two** independent ways the JSON reaches the game; don't confuse them:
 
-1. **Runtime data-drive (SDL only).** With `SWOS_DATA_JSON` / `SWOS_MENU_JSON` set
-   (default-on), the SDL build loads the JSON at startup and **overwrites the compiled
+1. **Runtime data-drive (SDL only).** With `SWOS_DATA_JSON` / `SWOS_MENU_JSON` /
+   `SWOS_TACTICS_JSON` (all default-on; `=0` turns one off), the SDL build loads the JSON at startup and **overwrites the compiled
    data in place** — the fast edit-and-rerun loop, no rebuild.
 2. **Build-time bake (the "flip", both ports).** At build, the Python emitters regenerate
-   `competition_data.c` / `menu_data.c` **from the JSON**, then the compiler compiles them.
-   The committed JSON is the source; the `.c` is a generated artifact. The Amiga build uses
-   the same generated C (it syncs over). This is what makes a JSON edit a permanent,
+   `competition_data.c` / `menu_data.c` / `tactics_data.c` **from the JSON**, then the
+   compiler compiles them. The committed JSON is the source; the `.c` is a generated
+   artifact. The Amiga build compiles the same generated C from the shared `src/`. This is what makes a JSON edit a permanent,
    cross-port change.
 
 The two share the JSON and produce identical bytes; (1) is for iteration, (2) is the
@@ -97,6 +106,11 @@ direction). `swos_team_file.py` is the shared team-data library (decode/encode +
 | **export** (→ JSON) | `export_competitions.py` | `export_menus.py` | `decode_data.py --dump-json` |
 | **emit** (→ C/binary) | `emit_competitions.py` | `emit_menus.py` | `emit_teams.py` |
 
+Tactics follow the same pattern: `export_tactics.py` / `emit_tactics.py` ↔
+`src/tactics_data.c` (runtime loader `src/tactics_load_json.c`, `SWOS_TACTICS_JSON_VERIFY`
+for the byte-exact check). Translations: `export_translations.py` writes `en.json`,
+`gen_translations.py` the other languages.
+
 How each emitter works:
 
 - **`emit_competitions.py`** — splices regenerated `CompetitionCup/Tournament/League/
@@ -116,18 +130,19 @@ How each emitter works:
 
 ## Workflows
 
-### Competitions / menus (C — the flip)
+### Competitions / menus / tactics (C — the flip)
 
 ```sh
-# edit bin/data_json/competitions/*.json  or  bin/data_json/menus/*.json
-make                       # regenerates competition_data.c / menu_data.c, then builds
+# edit bin/data_json/competitions/*.json, menus/*.json or tactics/*.json
+make                       # regenerates competition_data.c / menu_data.c / tactics_data.c, then builds
 make regen-data            # force the regen without a full build
-git add bin/data_json/... src/competition_data.c src/menu_data.c   # commit JSON + generated C
+git add bin/data_json/... src/competition_data.c src/menu_data.c src/tactics_data.c   # commit JSON + generated C
 ```
 
-The Makefile rule makes each `.c` depend on its JSON, so editing the JSON regenerates the
-`.c` at build (via `emit_*.py --out`). The Amiga port gets the generated `.c` through the
-normal source sync.
+The SDL Makefile rule makes each `.c` depend on its JSON, so editing the JSON regenerates the
+`.c` at build (via `emit_*.py --out`). `Makefile.amiga` has **no** regen rule: it compiles the
+committed `.c` from the shared `src/`, so run `make regen-data` (or an SDL build) before an
+Amiga build that should see a JSON edit.
 
 ### Teams / TMD / POOLPLYR (binary)
 
@@ -137,7 +152,7 @@ python3 scripts/emit_teams.py            # VERIFY 1:1 vs the current bin/data fi
 python3 scripts/emit_teams.py --write    # regenerate the RNC-compressed bin/data files
 ```
 
-These stay local (the binaries are gitignored). Refresh the JSON from the binaries with
+Commit the JSON and the regenerated binaries together. Refresh the JSON from the binaries with
 `python3 scripts/decode_data.py --dump-json bin/data_json/teams`.
 
 ### Career-mode balance knobs (`career_params.json`)
@@ -194,17 +209,21 @@ regen-data:        # force both
 	python3 scripts/emit_menus.py        --out src/menu_data.c
 ```
 
-The build now depends on **python3**. `competition_data.c` / `menu_data.c` are read by the
+(Abridged: the real rules also cover `tactics_data.c` from `bin/data_json/tactics/*.json`
+via `emit_tactics.py`, and `regen-data` regenerates all three.)
+
+The regen needs **python3**; without it on PATH the Makefile warns and compiles the committed
+`.c` as-is (a JSON edit then does not take effect). `competition_data.c` / `menu_data.c` are read by the
 emitter for their preamble (includes/stubs) and rewritten with the JSON-derived
 definitions — so they must stay committed (the preamble isn't in the JSON).
 
 ---
 
-## Amiga back-port
+## The Amiga target
 
-The Amiga port (`SWOS_C`) builds the **generated** `competition_data.c` / `menu_data.c`,
-which sync over from this tree — so a JSON edit, once regenerated and synced, is in the
-Amiga build too. The emitters bake JSON→C at *build* time (not runtime) because parsing
+The Amiga build compiles the **generated** `competition_data.c` / `menu_data.c` /
+`tactics_data.c` from the same `src/` (one tree since the 2026-08-12 merge; there is no sync
+step) — so a JSON edit, once regenerated, is in the Amiga build too. The emitters bake JSON→C at *build* time (not runtime) because parsing
 JSON on a 68k at startup would take minutes; the generated C compiles natively. RNC
 (`rnc_pack`/`rnc_unpack`) is byte-exact for v1 (`TEAM.NNN`) and v2 (`*.TMD`,
 `POOLPLYR.DAT`), so regenerated team binaries are indistinguishable from the originals on
@@ -214,7 +233,7 @@ either platform.
 
 ## Gotchas / key facts
 
-- **Two mechanisms, one JSON.** Runtime data-drive (`SWOS_DATA_JSON`/`SWOS_MENU_JSON`,
+- **Two mechanisms, one JSON.** Runtime data-drive (`SWOS_DATA_JSON`/`SWOS_MENU_JSON`/`SWOS_TACTICS_JSON`,
   SDL, edit-and-rerun) vs build-time bake (the emitters, both ports, the committed source).
   They produce identical bytes.
 - **The `.c` is generated — edit the JSON.** `competition_data.c` / `menu_data.c` are

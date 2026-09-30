@@ -1,5 +1,7 @@
 # Competition System — Dynamic / Pointer-Free Refactor (HANDOFF)
 
+> Status (2026-09-30): **complete** -- engine Steps 1-7 (`cf4017c`, `5c0070f`; `include/comp_identity.h`, `Comp_ById`/`Comp_AppendCareerContest`) and Copa Libertadores incl. the Step-8 Amiga bake (`e99d40b`, `955476e`, `ca2dedc`) and the interactive CONMEBOL-club play path listed as remaining in §8e (`f88b062`) all landed. Kept as the record of how. Mentions of `sync_to_amiga_port.sh` / "the Amiga port" as a separate tree predate the 2026-08-12 merge (the script is now a tombstone; one tree builds both targets).
+
 > Fresh-session handoff. Goal of this project: **break competitions free of
 > hardcoded compiled addresses** so they are identified by id/index (not by the
 > address of a compiled global), the competition tables are **built at runtime**

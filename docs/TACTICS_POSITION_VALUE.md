@@ -7,7 +7,7 @@ logic, the per-player *position-value* formula (`GetPlayerPrice`), the
 team-average formula (`ComputeOldPlayerSkillForViewResult`), and the full set of
 weight tables that drive it.
 
-All line numbers refer to this repo (SDL port); the logic is a faithful port of
+All line numbers refer to this repo (the shared `src/` tree; checked 2026-09-30); the logic is a faithful port of
 the original Amiga `SWOS2.s`.
 
 ---
@@ -61,7 +61,7 @@ if (slot < 11) {                                  /* first 11 players only */
 `_oldPlayerPositionsArray` is a snapshot of `_playerPositionsArray` taken on
 entry (`EditTacticsMenuSavePlayerPositions`, `src/edit_tactics.c:493`). The same
 per-player check is drawn on the squad screen in
-`src/play_match_menu.c:1175`.
+`src/play_match_menu.c:1194`.
 
 ### 2.2 Big, whole-team — `src/edit_tactics.c` (`SetBigCheckSprite`) / `src/menus.c` (`UpdateBigCheckMark`)
 
@@ -82,13 +82,13 @@ current > baseline ⇒ improvement ⇒ tick.)
 ## 3. The per-player position-value pipeline
 
 ```
-UpdatePlayerPositionAndReturnRole(team, i)   src/match_sim.c:1993
+UpdatePlayerPositionAndReturnRole(team, i)   src/match_sim.c:2145
    └─ for an outfield player in an outfield slot:
-        GetPlayerPrice(team, playerBase, i)  src/match_sim.c:1832   ← the formula
+        GetPlayerPrice(team, playerBase, i)  src/match_sim.c:1954   ← the formula
    └─ writes the result to _playerPositionsArray[slot]
    └─ returns (role<<16 | value)
 
-ComputeOldPlayerSkillForViewResult(team, n)  src/match_sim.c:744
+ComputeOldPlayerSkillForViewResult(team, n)  src/match_sim.c:818
    └─ sums every player's value into a team average → _oldPlayerSkill
 ```
 
@@ -107,7 +107,7 @@ that calls `GetPlayerPrice`. Edge cases it applies **before** the formula:
 
 ---
 
-## 4. `GetPlayerPrice` — the formula (`src/match_sim.c:1832`)
+## 4. `GetPlayerPrice` — the formula (`src/match_sim.c:1954`)
 
 This is the heart of it. A player's value is how well their 7 skills match the
 areas of the pitch their tactic sends them to, summed over the whole pitch.
@@ -181,7 +181,7 @@ weight:  0   1   3   6  10  15  21  28      (triangular numbers T(n) = n(n+1)/2)
 A skill's contribution scales **quadratically** with its ponder, so the few
 skills that matter most at a position dominate.
 
-### 5.2 `_priceSkillPonders[35]` — which skills matter per ball-quadrant (`src/tactics_data.c:114`)
+### 5.2 `_priceSkillPonders[35]` — which skills matter per ball-quadrant (`src/tactics_data.c:597`)
 
 Decoded (one column per skill, value = ponder 0..7):
 
@@ -229,7 +229,7 @@ The gradient is clear: **defensive quadrants reward Tackling/Heading, attacking
 quadrants reward Finishing/Control/Passing.** This is why a striker dropped into
 defence loses value and a tackler pushed forward does too.
 
-### 5.3 `_skillsPerQuadrant[245]` — quadrant importance per position type (`src/tactics_data.c:110`)
+### 5.3 `_skillsPerQuadrant[245]` — quadrant importance per position type (`src/tactics_data.c:593`)
 
 7 rows (player position types 1..7, defensive → attacking) × 35 quadrants,
 value 1..4 = how much that quadrant counts toward this position's value
@@ -250,7 +250,7 @@ Row 1 weights the defensive quadrants; row 7 weights the attacking quadrants —
 so the *same* skill-match counts for more or less depending on whether the
 quadrant is "the player's job".
 
-### 5.4 `_quadrantCoordinatesToBallQuadrant[240]` — fine grid → ball-quadrant (`src/tactics_data.c:115`)
+### 5.4 `_quadrantCoordinatesToBallQuadrant[240]` — fine grid → ball-quadrant (`src/tactics_data.c:598`)
 
 15 rows × 16 columns of fine pitch coordinates, each mapped to a ball-quadrant
 0..34 (note the 3-row × ~2-col banding that collapses the fine grid onto the
@@ -274,7 +274,7 @@ quadrant is "the player's job".
  4  4  4  9  9 14 14 19 19 24 24 29 29 34 34 34
 ```
 
-### 5.5 `_quadrantDistanceFactor[35×35]` — distance falloff (`src/tactics_data.c:113`)
+### 5.5 `_quadrantDistanceFactor[35×35]` — distance falloff (`src/tactics_data.c:596`)
 
 A 35×35 matrix; row *i* is the weight from the ball-position *i* to every
 ball-quadrant, peaking at **0x20 (32)** on the diagonal and falling off with
@@ -300,7 +300,7 @@ than +10 over their base regardless of tactic.
 
 ---
 
-## 6. Team average — `ComputeOldPlayerSkillForViewResult` (`src/match_sim.c:744`)
+## 6. Team average — `ComputeOldPlayerSkillForViewResult` (`src/match_sim.c:818`)
 
 Produces the `_oldPlayerSkill` the big tick/cross compares:
 
@@ -338,7 +338,7 @@ and an outfielder forced into goal.
 |-------|---------------|
 | Sprite constants | `include/play_match_menu.h` |
 | Small per-player check (editor) | `src/edit_tactics.c` · `EditTacticsAfterDrawPlayerNames` |
-| Small per-player check (squad) | `src/play_match_menu.c:1175` |
+| Small per-player check (squad) | `src/play_match_menu.c:1194` |
 | Big team check (editor) | `src/edit_tactics.c` · `SetBigCheckSprite` |
 | Big team check (squad) | `src/menus.c` · `UpdateBigCheckMark` |
 | Position-value dispatch | `src/match_sim.c` · `UpdatePlayerPositionAndReturnRole` |
@@ -362,10 +362,11 @@ original `SWOS2.s`.*
 > §9.3 and the `docs/tactics_amiga_vs_dos/` snapshot describe the data **before**
 > that fix; they remain accurate as a record of the original Amiga-vs-DOS delta,
 > not of the current shipped formations. The formations now live in
-> `bin/data_json/tactics/*.json` (see `docs/` data-pipeline notes).
+> `bin/data_json/tactics/*.json` (see `docs/DATA_PIPELINE.md`).
 >
 > **The pristine data is still buildable.** `make SWOS_ORIGINAL_TACTICS=1`
-> (after a `clean` — the flag changes baked data) selects it. The pre-fix
+> selects it (no `clean` needed any more: a `-D` change rebuilds every object
+> through the makefile's flags stamp). The pre-fix
 > formations live beside the shipped ones as
 > `bin/data_json/tactics/<id>_original.json` and are baked into the same
 > `src/tactics_data.c` as `_teamTactics<id>Original`, round-trip checked by
@@ -495,7 +496,7 @@ Two things follow that §9's original conclusion could not see:
 
 The full data and a per-coordinate spreadsheet are in
 `docs/tactics_amiga_vs_dos/` (`tactics_amiga.json`, `tactics_dos.json`,
-`tactics_amiga_vs_dos.csv`).
+`tactics_diff_summary.csv`, `tactics_diff_detail.csv`).
 
 **All twelve, measured** (2026-09-03, from the DOS disassembly directly —
 `swos-port/swos/swos.asm` `tact_*`, whose `g_tacticsTable` order is ours;
@@ -575,10 +576,13 @@ those two defenders to different quadrants.
 ### 9.6 Building the DOS formations — `SWOS_DOS_TACTICS`
 
 ```bash
-make clean && make SWOS_DOS_TACTICS=1        # the DOS coverage
-make clean && make SWOS_ORIGINAL_TACTICS=1   # the pristine Amiga coverage
-make clean && make                           # what ships (Amiga + the fixes)
+make SWOS_DOS_TACTICS=1        # the DOS coverage
+make SWOS_ORIGINAL_TACTICS=1   # the pristine Amiga coverage
+make                           # what ships (Amiga + the fixes)
 ```
+
+(These used to need `make clean` first; the flags stamp now rebuilds every object
+when a `-D` flag changes.)
 
 Baked from `bin/data_json/tactics/<id>_dos.json` by `scripts/emit_tactics.py`,
 which round-trip checks them like everything else, and selected in
@@ -599,6 +603,7 @@ outfielder in every decodable recording, including the two the shipped Amiga
 data gets wrong (Eranio, Ayala). That is as direct a confirmation as the corpus
 can give that these are the formations the recordings were made with.
 
-It is still **not** wired to `--dos-gameplay=on`: that is a gameplay decision
+It is still **not** wired to DOS gameplay (`[gameplay] style = dos` /
+`--dos-gameplay=on`): that is a gameplay decision
 (it changes squad-screen marks and player values in menus, not just in the
 match), not a data question any more.

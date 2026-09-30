@@ -1,5 +1,17 @@
 # 64-bit transition plan
 
+> **Status (2026-09-30): largely done — kept as the record of the plan.** 64-bit SDL
+> builds ship: `make X86_64=1` → `bin/SWOS.x86_64`, and the macOS, aarch64 and Cygwin64
+> targets are 64-bit (LP64); the default `make` is still 32-bit x86 (`-m32`). What
+> actually happened differs from the plan in places: there is no `BITNESS=` variable
+> (the target picks the width); the size asserts were **kept but made bitness-conditional**
+> (`#if UINTPTR_MAX == 0xFFFFFFFFu` in `include/game_types.h`), not dropped; the
+> `careerFileBufferBuf` overlay is **retired** (`src/swos_globals_career_overlay.c` now holds
+> two plain globals); and the legacy raw `.CAR` reader is **retired** (JSON only,
+> 2026-06-10). Still open from §8 / Phase 7: `swos_amiga_data_imports.c`,
+> `swos_amiga_data_stubs.c`, `swos_amiga_func_stubs.c`, `swos_amiga_ptr_imports.c` still
+> exist. Saves round-trip across 32/64-bit and LE/BE via the JSON format.
+
 ## Goal
 
 The SDL port currently builds 32-bit only because the source assumes
@@ -124,7 +136,9 @@ should:
 
 Until the overlay is retired, mark every hardcoded offset constant
 in `swos_globals_career_overlay.c` with a `TODO: derive from struct`
-comment so we can audit them later.
+comment so we can audit them later. (**Retired** since: every label became its own typed
+global; see the header of `src/swos_globals_career_overlay.c` and
+docs/COMPETITION_SLOT_ALIAS_UNTANGLE.md §8.)
 
 #### Concrete bite — `substitutesCount=2` invisible-suspension bug (May 2026)
 
@@ -257,6 +271,8 @@ Already handled. Recap of what the recent cleanup gave us:
 The legacy raw-byte `.CAR` loader is still wired up for backward
 compat (`file_io.c:_LoadCareerFile`'s non-JSON branch). On 64-bit
 builds this path **does not work** — the raw image was 32-bit-only.
+(**Done:** retired 2026-06-10 — `LoadCareerFile` in `src/file_io.c` accepts only JSON and
+shows the `aFileSavedByDif` error menu for anything else.)
 Either:
 
 - Mark the legacy `.CAR` reader as 32-bit-only (`#if UINTPTR_MAX ==
@@ -266,7 +282,8 @@ Either:
 
 ### 7. Build configuration
 
-The Makefile currently force-builds 32-bit:
+The Makefile currently force-builds 32-bit (*as of writing; now the default `make` is
+32-bit and `X86_64=1`, macOS, aarch64 and Cygwin64 build 64-bit*):
 
 ```
 gcc -m32 ...
@@ -460,9 +477,9 @@ Once 64-bit SDL is stable:
   (`swos_globals.c` / `competition_data.c` / per-feature files).
   These existed as bridges during initial bring-up and are no longer
   load-bearing.
-- Back-port the whole tree to the Amiga C port — should compile
-  without changes because the build picks 32-bit by default and
-  `BE_*` macros become no-ops on m68k.
+- ~~Back-port the whole tree to the Amiga C port~~ — moot: the SDL and
+  Amiga trees merged into this one repo on 2026-08-12, so `make -f Makefile.amiga`
+  builds the same `src/` (the `BE_*` macros are no-ops on m68k).
 
 Steps 5-7 can land in any order once Phases 1-4 are complete. Phase
 6 is the milestone — first 64-bit SDL build — and the only one with

@@ -12,6 +12,7 @@ because it is release procedure rather than triage.
 /triage                 list the queue
 /triage <id>            work one report
 scripts/build_dist.sh   + scripts/build_macos.sh    the drop
+packaging/web/changelog.html                        an entry for the drop's build
 scripts/upload_dist.sh --insecure-tls               publish it
 reportctl status <id> done "fixed in <commit>" + archive
 /changelog              post the summary
@@ -94,6 +95,15 @@ handles its own `clean` (both makefiles) and the tester flags
 (`SWOS_TEST_NO_INJURIES_CARDS=1`, `SWOS_SAVE_FORMAT_JSON_VERIFY=0`); do not
 hand-roll it. See CLAUDE.md, "Release builds".
 
+**Then write the changelog entry.** Every published build has one in
+`packaging/web/changelog.html` (embedded in the downloads page, and at
+baker76.com/changelog.html); its header comment says how. The entry names the
+build the binaries carry and its build time — the `Build X · YYYY-MM-DD HH:MM
+UTC` line at the top of `dist/swos.html`, which `gen_downloads_page.sh` prints as
+"built …" — so it is written AFTER the drop is built, and committed. It lives
+outside the paths the `-dirty` stamp covers, so committing it does not
+invalidate the drop.
+
 ### Knowing when a long step is finished
 
 The drop takes 40+ minutes and the publish 20+, and both go quiet for minutes at
@@ -138,6 +148,13 @@ run. `--insecure-tls` is required and is not laziness: baker76.com is GoDaddy
 shared hosting whose FTP certificate is issued to the provider, not to the
 domain. `--verify-only` re-checks what is on the server without re-uploading
 111 MB.
+
+It also refuses when the drop's build has **no entry in
+`packaging/web/changelog.html`** (step 5) — add it, commit, and run again, or pass
+`--skip-changelog` when publishing without one is meant. The downloads page
+(`swos.html`) and `changelog.html` go to `/public_html` with every full or
+`--bin-only` upload; a changelog fix on its own needs no new drop:
+`scripts/upload_dist.sh --insecure-tls --page-only`.
 
 ## 7. Close the reports
 

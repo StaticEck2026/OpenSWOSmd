@@ -1,5 +1,7 @@
 # `primary_comp_block` → typed semantic fields (hand-off)
 
+> Status (2026-09-30): **blob retired, one item open.** `primary_comp_block` is gone, and so are the four split keys described below (`primary_name_ptr`, `primary_comp_tail` etc.): slot 0 is now a `CompetitionSlotBuffer` saved like the other four slots, i.e. a `primary_competition_context` raw blob plus the typed cross-target `emit_comp_slot("primary")` override (`src/save_format_json.c`). **Still open:** a symbolic `namePtr`. On load `RebuildPointersAfterLoad` Step 1b (`src/career_init.c`) points it at the slot's own `competitionName`, which loses the `aFriendly` identity and `aEuropeanTour..aOceaniaTour` range checks described below. Kept as the record of how.
+
 This document tracks the work to retire the `primary_comp_block`
 byte-blob field in the JSON save format and replace it with typed
 semantic fields. The blob currently encodes 154 bytes of

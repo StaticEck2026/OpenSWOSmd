@@ -1,7 +1,16 @@
 # SWOS SFX research
 
-The in-game sound effects are stored in `bin/sound/sfx.sng` (note/sequence
-table) + `bin/sound/sfx.in1` (sample bank), both in RJP1 format
+> **Status (2026-09-30): research log, partly superseded.** A tester's by-ear
+> pass (`987705e`, 2026-05-05) renamed the ids, so the **current names and
+> meanings are the `#define`s in `include/sfx_ids.h`** (e.g. `0x0F` =
+> `SFX_CROWD_KEEPERSAVES`, `0x25` = `SFX_BALL_KEEPER_SAFE_2`); the guesses below
+> predate it. The debug SFX-test mode (number keys at the menu) described below
+> is no longer in `src/platform_sdl.c`; to trace what the game triggers, build
+> with `make SWOS_DEBUG=1` (`SWOS_DEBUG_SFX`, `include/sfx_debug.h`), which logs
+> every note/wave/preset trigger as an `[sfx]` line with its `sfx_ids.h` name.
+
+The in-game sound effects are stored in `bin/sound/SFX.SNG` (note/sequence
+table) + `bin/sound/SFX.IN1` (sample bank), both in RJP1 format
 (`RJP1SMOD` header). The bank holds **72 instruments** and **13
 "subsongs"** (the latter being the preset table — 4-byte records, one
 per preset, each byte = a noteId routed to one of the 4 channels).
@@ -10,8 +19,8 @@ This document tracks what each wave/note ID actually plays, sourced
 from three places:
 
 1. **In-code triggers** — the game already calls
-   `_AudioChannelQueueNextWaveIfEnabled(channel, waveId)` and
-   `_AudioApplyPresetToChannels(presetId)` with hardcoded ids in
+   `AudioChannelQueueNextWaveIfEnabled(channel, waveId)` and
+   `AudioApplyPresetToChannels(presetId)` with hardcoded ids in
    `src/sfx_crowd.c`. The function name + the id give us a strong
    hint about what the sound is meant to be.
 2. **By-ear mapping** — debug SFX-test mode in `src/platform_sdl.c`
@@ -31,9 +40,9 @@ this on top of the existing RJP1 player by mirroring two paths:
 
 | Game call | RJP1 call | Indirection chain |
 |---|---|---|
-| `_AudioChannelNoteOnOff(ch, noteId)` | `RJP1_StartSequenceByNoteId(p, ch, noteId)` | `song_data[3] + noteId*4` (BE32 offset) `+ song_data[5]` → first byte = wave id → `song_data[4] + waveId*4 + song_data[6]` = sequence_data |
-| `_AudioChannelQueueNextWaveIfEnabled(ch, waveId)` | `RJP1_StartSequenceByWaveId(p, ch, waveId)` | `song_data[4] + waveId*4 + song_data[6]` = sequence_data |
-| `_AudioApplyPresetToChannels(presetId)` | iterates 4 noteIds via `RJP1_PresetEntry` then `StartSequenceByNoteId` per channel | `song_data[2] + presetId*4` = 4-byte (one noteId per channel) |
+| `AudioChannelNoteOnOff(ch, noteId)` | `RJP1_StartSequenceByNoteId(p, ch, noteId)` | `song_data[3] + noteId*4` (BE32 offset) `+ song_data[5]` → first byte = wave id → `song_data[4] + waveId*4 + song_data[6]` = sequence_data |
+| `AudioChannelQueueNextWaveIfEnabled(ch, waveId)` | `RJP1_StartSequenceByWaveId(p, ch, waveId)` | `song_data[4] + waveId*4 + song_data[6]` = sequence_data |
+| `AudioApplyPresetToChannels(presetId)` | iterates 4 noteIds via `RJP1_PresetEntry` then `StartSequenceByNoteId` per channel | `song_data[2] + presetId*4` = 4-byte (one noteId per channel) |
 
 `song_data[i]` is RJP1's terminology for what the Amiga audio engine
 calls `bankSectionPtrs[i]`. The numbering is the same.
@@ -45,25 +54,25 @@ grouped by the function that calls it.
 
 | C trigger function | Path | id (dec/hex) | Meaning (guessed from fn name) |
 |---|---|---|---|
-| `_PlayFoulWhistleSample` | wave | 4 / `0x04` | FOUL whistle |
-| `_PlayCornerKickSample` | wave | 15 / `0x0F` | Corner kick — but user heard "aww" at id 15, so the function name may be wrong; could be a generic crowd reaction (MISSGOAL?) |
-| `_PlaySfxSample16` | wave | 16 / `0x10` | Generic kick variant — user heard "soft bounce" at id 16 |
-| `_PlayGoalKickOffSample` | wave | 18 / `0x12` | Kick-off after goal — but user heard "aww" at id 18, function name suspect |
-| `_PlayEndGameWhistleSample` | wave | 22 / `0x16` | ENDGAMEW (final whistle) |
-| `_PlayMissGoalSample` | wave | 38 / `0x26` | MISSGOAL ("aaah") |
-| `_PlayGoodPassSample` | wave | 39 / `0x27` | Crowd appreciation? |
-| `_PlaySample3IfNotTraining` | wave | 44 / `0x2C` | Unknown |
-| `_PlayRefereeWhistleSample` | wave | 49 / `0x31` | REF_WH (kickoff/restart whistle) |
+| `PlayFoulWhistleSample` | wave | 4 / `0x04` | FOUL whistle |
+| `PlayCornerKickSample` | wave | 15 / `0x0F` | Corner kick — but user heard "aww" at id 15, so the function name may be wrong; could be a generic crowd reaction (MISSGOAL?) |
+| `PlaySfxSample16` | wave | 16 / `0x10` | Generic kick variant — user heard "soft bounce" at id 16 |
+| `PlayGoalKickOffSample` | wave | 18 / `0x12` | Kick-off after goal — but user heard "aww" at id 18, function name suspect |
+| `PlayEndGameWhistleSample` | wave | 22 / `0x16` | ENDGAMEW (final whistle) |
+| `PlayMissGoalSample` | wave | 38 / `0x26` | MISSGOAL ("aaah") |
+| `PlayGoodPassSample` | wave | 39 / `0x27` | Crowd appreciation? |
+| `PlaySample3IfNotTraining` | wave | 44 / `0x2C` | Unknown |
+| `PlayRefereeWhistleSample` | wave | 49 / `0x31` | REF_WH (kickoff/restart whistle) |
 | `crowdSamples[0..3]` | wave | 55, 56, 58, 62 / `0x37, 0x38, 0x3A, 0x3E` | Background crowd chants — likely BGCRD3L / CHANT4L / CHANT8L / CHANT10L |
-| `_PlaySample(1)` | preset | 1 | Used by `_PlaySample1IfNotTraining` and `_PlaySample1` — likely match-event preset |
-| `_PlaySample(3)` | preset | 3 | Used by `_PlaySample2IfNotTraining` |
-| `_PlaySample(4)` | preset | 4 | Used by `_PlaySample4IfNotTraining` |
-| `_PlaySample(6)` | preset | 6 | Used by `_PlayPenaltySample` |
-| `_PlaySample(7)` | preset | 7 | Used by `_PlaySample7IfNotTraining` |
+| `PlaySample(1)` | preset | 1 | Used by `PlaySample1IfNotTraining` and `PlaySample1` — likely match-event preset |
+| `PlaySample(3)` | preset | 3 | Used by `PlaySample2IfNotTraining` |
+| `PlaySample(4)` | preset | 4 | Used by `PlaySample4IfNotTraining` |
+| `PlaySample(6)` | preset | 6 | Used by `PlayPenaltySample` |
+| `PlaySample(7)` | preset | 7 | Used by `PlaySample7IfNotTraining` |
 
-The two `_HandleKickSampleAndCrowd` callers that pass a runtime sfxId
-(`_PlayKickSample`, the dynamic 0x25/0x28 alternation) and
-`_PlayKickSample`'s code path also use 0x25 / 0x28 for kick variants.
+The two `HandleKickSampleAndCrowd` callers that pass a runtime sfxId
+(`PlayKickSample`, the dynamic 0x25/0x28 alternation) and
+`PlayKickSample`'s code path also use 0x25 / 0x28 for kick variants.
 
 ## By-ear mapping (wave mode, channel 3)
 
@@ -75,7 +84,7 @@ is the working table; correct any rows as we learn more.
 | 1 / `0x01` | low background crowd | `BGCRD3L` | high |
 | 2 / `0x02` | low background crowd (same as 1) | `BGCRD3L` second loop, or another bg variant | medium |
 | 3 / `0x03` | crowd cheer | `HOMEGOAL` or one of CHANT4L/8L/10L | medium |
-| 4 / `0x04` | whistle | `FOUL` (matches game's `_PlayFoulWhistleSample`) | high |
+| 4 / `0x04` | whistle | `FOUL` (matches game's `PlayFoulWhistleSample`) | high |
 | 5 / `0x05` | crowd cheer | crowd chant variant | medium |
 | 6 / `0x06` | crowd cheer | crowd chant variant | medium |
 | 7 | (untested) | ? | — |
@@ -86,15 +95,15 @@ is the working table; correct any rows as we learn more.
 | 12 / `0x0C` | kick | `KICKX` variant | high |
 | 13 / `0x0D` | bounce | `BOUNCEX` variant | high |
 | 14 / `0x0E` | click sound | `BOUNCEX` soft variant or tackle | medium |
-| 15 / `0x0F` | "awww" | `MISSGOAL` (matches what _PlayCornerKickSample plays — function name is wrong, this isn't a corner-kick sound) | high |
-| 16 / `0x10` | soft bounce | `KICKX` or `BOUNCEX` (matches `_PlaySfxSample16`) | high |
+| 15 / `0x0F` | "awww" | `MISSGOAL` (matches what PlayCornerKickSample plays — function name is wrong, this isn't a corner-kick sound) | high |
+| 16 / `0x10` | soft bounce | `KICKX` or `BOUNCEX` (matches `PlaySfxSample16`) | high |
 | 17 / `0x11` | hard bounce | `KICKX` variant | medium |
-| 18 / `0x12` | "awww" | `MISSGOAL` (matches what `_PlayGoalKickOffSample` plays — function name suspect) | medium |
+| 18 / `0x12` | "awww" | `MISSGOAL` (matches what `PlayGoalKickOffSample` plays — function name suspect) | medium |
 | 19 / `0x13` | unknown | ? | — |
 | 20 / `0x14` | (untested — Shift+0 not pressed) | ? | — |
 
-**Important code finding:** `_PlayCornerKickSample` uses wave id 15
-and `_PlayGoalKickOffSample` uses wave id 18, but the user heard
+**Important code finding:** `PlayCornerKickSample` uses wave id 15
+and `PlayGoalKickOffSample` uses wave id 18, but the user heard
 "awww" (a MISSGOAL crowd reaction) at both ids. Either these helper
 functions are misnamed in our reverse-engineered C source, or the
 wave at those ids really is a generic crowd reaction that gets
@@ -152,11 +161,13 @@ suffixes indicate per-event variants (e.g. `KICK1, KICK2, KICK3`).
 
 1. Run with SFX-test mode (`./bin/SWOS`). Press digit keys at the menu;
    the first digit press loads the SFX bank. `q`/`a` paginate.
+   *(The SFX-test mode has since been removed — see the status note at the
+   top; render ids with `rjp1player -w SFX` (docs/SFX_REVIEW.md) instead.)*
 2. Listen, write down the sound for each id.
-3. Add a row to the by-ear table above and update `src/sfx_ids.h`
+3. Add a row to the by-ear table above and update `include/sfx_ids.h`
    with a `#define` matching the SWOS 2020 name.
 4. When all 72 instruments are mapped, remove the SFX-test handler
-   from `pump_events_any_thread` and the lazy `_LoadSfxResources`
+   from `pump_events_any_thread` and the lazy `LoadSfxResources`
    trigger.
 
 ## Spectral fingerprint match against SWOS 2020 RAW set (2026-04-26)

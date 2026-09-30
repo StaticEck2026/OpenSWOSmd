@@ -216,9 +216,12 @@ share it.
 **3. A write to `save:/` is not durable until it is committed,** and SDL will
 not do it. Without the commit a save looks written, reads back correctly for
 the rest of the session, and is simply absent next launch. `swos_save_commit()`
-calls `SDL_NintendoSwitch_CommitSaveData("save")` and is called from
-`swos_io_save()` and `Settings_Save()`, in both cases **after** the file is
-closed, which the commit requires.
+calls `SDL_NintendoSwitch_CommitSaveData("save")` and is called, always **after**
+the file is closed (which the commit requires), from every write to the save
+mount (`20998f9`): `rob_save()`/`rob_delete()` in `resload.c` — the path careers,
+tactics, edited teams and options actually take — plus `swos_io_save()`,
+`Settings_Save()` and the first-launch `SWOS.ini`, the `.SRP` replays
+(`replay_v2.c`), the arcade high-score table and the match-report zip.
 
 **4. `printf` and `stderr` reach nobody.** Nothing connects stdio to a devkit,
 so a build that fails during startup gives an error code and not one word about
@@ -237,8 +240,11 @@ go to their files; only the stderr side is diverted. The `fprintf` in the else
 arm is the real function, because a macro is never expanded recursively inside
 its own expansion.
 
-`src/platform_switch.cpp` is the other end, and is the project's **only C++
-translation unit** — it exists because `NN_LOG` is a C++ macro (`::nn::diag::`).
+`src/platform_switch.cpp` is the other end, and is the project's **only
+Switch-specific C++ translation unit** — it exists because `NN_LOG` is a C++
+macro (`::nn::diag::`). (It is no longer the only `.cpp` in `src/`:
+`netplay_netem_install.cpp` bridges netplay to GGPO-X, and compiles to nothing
+here because the Switch build does not define `SWOS_NETPLAY`.)
 `Makefile.amiga` filters it out through `SWITCH_ONLY_SRCS`, the same way
 `SDL_ONLY_SRCS` filters C. The desktop builds' `stderr`-to-`SWOS.log`
 `freopen` is skipped here: a log file on the save mount would burn the player's
@@ -350,7 +356,7 @@ before submission:**
 
 | field | current | why |
 |---|---|---|
-| `ApplicationId` | `0x01004b9000490000` | the SDK's Demo1 sample. Installing this build overwrites Demo1 if that sample is on the console, and two titles sharing an id overwrite each other's saves |
+| `ApplicationId` | `0x0100c0d000494000` | an SDK sample's id (PrepoSimple — deliberately *not* Demo1, `0x01004b9000490000`, which the reference port on the same devkit uses). Installing this build overwrites that sample if it is on the console, and two titles sharing an id overwrite each other's saves |
 | `ApplicationErrorCodeCategory` | `ABC12` | required because SDL's assert dialog calls `nn::err::ShowApplicationError` |
 
 Do not invent an id that looks like a development range:
@@ -416,7 +422,8 @@ result = (description << 9) | module
 - Replace the borrowed `ApplicationId` and error code category.
 - Decide what screenshots do on a read-only mount.
 - `SDL_NINTENDOSWITCH_SINGLEPLAYER=1` in the fork's config removes a lot of
-  input-related certification pain, and SWOS is local-only.
+  input-related certification pain, and the Switch build is local-only (no
+  netplay is compiled into it).
 - Verify saves survive a relaunch, and that the commit is in the right places.
 - Handheld/docked transitions, audio on the console's speakers, frame pacing.
 - Cert has not been surveyed.

@@ -6,6 +6,11 @@ pointers. Written 2026-07-18 after a long session where time was lost re-derivin
 docs already answered. **If you are picking this up cold: read §5 (open issues) and §6
 (gotchas) first — they encode what has already been ruled out so you don't re-try it.**
 
+> **Status (2026-09-30): AGA work is PARKED (since 2026-07-30) — SDL first.** Kept as the entry point for
+> when it resumes; don't pick it up without the owner. §5a (leftward scroll jitter) was
+> the last recorded open issue. Paths below were updated for the 2026-08-12 repo merge
+> and the AmigaScope submodule (`scripts/amiga/amigascope`).
+
 This is the Amiga (m68k, FS-UAE) build. SDL renders chunky and does NOT exercise any of the
 copper/blitter scroll path — all of this is `#if !defined(SWOS_SDL_BUILD)` / `#ifdef AGA`.
 
@@ -22,8 +27,8 @@ copper/blitter scroll path — all of this is `#if !defined(SWOS_SDL_BUILD)` / `
 | **AGA hardware docs** `/mnt/c/Projects/Amiga/doc/aga/` | Authoritative chipset behaviour — **read these instead of guessing.** `RandyAGA.txt` ("Smooth Hardware Scrolling", "LONG burst mode" — the fine-scroll model), `AGA Registers.pdf`, `AGA.guide`, `A1200FuncSpec.txt`. |
 | **Memory** (`~/.claude/.../memory/`) | `project_aga_fmode_impl`, `project_aga_fmode_leftscroll_jitter`, `project_aga_mixed_depth_rendering`, `project_aga_sprite_ddfstrt_dma_steal`, `feedback_dont_blame_wsl`. Point-in-time findings; verify against code. |
 
-Source of record for engine behaviour: the Amiga port `/mnt/c/Projects/AI/SWOS/OpenSWOS` (data
-`Data.c`, `SWOS2.s`) and SwosGfx `AmigaTools.cs` for asset formats.
+Source of record for engine behaviour: this repo, `/mnt/c/Projects/AI/SWOS/OpenSWOS`
+(reference data `data/Data.c`, `data/SWOS2.s`) and SwosGfx `AmigaTools.cs` for asset formats.
 
 ---
 
@@ -36,6 +41,7 @@ when built `-DPITCH_SCROLL_TEST`. It shows ONLY a scrolling pitch (no players ye
 ```sh
 cd /mnt/c/Projects/AI/SWOS/OpenSWOS
 unset OS                              # else the Makefile picks the Windows 'where' branch
+# MUST be the benbaker76 fork of vscode-amiga-debug (same dir name as the marketplace build)
 BART=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 export PATH="$BART/opt/bin:$BART:$PATH"   # opt/bin = gcc/as; $BART = elf2hunk (BOTH needed)
 rm -f obj/*.d                          # stale .d carry Windows C:/ paths -> break make
@@ -48,11 +54,11 @@ around `ShowLoaderIntroSequence` in SWOS.c) so it boots straight to the pitch.
 **Boot + drive (see GDB_DEBUGGING.md for detail):**
 ```sh
 scripts/amiga/amiga_gdb.sh up            # or: down / status / restart
-P="python3 scripts/amiga/gdb_proxy.py cmd"
-$P "break PitchScrollTest"; timeout 30 python3 scripts/amiga/gdb_proxy.py cmd "continue"
+P="python3 scripts/amiga/amigascope/gdb_proxy.py cmd"
+$P "break PitchScrollTest"; timeout 30 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "continue"
 $P "set var g_pstAutoScrollX = 2"        # continuous scroll, bounces at edges
 $P "set var g_pstFullRedraw = 0"         # 0 = REAL incremental ScrollX (what the game uses)
-$P "delete"; timeout 6 python3 scripts/amiga/gdb_proxy.py cmd "continue"   # free-run
+$P "delete"; timeout 6 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "continue"   # free-run
 ```
 Leave it free-running for the display to stay live. A read-probe returning `[BUSY: target
 running]` = free-running = good. To interrupt: `pkill -INT -f '[m]68k-amiga-elf-gdb'` then
@@ -71,7 +77,7 @@ running]` = free-running = good. To interrupt: `pkill -INT -f '[m]68k-amiga-elf-
 
 ---
 
-## 3. Tools (all in `scripts/amiga/`, driven through the gdb proxy)
+## 3. Tools (all in `scripts/amiga/amigascope/`, driven through the gdb proxy; `scripts/amiga/amiga_gdb.sh` is a shim that loads `scripts/amiga/amigascope.env` and forwards there)
 
 | Tool | Use |
 |---|---|
@@ -83,8 +89,10 @@ running]` = free-running = good. To interrupt: `pkill -INT -f '[m]68k-amiga-elf-
 | `copper_disasm.py` | disassemble the live copper list (BPL ptrs, DDF/DIW windows, fine scroll, palette) |
 
 ### ⚠️ The two FS-UAE binaries (the single biggest time-sink — see DEBUG_TOOLKIT.md)
-- **Stock** (bartman vscode ext, the harness default `FSUAE_DIR`): `monitor screenshot`
-  **re-composites a clean settled frame** — real-time artifacts vanish.
+- **Stock** (bartman vscode ext, AmigaScope's own default `FSUAE_DIR`): `monitor screenshot`
+  **re-composites a clean settled frame** — real-time artifacts vanish. (For this project
+  `scripts/amiga/amigascope.env` now sets `FSUAE_BIN` to the modified binary below, so the
+  shim boots the modified one by default.)
 - **Modified** `/mnt/c/Projects/Linux/fs-uae/fs-uae`: `monitor screenshot` **retains the LIVE
   frame** (`fsemu_screenshot_capture_now`), and has the `monitor profile` DMA recorder. Boot it:
   ```sh
@@ -263,7 +271,7 @@ architectural work, not a quick patch. The rig's 6-per-row grid is a pathologica
 > the historical record of what was/wasn't propagated at the time.
 
 Scroll/display/sprite `.c` are shared between the SDL tree
-(`/mnt/c/Projects/AI/SWOS/OpenSWOS`, canonical edit site) and the Amiga tree
-(`/mnt/c/Projects/AI/SWOS/OpenSWOS`, what FS-UAE builds). `display.h` genuinely diverges — hand-port
+(`SWOS_C_SDL`, canonical edit site) and the Amiga tree
+(`SWOS_C`, what FS-UAE builds) — both now this one repo. `display.h` genuinely diverges — hand-port
 its 3 AGA changes. Copy this file (`docs/AGA_TEST.md`) to both trees. **Never git-commit the
 Amiga tree** (owner commits it); SDL tree commits straight to main, source only.
