@@ -310,6 +310,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/clear":
             self.handle_clear()
             return
+        if self.path == "/delete":
+            self.handle_delete()
+            return
         if self.path != "/action":
             self.send_error(404)
             return
@@ -353,6 +356,37 @@ class Handler(BaseHTTPRequestHandler):
         write_log("clear", f"=== {ts}  action=clear (from a fetch script) ===\n"
                            f"removed {len(removed)}, kept {len(kept)}, refused {len(refused)}\n--- OK ---\n")
         body = json.dumps({"removed": removed, "kept": kept, "refused": refused}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def handle_delete(self):
+        """POST /delete, body 'name=<recording>.SRP' (form-encoded): one recording and its
+        card, from the playback page's delete buttons (docs/PLAYBACK.md). Only a name the
+        clear rules accept, nothing outside the recordings folder. The page sends
+        X-SWOS-Admin: 1 -- a header a cross-site form cannot set, so another site cannot make
+        a logged-in browser delete anything. Answers JSON: {"removed": true|false}."""
+        if self.headers.get("X-SWOS-Admin") != "1":
+            self.send_error(403, "missing X-SWOS-Admin header")
+            return
+        length = int(self.headers.get("Content-Length", 0))
+        if length > 4096:
+            self.send_error(413)
+            return
+        raw = self.rfile.read(length).decode("utf-8", "replace")
+        name = parse_qs(raw).get("name", [""])[0]
+        if not RECORDING_NAME.match(name):
+            self.send_error(400, "not a recording name")
+            return
+        removed = delete_file(os.path.join(RECORDINGS_DIR, name))
+        delete_file(os.path.join(RECORDINGS_DIR, name[:-4] + ".json"))
+        refresh_recordings_index()
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        write_log("delete", f"=== {ts}  action=delete (from the playback page) ===\n"
+                            f"{name}: {'removed' if removed else 'not there'}\n--- OK ---\n")
+        body = json.dumps({"removed": removed}).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

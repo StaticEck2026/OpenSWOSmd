@@ -64,6 +64,32 @@ def main():
         def do_HEAD(self):
             self.handle_get(send_body=False)
 
+        def do_POST(self):
+            # The playback page's delete button, as the server's admin service answers it
+            # (tools/matchmaker-admin/main.py handle_delete) -- here without the login, since
+            # this only ever listens on this machine. The same header and name checks.
+            if urllib.parse.urlsplit(self.path).path != "/cc/delete":
+                return self.send_error(404)
+            if self.headers.get("X-SWOS-Admin") != "1":
+                return self.send_error(403)
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            name = urllib.parse.parse_qs(self.rfile.read(min(length, 4096)).decode()).get("name", [""])[0]
+            if "/" in name or "\\" in name or name.startswith(".") or not name.upper().endswith(".SRP"):
+                return self.send_error(400)
+            removed = False
+            for f in (name, name[:-4] + ".json"):
+                try:
+                    os.remove(os.path.join(mounts["/recordings/"], f))
+                    removed = removed or f == name
+                except OSError:
+                    pass
+            body = ('{"removed": %s}' % ("true" if removed else "false")).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def handle_get(self, send_body):
             path = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path)
             if path in ("/", "/playback"):

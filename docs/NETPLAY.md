@@ -1323,7 +1323,7 @@ players without relaying, or one of its own anywhere else:
 build/matchmaker/swos-matchmaker 19602 --record --ledger matches.jsonl
 SWOS_RECORD=server ...          # the player: stream to the matchmaker it logged in to
 SWOS_RECORD=10.0.0.5:19602 ...  #             ... or to any recorder
-# or in SWOS.ini:  [netplay] record = server | host[:port] | (empty = off)
+# or in SWOS.ini:  [netplay] record = server (the default; empty = server) | host[:port] | off
 ```
 
 **What is streamed** (`include/record_proto.h`, client `src/match_record.c`): a HELLO

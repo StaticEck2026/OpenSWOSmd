@@ -369,8 +369,9 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         opts->matchmaker };
     items[n++] = (IniEntry){ "netplay", "record",
         "; record: stream every live match to a recorder, which keeps it and compares the\n"
-        "; two players' frames to catch a desync: \"server\" (the matchmaker above), a\n"
-        "; recorder of your own as \"host\" or \"host:port\", or empty for none.",
+        "; two players' frames to catch a desync: \"server\" (the default: the matchmaker\n"
+        "; above, for the matches it arranges), a recorder of your own as \"host\" or\n"
+        "; \"host:port\" (every match), or \"off\". Empty means the default.",
         opts->record };
     items[n++] = (IniEntry){ "netplay", "reports",
         "; reports: true | false -- after an online match, send both players' SWOS.log and\n"

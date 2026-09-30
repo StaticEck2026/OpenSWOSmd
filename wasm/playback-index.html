@@ -25,6 +25,13 @@
     .score { color: #fff; font-weight: 600; margin: 0 6px; }
     .flag { font-size: 11px; padding: 0 5px; border-radius: 3px; margin-left: 6px; }
     .desync { background: #5a1a1a; color: #ff9090; }
+    li { display: flex; gap: 6px; align-items: stretch; }
+    li a { flex: 1; }
+    .del { display: none; background: #2a1414; color: #ff9090; border: 1px solid #5a2a2a; border-radius: 4px;
+           margin-bottom: 4px; padding: 0 10px; font: 12px system-ui, sans-serif; cursor: pointer; }
+    .del:hover { background: #3a1818; }
+    body.manage .del { display: block; }
+    #manage { float: right; color: var(--dim); font-size: 12px; cursor: pointer; text-decoration: underline; }
     .early { background: #4a3a10; color: #f0c060; }
     li a:hover { outline: 1px solid var(--accent); }
     .when { min-width: 17ch; }
@@ -35,6 +42,7 @@
 </head>
 <body>
   <main>
+    <span id="manage" title="Delete recordings (asks for the admin login)">manage</span>
     <h1>SWOS Playback</h1>
     <p>Recorded online matches. Open one, scrub to the moment, and "copy link" gives the exact frame.</p>
     <input id="filter" type="search" placeholder="Filter by player, team, date or match id" autocomplete="off">
@@ -95,7 +103,12 @@
           a.appendChild(when);
           if (card) a.appendChild(who(card)); else a.appendChild(id);
           a.appendChild(size);
-          var li = document.createElement('li'); li.appendChild(a); listEl.appendChild(li);
+          var li = document.createElement('li'); li.appendChild(a);
+          var del = el('button', 'del', 'delete');
+          del.title = 'Delete this recording from the server';
+          del.onclick = function () { remove(it, card); };
+          li.appendChild(del);
+          listEl.appendChild(li);
         });
         msg.textContent = items.length ? '' : 'No recordings on the server.';
       }
@@ -105,6 +118,38 @@
         if (!s) return '';
         if (!/^\d+$/.test(s)) return s.replace(/([KMG])$/, ' $1B');
         return +s > 1e6 ? (s / 1e6).toFixed(1) + ' MB' : Math.round(s / 1e3) + ' KB';
+      }
+      // ---- Deleting one recording (docs/PLAYBACK.md): only in "manage" mode, and only for
+      // whoever has the admin page's login -- the delete goes to the admin service behind
+      // /cc/, whose password the browser asks for the first time. X-SWOS-Admin is a header a
+      // form on another site cannot send, so no other page can delete through that login.
+      document.getElementById('manage').onclick = function () {
+        var on = document.body.classList.toggle('manage');
+        this.textContent = on ? 'done' : 'manage';
+      };
+      function remove(it, card) {
+        var what = it.name;
+        if (card && card.players)
+          what += '\n' + (card.players[0] && card.players[0].name || '?') + ' v ' +
+                  (card.players[1] && card.players[1].name || '?');
+        if (!confirm('Delete this recording from the server?\n\n' + what)) return;
+        var x = new XMLHttpRequest();
+        x.open('POST', base.replace(/recordings\/?$/, '') + 'cc/delete');
+        x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        x.setRequestHeader('X-SWOS-Admin', '1');
+        x.onload = function () {
+          if (x.status === 200) {
+            items = items.filter(function (i) { return i.name !== it.name; });
+            delete cards[it.name];
+            render();
+          } else if (x.status === 401) {
+            alert('Not deleted: this needs the admin login.');
+          } else {
+            alert('Not deleted: the server said ' + x.status + ' ' + x.statusText);
+          }
+        };
+        x.onerror = function () { alert('Not deleted: the server could not be reached.'); };
+        x.send('name=' + encodeURIComponent(it.name));
       }
       document.getElementById('filter').addEventListener('input', render);
       // nginx's autoindex: one <a href="NAME"> per file, then its date and size on the line.

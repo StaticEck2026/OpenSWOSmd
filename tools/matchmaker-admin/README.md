@@ -5,6 +5,14 @@ recordings player, the four `swos-matchmaker-service.sh` actions, and clearing t
 and the recordings) plus a live output pane, for maintaining the matchmaker server without
 an SSH session.
 
+## Deleting one recording
+
+`POST /delete` (`/cc/delete` through nginx), body `name=<recording>.SRP`: the playback page's
+per-recording **delete** button (docs/PLAYBACK.md). Removes that `.SRP` and its card and
+rewrites `index.json`. It needs the `X-SWOS-Admin: 1` header, which a cross-site form cannot
+set, and only a name matching `<date>-<time>-<id>.SRP` -- nothing outside the recordings
+folder. Same user, no root, like the Clear buttons.
+
 ## Update recordings player
 
 Builds the player (`scripts/build_playback.sh`, needs emsdk) and copies it into

@@ -39,13 +39,25 @@ match ended, whether it was relayed, the desync frame) and `index.json`, every c
 folder newest first (`third_party/matchmaker/Server/Recorder.cpp`, `WriteMatchCard`). The
 page reads `index.json` beside nginx's listing and lists every recording either way; one
 without a card shows its match id as before. Addresses are never on a card -- the page is
-public; it says who, not where from. A player who does not record (`[netplay] record` is off
-by default) never streams, but still gets a name: the other player's opening message names
+public; it says who, not where from. A player who does not record (`[netplay] record = off`, a
+browser, or a build from before 2026-09-30, when it became on by default) never streams, but still gets a name: the other player's opening message names
 both (`"recorded": false` on the card, `peer` in the ledger), and for matches from before the
 recorder kept that, `recordings_index.py` reads it from the match report's `rating.txt`. Recordings made before the recorder wrote cards get
 theirs from the ledger's `match` lines, and a card whose recording was cleared goes:
 `scripts/recordings_index.py`, which `install`, `restart` and the admin page's
 "Update recordings player" run, and the "Clear" buttons after them.
+
+## Deleting a recording
+
+**manage** (top right of the list) puts a **delete** button on every row. A delete asks for
+confirmation, names the match, and removes the `.SRP` and its card from the server. It goes to
+the admin service behind `/cc/` (`POST /cc/delete`, `tools/matchmaker-admin/main.py
+handle_delete`), so the browser asks for the admin page's login the first time, and nobody
+without it can delete anything; the request carries an `X-SWOS-Admin: 1` header, which a form
+on another site cannot send, so no other page can delete through a logged-in browser. Only a
+recording's own name is accepted. The admin page's **Clear all recordings** is still there
+for everything at once. `scripts/serve_playback.py` answers the same request locally, without
+a login, for trying it on this machine.
 
 ## A recording is shown in the view it was played in
 

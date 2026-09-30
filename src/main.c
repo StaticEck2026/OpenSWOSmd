@@ -392,7 +392,7 @@ int main(int argc, char **argv)
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
-    opts.record[0] = '\0';        /* default: live matches are not recorded */
+    opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
     opts.prediction = 1;          /* default: a live match's replay keeps what each player saw */
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     opts.reports = 1;             /* a tester build: match reports come back to us */
@@ -891,7 +891,14 @@ int main(int argc, char **argv)
      * SWOS_MM_HOST / SWOS_MM_PORT still win, so a test can point one process
      * somewhere else without touching the player's SWOS.ini. */
     MmClient_SetConfiguredServer(opts.matchmaker);
-    /* And where a live match is recorded, if anywhere (SWOS_RECORD still wins). */
+    /* And where a live match is recorded, if anywhere (SWOS_RECORD still wins). On by
+     * default: an empty record= -- every SWOS.ini written before this, too -- means
+     * "server", which records the matches the matchmaker arranges, to it (match_record.c).
+     * "off" turns it off. Not in a browser: its recording is not wired yet. */
+#ifndef __EMSCRIPTEN__
+    if (!opts.record[0])
+        snprintf(opts.record, sizeof opts.record, "server");
+#endif
     MatchRecord_SetConfigured(opts.record);
     /* And whether a match report leaves this machine (include/match_report.h). */
     MatchReport_SetEnabled(opts.reports);

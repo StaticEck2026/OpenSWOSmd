@@ -32,6 +32,12 @@ typedef struct {
 /* [netplay] record, published by main.c. */
 void MatchRecord_SetConfigured(const char *spec);
 
+/* The next match was arranged by the matchmaker (its START), or not (the direct-IP menu,
+ * a test's loopback pair). "server" records only matches the matchmaker arranged -- to that
+ * matchmaker -- so recording on by default never sends a direct or test match to the live
+ * server. An explicit host[:port] records every match. */
+void MatchRecord_SetArrangedByServer(int32_t on);
+
 /* The recorder a match would go to, as "host:port", or "" when recording is off. */
 const char *MatchRecord_Target(void);
 

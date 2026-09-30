@@ -99,7 +99,9 @@ to peer. `--netem <profile|cycle>` puts the game's own emulator (`src/netem_core
 the middle, where it disturbs the lobby's link too, which the client-side one never does.
 `scripts/relay_test.sh` (`NETEM=wifi|awful|...`) plays two local players through it via the real
 menus; run it after touching `p2p_link`, the lobby's start, or the relay. `--record` makes the
-same server a recorder any live match can stream to (`SWOS_RECORD`/`[netplay] record`, relayed
+same server a recorder any live match can stream to (`SWOS_RECORD`/`[netplay] record`, ON by default
+since 2026-09-30 for the matches the matchmaker arranges -- `MatchRecord_SetArrangedByServer` keeps
+direct and test matches off the live server; relayed
 or peer to peer): it compares both players' confirmed-frame hashes and logs a desync with its
 exact frame, and keeps the match as a `.SRP` that must be the host's `LATEST.SRP` byte for byte
 — both are laid out by `src/srp_writer.c` (§7 "The recorder";

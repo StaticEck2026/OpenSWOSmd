@@ -386,13 +386,17 @@ SERVER**, then the players and games online, or **SERVER NOT CONNECTED** if it c
 it (§11).
 
 **Recording matches** is in the menu too. After LOGIN, open **SETTINGS** on the matchmaking
-screen: **MULTIPLAYER SETTINGS → RECORD MATCHES**, OFF or ON. ON streams every match to the
-server's recorder (§4's `--record`), which keeps it and compares both players frame by frame
+screen: **MULTIPLAYER SETTINGS → RECORD MATCHES**, OFF or ON — **ON by default** since
+2026-09-30 (an empty `record=` in `SWOS.ini` means ON; OFF writes `off`). ON streams every
+match the matchmaker arranges to the server's recorder (§4's `--record`), which keeps it and compares both players frame by frame
 to catch a desync. Like the SERVER row it is saved as soon as it is changed, and it applies
 from the very next match — no restart. What it keeps and how to use it: §12.
 
-ON means the server the player logged in to. A player who names a recorder somewhere else
-in `SWOS.ini` (`[netplay] record = host[:port]`) sees that address in the row instead of ON,
+ON means the server the player logged in to, and only for the matches it arranged: a
+direct-IP match (`--menu=p2p/p2pMenu`) or a test's loopback pair is never streamed to it
+(`MatchRecord_SetArrangedByServer`). The browser build does not record yet. A player who names
+a recorder somewhere else in `SWOS.ini` (`[netplay] record = host[:port]`) records every match
+there, and sees that address in the row instead of ON,
 and switching the row off and back on restores it rather than losing it.
 
 The other rows on MULTIPLAYER SETTINGS — SOUND FX, COMMENTARY, the chat options and the
@@ -657,10 +661,12 @@ Two different questions, answered by two different things:
 **On the server:** `--record`, with `--recordings DIR` and `--ledger FILE` (§4). It takes
 TCP on the same port as everything else.
 
-**On each player's game:** MULTIPLAYER, LOGIN, **SETTINGS → MULTIPLAYER SETTINGS → RECORD
-MATCHES: ON** (§7). That is `[netplay] record = server` in `SWOS.ini`; a recorder somewhere
-else is `host` or `host:port`. It applies from the next match, and both players should
-have it on: the recorder's whole method is comparing the two.
+**On each player's game:** nothing, by default: **RECORD MATCHES** (MULTIPLAYER, LOGIN,
+SETTINGS → MULTIPLAYER SETTINGS) is ON unless a player turned it off (§7). That is
+`[netplay] record = server` in `SWOS.ini`, or an empty `record=`; a recorder somewhere else is
+`host` or `host:port`, and `off` turns it off. Both players should have it on: the recorder's
+whole method is comparing the two, and a match only one of them streams is kept with the
+other's name but not compared.
 
 **What it keeps:**
 

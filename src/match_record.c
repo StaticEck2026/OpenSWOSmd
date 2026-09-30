@@ -17,10 +17,16 @@
 #include <string.h>
 
 static char s_configured[80];
+static int32_t s_arrangedByServer;
 
 void MatchRecord_SetConfigured(const char *spec)
 {
     snprintf(s_configured, sizeof s_configured, "%s", spec ? spec : "");
+}
+
+void MatchRecord_SetArrangedByServer(int32_t on)
+{
+    s_arrangedByServer = on != 0;
 }
 
 #ifdef SWOS_NETPLAY
@@ -90,6 +96,8 @@ static int32_t resolve_target(char *host, size_t hostCap, uint16_t *port)
     if (!spec[0] || SDL_strcasecmp(spec, "off") == 0 || SDL_strcasecmp(spec, "false") == 0)
         return 1;
     if (SDL_strcasecmp(spec, "server") == 0) {
+        if (!s_arrangedByServer)
+            return 1;               /* not the matchmaker's match: see MatchRecord_SetArrangedByServer */
         snprintf(host, hostCap, "%s", MmClient_DefaultHost());
         *port = MmClient_DefaultPort();
         return 0;

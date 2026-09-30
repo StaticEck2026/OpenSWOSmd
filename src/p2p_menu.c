@@ -25,6 +25,7 @@
 #include "menu_load_json.h"
 #include "menu_symbols.h"
 #include "menu_system.h"
+#include "match_record.h"   /* a direct match is not the matchmaker's: "server" does not record it */
 
 #include <stdio.h>
 #include <string.h>
@@ -293,6 +294,7 @@ static void p2pMenu_start_OnSelect(void)
         return;
     }
 
+    MatchRecord_SetArrangedByServer(0);
     if (s_hosting)
         P2PLink_Host(port);
     else

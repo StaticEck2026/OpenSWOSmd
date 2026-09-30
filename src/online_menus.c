@@ -616,6 +616,7 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
 
         /* The lobby is done with; from here the two of us talk directly. */
         MmClient_Disconnect();
+        MatchRecord_SetArrangedByServer(1);     /* [netplay] record = server records it */
         st = NULL;      /* it pointed into what that just cleared */
 
         if (n == 0 || P2PLink_Punch(list, n, localPort) != 0)
@@ -1716,8 +1717,9 @@ static void mmsSelectPitchSet(void)
     if (!s_recordOn[0])
         snprintf(s_recordOn, sizeof s_recordOn, "server");
 
+    /* "off", not "": an empty record= is the default, which records (main.c). */
     if (record_is_on(g_arcadeOpts->record))
-        g_arcadeOpts->record[0] = '\0';
+        snprintf(g_arcadeOpts->record, sizeof g_arcadeOpts->record, "off");
     else
         snprintf(g_arcadeOpts->record, sizeof g_arcadeOpts->record, "%s", s_recordOn);
 
