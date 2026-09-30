@@ -208,9 +208,18 @@ EOF
     # and "enable --now" leaves an already-running server as it was. restart starts a
     # stopped one too, so install works whether or not the service exists yet.
     sudo systemctl restart "$SERVICE_NAME"
+    refresh_match_cards
     echo "Installed and (re)started."
     systemctl status "$SERVICE_NAME" --no-pager || true
     playback_warning
+}
+
+# The match cards again, AFTER a restart: stopping the server closes any match still open
+# and writes its ledger line then, which the cards read -- the run in deploy_playback, before
+# the restart, could not see it (a match left open until a restart got no card, 2026-09-30).
+refresh_match_cards() {
+    sudo -u "${RUN_USER}" python3 "${REPO_DIR}/scripts/recordings_index.py" \
+        --recordings "${DEPLOY_DIR}/recordings" --ledger "${DEPLOY_DIR}/matches.jsonl" || true
 }
 
 restart_service() {
@@ -218,6 +227,7 @@ restart_service() {
     deploy_playback
     echo "Restarting ${SERVICE_NAME} ..."
     sudo systemctl restart "$SERVICE_NAME"
+    refresh_match_cards
     systemctl status "$SERVICE_NAME" --no-pager || true
     playback_warning
 }

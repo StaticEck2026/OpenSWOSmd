@@ -53,6 +53,9 @@ LOCAL_ACTIONS = {
     # The recordings player alone: built and copied into /srv/.../playback, which this
     # account owns -- no root, and no restart, so no match in progress is touched.
     "player": ["scripts/update_playback.sh"],
+    # The /playback/ list alone: every recording's card (names, score) and index.json,
+    # from the ledger and the match reports -- seconds, no build.
+    "cards": ["python3", "scripts/recordings_index.py"],
 }
 # Needs real root - queued for admin-cron-worker.sh instead. That script has
 # its own copy of this same set; both must agree, or a queued file just sits
@@ -67,6 +70,7 @@ ACTIONS = [
     ("pull", "git pull"),
     ("build", "Rebuild (server + recordings player)"),
     ("player", "Update recordings player"),
+    ("cards", "Refresh match list"),
     ("status", "Service: status"),
     ("install", "Service: install"),
     ("restart", "Service: restart"),

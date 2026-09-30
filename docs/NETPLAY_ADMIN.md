@@ -13,6 +13,7 @@ from the ground up (ports, certificates, nginx, the service) is [NETPLAY_SETUP.m
 | **git pull** | `git pull --ff-only` in the server's checkout | the service account | seconds |
 | **Rebuild (server + recordings player)** | `scripts/run_matchmaker.sh --rebuild --build-only --with-playback`: builds the matchmaker and the player (emsdk at `~/git/emsdk`). Builds only — nothing goes live | the service account | minutes |
 | **Update recordings player** | `scripts/update_playback.sh`: builds the player, copies it to `/srv/swos-matchmaker/playback`, and refreshes the match cards (`scripts/recordings_index.py`). Live at once, no restart | the service account | minutes |
+| **Refresh match list** | `scripts/recordings_index.py`: every recording's card (players' names, score) and the list's `index.json`, from the ledger and the match reports. No build, live at once | the service account | seconds |
 | **Service: restart** | `swos-matchmaker-service.sh restart`: puts the built matchmaker live (and the built player, and refreshes the cards), then restarts it. **Ends any match being relayed or recorded** | root, queued | up to a minute to start |
 | **Service: install** | `swos-matchmaker-service.sh install`: the above, plus the `/srv` folders, the systemd unit and nginx's `/playback/`. Use it when a change touches the unit or nginx | root, queued | up to a minute to start |
 | **Service: status** | the service's `systemctl status` | the service account | seconds |
@@ -59,7 +60,7 @@ These still need someone with ssh on the server (Redhair):
 |---|---|
 | `/playback/` still shows the old page | **Update recordings player**, then reload the page (Ctrl+F5); **Rebuild** alone does not put it live |
 | a **delete** on `/playback/` fails with "the server said 403/404" | the admin page is older than the delete endpoint: **Restart admin page** (or, the first time, the ssh restart above) |
-| a card shows `?` for a player | **Update recordings player** fills names from the ledger and the match reports; one without a report in `reports/` stays `?` |
+| a card shows `?` for a player, or a recording shows only its id | **Refresh match list**. A match still open when the server restarted gets its ledger line at the restart itself; `Service: restart` now refreshes the cards after restarting too. Names come from the ledger and the match reports — one without a report in `reports/` stays `?` |
 | Rebuild's log says the player was skipped ("no emsdk") | emsdk not found: the panel looks in `~/git/emsdk` (`EMSDK_DIR`) |
 | a queued button does nothing for more than a minute | the root cron job is not running — ssh, `sudo crontab -l` ([README](../tools/matchmaker-admin/README.md), setup step 2) |
 | after **Service: install**, the log ends with a **WARNING** about `/playback/` | nginx could not be set up by the script; the warning says what to add by hand ([PLAYBACK.md](PLAYBACK.md), "On the server") |
