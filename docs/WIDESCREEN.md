@@ -170,6 +170,42 @@ camera can pan `672 - _screen_width` px and still keep the view on the pitch.
 A wider view therefore scrolls **less** far (the right edge still stops at the
 pitch edge); everything collapses to the original behaviour at 336.
 
+### The DOS view
+
+`[gameplay] style = dos` simulates the PC release's **320x200** view (`MatchViewEnter` pins
+`_sim_view_width/_height`), which decides where the camera aims, its limits and which
+players count as on screen. The PICTURE is separate:
+
+| `[video] widescreen` | DOS picture |
+|---|---|
+| `false`, `stretch` | 320x200, the PC release's own (stretched to fill with `stretch`) |
+| `true` | the same `w x 272` as the Amiga view's widescreen picture (484x272 on 16:9) |
+
+Until 2026-09-30 `true` widened only: 356x200 on 16:9, which looked zoomed in and "threw you
+back to DOS resolution" at kick-off (ReportBot 0013). Now the picture is as tall as the
+Amiga's and shows more pitch in both directions, and the match underneath is still exactly
+DOS -- the replay rig matches the DOS recordings frame for frame with it on.
+
+A picture taller than the simulated view needs a **vertical render origin**, as a wider one
+needs `Render_CameraX`: `Render_CameraY()` (camera.c) scales the simulation camera's range
+`[0, 880 - simH]` onto the picture's `[0, 880 - H]`, so the picture reaches the top and
+bottom of the pitch exactly when the camera does and never shows past the stadium; it is the
+identity whenever the picture is no taller than the view (the Amiga view, DOS at 320x200).
+Everything that DRAWS uses it -- the pitch (`DrawChunkyPitch`), the sprites, the crowd,
+highlight playback, the `.SRP` player -- and nothing the game DECIDES from: the draw list's
+`onScreen` and `animVis` culls keep measuring from `_cameraY` (`d2sim` in sprites.c), as they
+keep `_cameraX` for X. The in-match instant replay records the drawn origin and hands it
+back through the inverse, `Render_SimCameraYFromRender`.
+
+The HUD: top-anchored items (the clock, the replay R) sit at `Render_CameraY() + K`;
+bottom-anchored ones (the result panel, the scorer list, the name bar's bottom corners) add
+`RENDER_EXTRA_Y` (display.h: picture height minus simulated height, 72 here, 0 otherwise) so
+they follow the bottom edge down.
+
+A `.SRP` records the height its match was simulated in (META, docs/REPLAY_FORMAT_V2.md), and
+playback maps its camera from that (`ReplayV2_ApplyRecordedSimView`), so a replay draws what
+the live match drew at any picture size.
+
 ### In-match HUD (screen-fixed sprites)
 
 The in-match HUD — team names, score digits, the dash, the scorer list, the

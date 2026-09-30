@@ -168,7 +168,7 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 
     /* compute screen-relative coordinates */
     screenX = pixelX - Render_CameraX();
-    screenY = pixelY - (int16_t)_cameraY.s.i;
+    screenY = pixelY - Render_CameraY();
 
 #ifdef SWOS_SDL_BUILD
     /* The fan is drawn via DrawSprite16Pixels, whose blit is offset by

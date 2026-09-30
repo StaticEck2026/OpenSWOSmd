@@ -695,7 +695,11 @@ GameFrameResult GameLoop_Frame(void)
 #else
                                  _cameraX.s.i,
 #endif
+#ifdef SWOS_SDL_BUILD
+                                 (uint16_t)Render_CameraY());
+#else
                                  _cameraY.s.i);
+#endif
 #ifdef SWOS_SDL_BUILD
     { extern void ReplayRec_FrameBegin(void); ReplayRec_FrameBegin(); }
 #endif
@@ -936,7 +940,7 @@ void MatchViewEnter(void)
                                         * an adaptive widescreen width */
     s_viewSavedH = _screen_height;
     { extern int _dos_view_width; _screen_width = _dos_view_width; }
-    _screen_height   = DOS_VIEW_HEIGHT;
+    { extern int _dos_view_height; _screen_height = _dos_view_height; }
     _sim_view_width  = DOS_VIEW_WIDTH;   /* pinned: the game is DOS at any width */
     _sim_view_height = DOS_VIEW_HEIGHT;
     Platform_ViewChanged();
@@ -1080,6 +1084,9 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
     { extern void ReplayV2_UseRecordedView(void); ReplayV2_UseRecordedView(); }
 #endif
     MatchViewEnter();
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayV2_ApplyRecordedSimView(void); ReplayV2_ApplyRecordedSimView(); }
+#endif
     /* Set the highlight flag AFTER InitGameSaveTeams' fade-out. The flag is what
      * flips refresh_palette_from_copper to the DOS pitch palette; setting it
      * earlier made the (Amiga-graphics) stadium "VS" line-up fade out through DOS

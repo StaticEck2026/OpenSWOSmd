@@ -113,6 +113,9 @@ int32_t ReplayV2_HasAudio(void);
  * when the recording's view is not known or is the player's own. */
 void    ReplayV2_UseRecordedView(void);
 void    ReplayV2_RestoreView(void);
+/* After the viewer's MatchViewEnter: map the camera from the height the recording was
+ * simulated in (META), restored by ReplayV2_RestoreView. */
+void    ReplayV2_ApplyRecordedSimView(void);
 
 /* PlayHighlightsLoop, starting the one scene a .SRP is. */
 void    ReplayV2_StartScene(void);

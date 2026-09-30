@@ -797,9 +797,9 @@ void DrawChunkyPitch(void)
     const int fbH = _screen_height;
 
     int startTileX = (int)Render_CameraX() / PITCH_TILE_SIZE;
-    int startTileY = (int)_cameraY.s.i / PITCH_TILE_SIZE;
+    int startTileY = (int)Render_CameraY() / PITCH_TILE_SIZE;
     int offsetX    = (int)Render_CameraX() % PITCH_TILE_SIZE;
-    int offsetY    = (int)_cameraY.s.i % PITCH_TILE_SIZE;
+    int offsetY    = (int)Render_CameraY() % PITCH_TILE_SIZE;
     if (offsetX < 0) { offsetX += PITCH_TILE_SIZE; startTileX--; }
     if (offsetY < 0) { offsetY += PITCH_TILE_SIZE; startTileY--; }
 

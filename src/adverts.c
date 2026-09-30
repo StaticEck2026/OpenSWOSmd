@@ -414,7 +414,7 @@ skip_advance:
 
     /* Position relative to camera */
     spr->x.s.i = Render_CameraX() + 0x12D;
-    spr->y.s.i = _cameraY.s.i + 0x271E;
+    spr->y.s.i = Render_CameraY() + 0x271E;
 
     if (_currentPlayerIndicatorPosition == 3)
         spr->y.s.i += 0x0A;

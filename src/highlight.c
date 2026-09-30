@@ -315,7 +315,10 @@ static int16_t ReplayCameraY(int16_t recordedY)
     extern uint16_t _playHighlightFlag;
     s_replayRecCamY = recordedY;   /* the decode rebuilds world Y from this */
     if (_playHighlightFlag == 0)
-        return recordedY;          /* in-game instant replay: same space already */
+        /* In-game instant replay: game_loop.c records the DRAWN origin (Render_CameraY,
+         * as it records Render_CameraX), so hand the camera the simulation Y that maps
+         * back onto it -- the identity unless the picture is taller than the view. */
+        return Render_SimCameraYFromRender(recordedY);
 
     /* Y is not scaled the way X is, so the playback camera is just the recorded
      * one clamped into the live vertical range. Sprites follow it regardless of
@@ -325,10 +328,14 @@ static int16_t ReplayCameraY(int16_t recordedY)
      * NOTE 0x260 is still a constant while the visible height became runtime in
      * f860c9a. That is a FRAMING choice now, not a correctness one, but it is
      * wrong for the DOS view's 200 lines and wants revisiting. */
+    /* The picture's own range, [0x10, 880 - its height]: 0x260 at 272 lines, as the
+     * literal was, and the 680 a 200-line DOS picture reaches (the NOTE above). Then back
+     * to the simulation camera that draws there. */
     int16_t out = recordedY;
+    int16_t bottom = (int16_t)(880 - _screen_height);
     if (out < 0x10) out = 0x10;
-    else if (out > 0x260) out = 0x260;
-    return out;
+    else if (out > bottom) out = bottom;
+    return Render_SimCameraYFromRender(out);
 #else
     return recordedY;
 #endif
@@ -882,7 +889,7 @@ sprite_decode:
             }
 
             sx = worldX - (int32_t)Render_CameraX() - _menu_draw_x_offset;
-            sy = worldY - (int32_t)_cameraY.s.i;
+            sy = worldY - (int32_t)Render_CameraY();
         }
 #endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,

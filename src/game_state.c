@@ -575,7 +575,7 @@ position_sprites:
      * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
     _team1NameSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 136 - (int16_t)_team1NameLength;
-    _team1NameSprite.y.s.i = _cameraY.s.i + SIM_RESULT_PANEL_Y + d7 + 10000;
+    _team1NameSprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + SIM_RESULT_PANEL_Y + d7 + 10000;
     _team1NameSprite.z.s.i = 10000;
 
     /* d0 = base row Y for grid sprites */
@@ -631,7 +631,7 @@ position_sprites:
 
     /* --- Team 1 goals digit 2 (units) --- */
     _team1GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 151;
-    _team1GoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
+    _team1GoalsDigit2Sprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
     _team1GoalsDigit2Sprite.z.s.i = 10000;
     _team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + _team1GoalsDigit2;
 
@@ -654,7 +654,7 @@ position_sprites:
         _team1TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 158;
         if (d1 == 1)
             _team1TotalGoalsDigit2Sprite.x.s.i += 4;
-        _team1TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
+        _team1TotalGoalsDigit2Sprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
         _team1TotalGoalsDigit2Sprite.z.s.i = 10002;
         _team1TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -671,7 +671,7 @@ position_sprites:
 
     /* --- Team 2 goals digit 2 (units) --- */
     _team2GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 173;
-    _team2GoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
+    _team2GoalsDigit2Sprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
     _team2GoalsDigit2Sprite.z.s.i = 10000;
     _team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + _team2GoalsDigit2;
 
@@ -693,7 +693,7 @@ position_sprites:
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
         _team2TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 171;
-        _team2TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
+        _team2TotalGoalsDigit2Sprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
         _team2TotalGoalsDigit2Sprite.z.s.i = 10002;
         _team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -714,7 +714,7 @@ position_sprites:
 
     /* --- Dash sprite --- */
     _dashSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 165;
-    _dashSprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 3) + d7 + 10000;
+    _dashSprite.y.s.i = Render_CameraY() + RENDER_EXTRA_Y + (SIM_RESULT_PANEL_Y + 3) + d7 + 10000;
     _dashSprite.z.s.i = 10000;
 
     /* --- Team 1 scorer sprites --- */
@@ -727,7 +727,7 @@ position_sprites:
             if (*widths == 0)
                 break;
             spr->x.s.i = Render_CameraX() + WIDE_MARGIN + 136 - (int16_t)*(widths);
-            spr->y.s.i = _cameraY.s.i + d1 + 10000;
+            spr->y.s.i = Render_CameraY() + RENDER_EXTRA_Y + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -745,7 +745,7 @@ position_sprites:
             if (*widths == 0)
                 break;
             spr->x.s.i = Render_CameraX() + WIDE_MARGIN + 200;
-            spr->y.s.i = _cameraY.s.i + d1 + 10000;
+            spr->y.s.i = Render_CameraY() + RENDER_EXTRA_Y + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -1073,7 +1073,7 @@ set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
         _currentTimeSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 0x14;
-        _currentTimeSprite.y.s.i = _cameraY.s.i + 0x2721;
+        _currentTimeSprite.y.s.i = Render_CameraY() + 0x2721;   /* top-anchored */
 
         /* The DOS release moves the clock 16 rows up and 6 columns left of
          * where the Amiga puts it, and the Amiga has no such adjustment --

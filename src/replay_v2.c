@@ -182,7 +182,7 @@ static void trace_frame(uint32_t frame)
      * by the last ScrollToCurrent -- the picture under the sprites. */
     if (trace_file())
         fprintf(s_trace, "frame %u sprites %u hash %016llx view %d %d %u %u%s\n", frame,
-                s_traceCount, (unsigned long long)s_traceHash, Render_CameraX(), _cameraY.s.i,
+                s_traceCount, (unsigned long long)s_traceHash, Render_CameraX(), Render_CameraY(),
                 fx, fy, s_traceClamped ? " clamped" : "");
     s_traceClamped = 0;
     s_traceCount = 0;
@@ -610,7 +610,11 @@ static uint8_t *build_meta(void)
      * view was kept says neither, and the player works it out (recorded_view). */
     BE_WRITE_U16(q, (uint16_t)((_gDosGameplay ? 1 : 0) | (_gDosGraphics ? 2 : 0) |
                                (_gArcadeMode ? 4 : 0) | (_gDosView ? 8 : 0) | 16));   q += 2;
-    BE_WRITE_U16(q, 0);                                           q += 2;
+    /* The height the match was SIMULATED in (display.h _sim_view_height): 200 in the DOS
+     * view, 272 in the Amiga's, whatever the picture. Playback maps the recorded camera
+     * onto its own picture from it, exactly as the live match did (camera.c
+     * viewOriginY16). 0 in a file from before it was kept. */
+    BE_WRITE_U16(q, (uint16_t)_sim_view_height);                  q += 2;
     BE_WRITE_U32(q, (uint32_t)time(NULL));                        q += 4;
     snprintf((char *)q, 32, "%s", Build_Version());               q += 32;
     q += 4;     /* the final score, patched in at the end of the match */
@@ -897,6 +901,7 @@ static struct {
     uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
     int32_t     dosView;        /* the view it was played in: 1 DOS, 0 Amiga, -1 not known */
     char        names[2][64];   /* PLYR: who played, "" when the file does not say */
+    uint16_t    simHeight;      /* META: the view height it was simulated in, 0 not known */
 } s_play;
 
 /* Worked out on load, never in a file: this frame was DRAWN wrong for that player -- one
@@ -1076,6 +1081,22 @@ static int32_t recorded_view(const uint8_t *meta, const uint8_t *file, uint32_t 
 }
 
 static int32_t s_ownDosView = -1;       /* the player's own, while a recording's is on */
+static int32_t s_ownSimHeight = -1;     /* the simulation view height, while the recording's is on */
+static int32_t s_setSimHeight;
+
+/* After the viewer's MatchViewEnter: the camera is mapped onto this picture from the
+ * height the match was simulated in, which is the recording's -- a replay rig match
+ * simulated in the DOS view's 200 lines while drawing 272 of them, and playback must map
+ * it the same way to draw what the live match drew. */
+void ReplayV2_ApplyRecordedSimView(void)
+{
+    if (!s_play.loaded || !s_play.simHeight || s_play.simHeight > 272 ||
+        s_play.simHeight == (uint16_t)_sim_view_height)
+        return;
+    s_ownSimHeight = _sim_view_height;
+    _sim_view_height = (int16_t)s_play.simHeight;
+    s_setSimHeight = _sim_view_height;
+}
 
 void ReplayV2_UseRecordedView(void)
 {
@@ -1088,6 +1109,12 @@ void ReplayV2_UseRecordedView(void)
 
 void ReplayV2_RestoreView(void)
 {
+    /* Only if it is still ours: leaving the DOS view has already reset it otherwise. */
+    if (s_ownSimHeight >= 0) {
+        if (_sim_view_height == s_setSimHeight)
+            _sim_view_height = (int16_t)s_ownSimHeight;
+        s_ownSimHeight = -1;
+    }
     if (s_ownDosView < 0)
         return;
     _gDosView = s_ownDosView;
@@ -1233,6 +1260,7 @@ int32_t ReplayV2_Load(const uint8_t *name)
         free(plyr);
         load_prediction(file, fileLen);
         s_play.dosView = recorded_view(meta, file, fileLen);
+        s_play.simHeight = BE_READ_U16(meta + 6);
     }
 
     if (why) {
@@ -1486,7 +1514,10 @@ static void draw_prediction(uint32_t f, int16_t origin, int16_t camY)
  * scripts/replay_v2_test.sh leaves them out of the comparison. */
 static uint32_t shown_camera_y(uint32_t cy)
 {
-    int32_t max = 880 - _screen_height;
+    /* The SIMULATION range: the picture is mapped onto it (Render_CameraY), so only a
+     * recording simulated in a shorter view than this playback's needs holding -- a file
+     * from before META kept its simulated height (ReplayV2_ApplyRecordedSimView). */
+    int32_t max = 880 - _sim_view_height;
     if (max >= 0 && (int16_t)(cy >> 16) > max) {
         s_traceClamped = 1;
         return (uint32_t)max << 16;
@@ -1571,7 +1602,7 @@ void ReplayV2_DrawFrame(void)
     DrawAnimatedPatterns();
 
     origin = Render_CameraX();
-    camY = _cameraY.s.i;
+    camY = Render_CameraY();
     adLine = BE_READ_U16(h + 18);
     adLine = adLine ? (uint16_t)(adLine - 1) : 0;     /* older recordings: the first strip */
     sprites = BE_READ_U16(h);

@@ -275,7 +275,7 @@ position_name:
      * below are insets from that box's edges: +10/+20 from the left,
      * HUD_WIDTH-10 from the right. HUD_MARGIN folds to 0 on Amiga. */
     spr->x.s.i      = Render_CameraX() + HUD_MARGIN;
-    spr->y.s.i      = (int16_t)_cameraY.s.i + 8000;
+    spr->y.s.i      = Render_CameraY() + 8000;
     spr->z.s.i      = 8000;
 
     /* The two releases put this indicator in measurably different places, and
@@ -288,20 +288,20 @@ position_name:
      * than 20 -- so they are listed out rather than derived.
      *
      * SWOS2.s loc_10B2B6 against swos.asm SetCurrentPlayerName
-     * @@set_picture_index. Kept as literals per mode: _gDosView is exactly
-     * 320x200 (widescreen there widens, it does not heighten), and writing the
-     * Amiga side as a formula would change a view this bug is not about. */
+     * @@set_picture_index. Kept as literals per mode. The DOS view simulates 320x200;
+     * with widescreen on its picture is 272 lines, and the bottom corners follow the
+     * bottom edge down by RENDER_EXTRA_Y (display.h) -- 0 in every other view. */
     switch (_currentPlayerIndicatorPosition) {
     case 1:
         /* Bottom-left */
         spr->x.s.i += 10;
-        spr->y.s.i += _gDosView ? 179 : 251;
+        spr->y.s.i += (_gDosView ? 179 : 251) + RENDER_EXTRA_Y;   /* bottom-anchored */
         return;
     case 2:
         /* Bottom-right */
         spr->x.s.i += HUD_WIDTH - 10;
         spr->x.s.i -= d2;
-        spr->y.s.i += _gDosView ? 179 : 251;
+        spr->y.s.i += (_gDosView ? 179 : 251) + RENDER_EXTRA_Y;   /* bottom-anchored */
         return;
     case 3:
         /* Top-right */

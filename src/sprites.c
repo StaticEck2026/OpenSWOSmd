@@ -1953,7 +1953,7 @@ void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
     x -= Render_CameraX();
-    y -= _cameraY.s.i;
+    y -= Render_CameraY();
 
     /* Cull if completely off-screen */
     if (x >= _screen_width)
@@ -1991,7 +1991,7 @@ void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 
     /* Fall through to DrawSpriteInCameraView logic (with spr already resolved) */
     x -= Render_CameraX();
-    y -= _cameraY.s.i;
+    y -= Render_CameraY();
 
     if (x >= _screen_width)
         return;
@@ -2435,7 +2435,10 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
          * render origin; identical at 336 wide (display.h). */
         int16_t d1sim = a1->x.s.i - a0->centerX - _cameraX.s.i;
         int16_t d1    = a1->x.s.i - a0->centerX - Render_CameraX();
-        int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i;
+        /* Y the same: `onScreen` from the game camera, placement from the render origin
+         * (identical unless the picture is taller than the view: camera.c). */
+        int16_t d2sim = a1->y.s.i - a0->centerY - _cameraY.s.i - a1->z.s.i;
+        int16_t d2 = a1->y.s.i - a0->centerY - Render_CameraY();
         d2 -= a1->z.s.i;
 
         /* Two culls, deliberately: one decides GAMEPLAY, the other DRAWING.
@@ -2465,9 +2468,9 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         {
             int16_t negW = -a0->pixWidth;
             int16_t negH = -a0->nlines;
-            int onScreen = !(d1sim >= SCREEN_WIDTH || d2 >= _sim_view_height ||
-                             d1sim <= negW || d2 <= negH);
-            int inRenderView = !(d1 >= _screen_width || d2 >= SCREEN_HEIGHT ||
+            int onScreen = !(d1sim >= SCREEN_WIDTH || d2sim >= _sim_view_height ||
+                             d1sim <= negW || d2sim <= negH);
+            int inRenderView = !(d1 >= _screen_width || d2 >= _screen_height ||
                                  d1 <= negW || d2 <= negH);
             a1->onScreen = (int16_t)onScreen;
             /* Only ever ADD to what `onScreen` already allows, and only when
@@ -2482,8 +2485,8 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
              * depended on the display -- and nothing animates it anyway. */
             if (!onScreen && _sim_draw_width > SCREEN_WIDTH && a1->z.s.i < HUD_LAYER_Z_MIN) {
                 int16_t d1draw = a1->x.s.i - a0->centerX - Sim_DrawCameraX();
-                int animVis = !(d1draw >= _sim_draw_width || d2 >= _sim_view_height ||
-                                d1draw <= negW || d2 <= negH);
+                int animVis = !(d1draw >= _sim_draw_width || d2sim >= _sim_view_height ||
+                                d1draw <= negW || d2sim <= negH);
                 if (animVis && g_spriteAnimVisibleCount < SPRITE_ANIMVIS_MAX)
                     g_spriteAnimVisible[g_spriteAnimVisibleCount++] = a1;
             }

@@ -26,6 +26,10 @@ int _gDosView = 0;
  * margin the game does not know about -- the same bargain the Amiga view's
  * widescreen makes (display.h, "the SIMULATION view"). */
 int _dos_view_width = DOS_VIEW_WIDTH;
+/* The DOS view's PICTURE height: 200, or 272 with widescreen on (main.c). The match is
+ * simulated at 320x200 either way; a taller picture shows more pitch around it
+ * (camera.c Render_CameraY, docs/WIDESCREEN.md "The DOS view"). */
+int _dos_view_height = DOS_VIEW_HEIGHT;
 int _gWidescreen  = 0;   /* 1 = wider 16:9 pitch view. SDL main sets from opts; Amiga stays 0 */
 char _gDosGraphicsDir[256] = "grafs_dos";   /* asset dir; see dos_mode.h */
 

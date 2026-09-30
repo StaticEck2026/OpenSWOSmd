@@ -1075,12 +1075,6 @@ int main(int argc, char **argv)
             if (dosw > PITCH_VIEW_MAX_WIDTH) dosw = PITCH_VIEW_MAX_WIDTH;
             if (opts.widescreen != 1) dosw = DOS_VIEW_WIDTH;   /* the PC release's own (stretched or not) */
             _dos_view_width = dosw;
-            if (dosView)
-                fprintf(stderr, "[video] DOS view: %dx%d in a match%s; the simulation is "
-                                "the PC release's %dx%d either way\n",
-                        dosw, DOS_VIEW_HEIGHT,
-                        dosw > DOS_VIEW_WIDTH ? " -- widescreen, showing more margin" : "",
-                        DOS_VIEW_WIDTH, DOS_VIEW_HEIGHT);
         }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
         int aspectW;
@@ -1098,6 +1092,25 @@ int main(int argc, char **argv)
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
         if (opts.widescreen != 1)      w = SCREEN_WIDTH;   /* the Amiga's own width (stretched or not) */
         _screen_width = w;
+        /* WIDESCREEN IN THE DOS VIEW means the widescreen PICTURE: the same w x 272 as the
+         * Amiga view's, showing more pitch in both directions -- not the 200-line DOS
+         * picture widened, which only zoomed in (ReportBot 0013: "when the match starts it
+         * throws you back to DOS resolution"). The match is still simulated at the PC
+         * release's 320x200 (MatchViewEnter pins _sim_view_*); only the picture is taller,
+         * mapped onto that camera by Render_CameraY. Without widescreen: 320x200 as ever. */
+        {
+            extern int _dos_view_width, _dos_view_height;
+            if (opts.widescreen == 1) {
+                _dos_view_width = w;
+                _dos_view_height = SCREEN_HEIGHT;
+            }
+            if (dosView)
+                fprintf(stderr, "[video] DOS view: %dx%d in a match%s; the simulation is "
+                                "the PC release's %dx%d either way\n",
+                        _dos_view_width, _dos_view_height,
+                        _dos_view_height > DOS_VIEW_HEIGHT ? " -- widescreen, showing more pitch" : "",
+                        DOS_VIEW_WIDTH, DOS_VIEW_HEIGHT);
+        }
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, _screen_height, opts.screen, nd, dw, dh, (double)dw / dh);
         /* Say so when the asked-for size is not what came out, because "I set 320x200 and

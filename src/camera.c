@@ -74,6 +74,54 @@ int16_t Render_CameraX(void)
     return (int16_t)(Render_CameraX16() >> 16);
 }
 
+/* The vertical render origin: the same idea as X, for a picture TALLER than the view
+ * the match is simulated in -- the DOS view with widescreen on, which simulates the PC
+ * release's 320x200 and shows 272 lines of it (docs/WIDESCREEN.md, "The DOS view"). The
+ * simulation camera ranges [0, 880 - simH]; the picture may only range [0, 880 - H]. So
+ * the one is SCALED onto the other: the picture reaches the top and bottom of the pitch
+ * exactly when the simulation camera does, and never shows past the stadium (which a
+ * 272-line picture at the DOS camera's 664 did). Identity whenever the picture is no
+ * taller than the simulation view -- the Amiga view, and DOS at 320x200 -- so those are
+ * unchanged to the pixel. Render-only: `_cameraY`, what the game reads, is untouched. */
+static int32_t viewOriginY16(int32_t height)
+{
+    const int32_t pan = 880 - _sim_view_height;        /* the simulation's range */
+    int32_t max = 880 - height;                         /* how far the picture may pan */
+
+    if (max <= 0)   return 0;
+    if (max >= pan) return _cameraY.raw;                /* not taller: identity */
+
+    int32_t y = (int32_t)(((int64_t)_cameraY.raw * max) / pan);
+    if (y < 0) y = 0;
+    else if (y > (max << 16)) y = max << 16;
+    return y;
+}
+
+int32_t Render_CameraY16(void)
+{
+    return viewOriginY16(_screen_height);
+}
+
+int16_t Render_CameraY(void)
+{
+    return (int16_t)(Render_CameraY16() >> 16);
+}
+
+/* A picture origin back to the simulation camera that maps onto it: the inverse, for
+ * a recorded DRAWN camera (the in-match instant replay's) handed back to _cameraY. */
+int16_t Render_SimCameraYFromRender(int16_t renderY)
+{
+    const int32_t pan = 880 - _sim_view_height;
+    int32_t max = 880 - _screen_height;
+    int32_t y;
+    if (max <= 0)        y = 0;
+    else if (max >= pan) y = renderY;
+    else                 y = ((int32_t)renderY * pan + max / 2) / max;
+    if (y < 0) y = 0;
+    else if (y > pan) y = pan;
+    return (int16_t)y;
+}
+
 /* The same origin for the SIMULATION draw width (display.h): where a view of that
  * width would draw from. It is what the match's draw-dependent decisions measure from,
  * so two peers with different displays measure from the same place. A wider view's
@@ -125,11 +173,11 @@ void Render_PublishScrollSubpixel(void)
     int32_t truex = Render_CameraX16();
     s_scroll_frac_x = (uint16_t)((uint32_t)truex & 0xFFFFu);
 
-    /* Y has no render-side clamp helper; pitch.c pins `_cameraY.s.i` to 0 at
-     * the top without clearing the fraction, so a pinned camera can carry a
-     * stale <1 px residual. Harmless (it is a constant sub-pixel offset, not
-     * motion), and it self-corrects as soon as the camera moves again. */
-    s_scroll_frac_y = _cameraY.s.frac;
+    /* Y the same way, from the vertical render origin (identity unless the picture is
+     * taller than the simulation view). At the very top pitch.c pins `_cameraY.s.i` to 0
+     * without clearing the fraction, so a pinned camera can carry a stale <1 px residual:
+     * harmless, a constant sub-pixel offset that self-corrects once the camera moves. */
+    s_scroll_frac_y = (uint16_t)((uint32_t)Render_CameraY16() & 0xFFFFu);
 
     s_scroll_frac_ms = Platform_NowMs();
 }

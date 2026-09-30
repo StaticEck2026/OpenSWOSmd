@@ -518,6 +518,16 @@ extern int32_t _sim_draw_width;
  *
  * 246 at 272 lines -- byte-identical to the literal it replaces -- and 174 at 200. */
 #define SIM_RESULT_PANEL_Y    ((int16_t)(_sim_view_height - 26))
+/* How much taller the PICTURE is than the view the match is simulated in: 0 except in
+ * the DOS view with widescreen on (320x200 simulated, 272 lines shown), where it is 72.
+ * A HUD element anchored to the BOTTOM of the screen adds it (the result panel, the
+ * name bar's bottom corners); one anchored to the top does not. Drawing only. */
+#ifdef SWOS_SDL_BUILD
+#define RENDER_EXTRA_Y        ((int16_t)(_screen_height > _sim_view_height ? \
+                                         _screen_height - _sim_view_height : 0))
+#else
+#define RENDER_EXTRA_Y        0
+#endif
 
 /* The camera DESTINATION clamp (where MoveCamera may aim). */
 #define SIM_CAMERA_MAX_Y      ((int16_t)(664 - (_sim_view_height - 200)))
