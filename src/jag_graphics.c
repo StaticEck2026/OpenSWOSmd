@@ -124,18 +124,22 @@ static uint8_t k_shade[JAG_KIT_SHADES] = { 16, 14, 12, 10 };
 
 static int32_t s_outfitShading = 1;
 static int32_t s_shadowShading = 1;
+static int32_t s_hairShading = 1;
+static int32_t s_shadeStep = 2;
 
 /* SWOS's own drop shadow: one near-black colour that reads on any pitch, which
  * is what "shadow_shading = false" asks for. */
 #define JAG_FLAT_SHADOW_COLOUR 8
 
-void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t step)
+void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t hair, int32_t step)
 {
     int32_t k;
     s_outfitShading = outfit != 0;
     s_shadowShading = shadow != 0;
+    s_hairShading = hair != 0;
     if (step < 1) step = 1;
     if (step > 5) step = 5;                 /* 16,11,6,1 is already almost black */
+    s_shadeStep = step;
     for (k = 0; k < JAG_KIT_SHADES; k++) {
         int32_t v = 16 - k * step;
         k_shade[k] = (uint8_t)(v < 1 ? 1 : v);
@@ -634,14 +638,18 @@ void JagGfx_NewMatch(void)
  * rather than the shadow deepening -- and it has to lift FAR ENOUGH: at 3/1 the
  * mid shade is 111, indistinguishable from the 000 beside it, and the hair reads
  * as the flat block the 16-colour game draws (reported 2026-09-21). At 7/3 it
- * reads as grey hair. 6/3 shades it while the mass stays black. Taste, so
- * SWOS_JAG_HAIR=hi,mid overrides it without a rebuild. */
+ * reads as grey hair. 6/3 shades it while the mass stays black -- and that is
+ * what shade_step's default of 2 gives: the lift is 3 x step and half of it, so
+ * the hair's contrast follows the same setting the kit's does (step 1 = 3/1,
+ * step 3 = 9/4). Taste, so SWOS_JAG_HAIR=hi,mid overrides it without a rebuild. */
 static int32_t s_lift0 = 6, s_lift1 = 3;
 
 void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
 {
     {
         const char *t = getenv("SWOS_JAG_HAIR");
+        s_lift0 = 3 * s_shadeStep;
+        s_lift1 = s_lift0 / 2;
         if (t && *t) { s_lift0 = atoi(t); if (strchr(t, ',')) s_lift1 = atoi(strchr(t, ',') + 1); }
     }
     int32_t i, slot, shade;
@@ -663,8 +671,12 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
      * sends all three to colour 3, so the Jaguar's shading is thrown away and the hair
      * is a flat block -- which is what the 16-colour game draws, and looks it. When the
      * three collapse onto one colour, shade that colour instead. A colour with nothing
-     * darker than it (black) lifts its highlight rather than deepening its shadow. */
-    {
+     * darker than it (black) lifts its highlight rather than deepening its shadow.
+     * Any other colour deepens by the kit's own ramp (k_shade: 16, 16-step,
+     * 16-2*step), so one shade_step sets the contrast of both. "hair_shading =
+     * false" skips all of it: the game's table as it stands, which is the
+     * 16-colour game's hair exactly. */
+    if (s_hairShading) {
         static const uint8_t hairArt[3] = { 13, 9, 12 };     /* light, mid, dark */
         uint16_t c = (uint16_t)(amiga16[hairArt[0]] & 0xFF);
         if ((uint16_t)(amiga16[hairArt[1]] & 0xFF) == c && (uint16_t)(amiga16[hairArt[2]] & 0xFF) == c) {
@@ -679,7 +691,7 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
                     if (ch[0] <= 3 && ch[1] <= 3 && ch[2] <= 3)
                         v = (int32_t)ch[j] + (k == 0 ? s_lift0 : k == 1 ? s_lift1 : 0); /* lift */
                     else
-                        v = ((int32_t)ch[j] * (k == 0 ? 16 : k == 1 ? 13 : 9)) >> 4;
+                        v = ((int32_t)ch[j] * k_shade[k]) >> 4;
                     want[j] = (uint8_t)(v > 15 ? 15 : v);
                 }
                 near = nearestEntry(want, 0, NULL);
@@ -693,9 +705,10 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
         }
     }
     if (getenv("SWOS_JAG_DUMP"))
-        fprintf(stderr, "[jag] shades %d/%d/%d/%d sixteenths, outfit=%s shadow=%s\n",
+        fprintf(stderr, "[jag] shades %d/%d/%d/%d sixteenths, outfit=%s shadow=%s hair=%s\n",
                 k_shade[0], k_shade[1], k_shade[2], k_shade[3],
-                s_outfitShading ? "on" : "off", s_shadowShading ? "on" : "off");
+                s_outfitShading ? "on" : "off", s_shadowShading ? "on" : "off",
+                s_hairShading ? "on" : "off");
     for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
         uint16_t colour = (uint16_t)(amiga16[k_kitSlotAmiga[slot]] & 0xFF);
         uint8_t base[3];
@@ -738,7 +751,7 @@ void           JagGfx_SetEnabled(int32_t on) { (void)on; }
 int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
 const uint8_t *JagGfx_SheetRemap(void) { return 0; }
 void           JagGfx_NewMatch(void) {}
-void           JagGfx_SetShading(int32_t o, int32_t s, int32_t st) { (void)o; (void)s; (void)st; }
+void           JagGfx_SetShading(int32_t o, int32_t s, int32_t h, int32_t st) { (void)o; (void)s; (void)h; (void)st; }
 int32_t        JagGfx_RemapDonated(uint8_t *p, uint32_t n) { (void)p; (void)n; return 0; }
 void           JagGfx_PitchApplied(void) {}
 void           JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)

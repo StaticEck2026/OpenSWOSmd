@@ -1,8 +1,9 @@
 # Palette v2 — two banks, one shared block
 
 > **Status (2026-09-30): plan, step 1 of §7 done.** The shading options exist
-> (`[graphics] outfit_shading / shadow_shading / shade_step`, defaults true / true
-> / 2; `--outfit-shading`, `--shadow-shading`, `--shade-step`). Steps 2-5 (the
+> (`[graphics] outfit_shading / shadow_shading / hair_shading / shade_step`, defaults
+> true / true / true / 2; `--outfit-shading`, `--shadow-shading`, `--hair-shading`,
+> `--shade-step`). Steps 2-5 (the
 > bank plane, two-palette upload, crowd LUT to the kit block, SwosGfx remapper)
 > are not in the code yet. Meanwhile the Jaguar tier gets its entries by
 > **donation** of the palette's duplicate entries (§1), not from the fixed
@@ -169,6 +170,7 @@ to 37.5% comes out dark grey. That is a real complaint, not a taste.
 [graphics]               ; (planned here as [jaguar]; shipped under [graphics])
 outfit_shading = true    ; false = flat kit, exactly the Amiga look
 shadow_shading = true    ; false = one shadow colour
+hair_shading   = true    ; false = hair as the game has it (black = flat); follows shade_step
 shade_step     = 2       ; sixteenths per shade: 16, 16-N, 16-2N, 16-3N
 ```
 

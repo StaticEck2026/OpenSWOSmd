@@ -19,10 +19,13 @@ void    JagGfx_SetEnabled(int32_t on);
 /* How the sprites are shaded (docs/PALETTE_V2.md §5).
  *   outfit  0 = every kit shade is the flat team colour, as the 16-colour game
  *   shadow  0 = the drop shadow is SWOS's own colour 8, one near-black
+ *   hair    0 = hair is what the game's own table makes it: a black head is the
+ *           flat block the 16-colour game draws
  *   step    sixteenths between kit shades: 16, 16-step, 16-2*step, 16-3*step.
+ *           Hair follows it too (a black head lifts by 3 x step).
  *           The Jaguar's own ratios are about 3.3, which takes a near-white sock
  *           down to 37.5% and reads as dark grey; 2 keeps it white. */
-void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t step);
+void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t hair, int32_t step);
 
 /* True for a bank the Jaguar tier provides (by the name an image script asks for,
  * with or without its folder). The loader uses it to know whose pixels it has. */

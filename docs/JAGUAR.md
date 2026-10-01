@@ -16,11 +16,10 @@ screen are exactly what they were — this is a sprite tier, not a palette swap.
 SDL only: an 8bpp bank is twice the chip RAM and twice the blitter bandwidth of
 the 4bpp one the A1200 draws today, so the Amiga build does not take it.
 
-**The web build plays with it by default** and carries the banks in its preload
-(`--preload-file bin/grafs_jag`, ~0.5 MB): it is the better-looking half of what
-the web build is for, and a browser player has no command line to turn it on
-with. `[graphics] sprites = amiga` in the in-browser `SWOS.ini` turns it off
-(`auto`, the default, keeps each platform's own choice).
+**The web build carries the banks** in its preload (`--preload-file bin/grafs_jag`,
+~0.5 MB) but, like every other build, plays with the Amiga sprites unless asked:
+`[graphics] sprites = jaguar` in the in-browser `SWOS.ini` turns the Jaguar art on
+(`auto`, the default, is `amiga`). It was on by default there until 2026-10-01.
 
 ## What the art does with colour
 
@@ -68,6 +67,14 @@ black. `666666`/`333333`/`000000` shades it while the mass stays black. It is
 taste, so `SWOS_JAG_HAIR=<hi>,<mid>` (4-bit channels) overrides `s_lift0`/`s_lift1`
 without a rebuild, and `SWOS_JAG_DUMP=1` prints the ramp a collapse produced.
 Hair the game already shades is left alone.
+
+**The lift follows `[graphics] shade_step`**, the kit's own contrast setting: the
+highlight lifts by 3 × step and the mid shade by half that, so the default step of
+2 is the `666666`/`333333` above, 1 is `333333`/`111111` and 3 is `999999`/`444444`.
+A collapsed colour that is *not* near-black deepens instead, by the kit's ramp
+(16, 16−step, 16−2·step sixteenths). `[graphics] hair_shading = false`
+(`--hair-shading=off`) skips the whole step: the game's table as it stands, so a
+black head is the flat block the 16-colour game draws.
 
 Skin has a milder version of the same thing: face type 2 sends 6,5,4 to 4,4,3, so
 its darkest tone is drawn with two shades rather than three. Left as the game has

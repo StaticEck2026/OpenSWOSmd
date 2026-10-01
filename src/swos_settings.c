@@ -180,11 +180,12 @@ static int handler(void *user, const char *section,
         else if (eqi(name, "sprites")) {
             if      (eqi(value, "amiga"))  opts->jag_graphics = 0;
             else if (eqi(value, "jaguar")) opts->jag_graphics = 1;
-            /* "auto" keeps the built-in default: the Jaguar art on the web build,
-             * where it is the better-looking half of what that build is for. */
+            /* "auto" keeps the built-in default, which is the Amiga's on every
+             * build (the web one included, since 2026-10-01). */
         }
         else if (eqi(name, "outfit_shading") && parse_bool(value, &b)) opts->outfit_shading = b;
         else if (eqi(name, "shadow_shading") && parse_bool(value, &b)) opts->shadow_shading = b;
+        else if (eqi(name, "hair_shading") && parse_bool(value, &b)) opts->hair_shading = b;
         else if (eqi(name, "shade_step")) {
             int v = atoi(value);
             if (v >= 1 && v <= 5) opts->shade_step = v;
@@ -395,7 +396,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "graphics", "sprites",
         "; sprites: auto | amiga | jaguar. The Atari Jaguar redrew the players at 256\n"
         "; colours -- same animations, more shades (docs/JAGUAR.md). auto is the\n"
-        "; per-platform default.\n",
+        "; built-in default, amiga.\n",
         opts->jag_graphics ? "jaguar" : "amiga" };
 
 
@@ -411,13 +412,21 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; that reads on any pitch, and costs the palette nothing.\n",
         opts->shadow_shading ? "true" : "false" };
 
+    items[n++] = (IniEntry){ "graphics", "hair_shading",
+        "; hair_shading: true | false. Shade hair the game draws in a single colour (a\n"
+        "; black head), by shade_step like the kit. false draws it flat, exactly as the\n"
+        "; 16-colour Amiga game does. Hair the game shades itself (ginger, blond) is\n"
+        "; the game's own either way.\n",
+        opts->hair_shading ? "true" : "false" };
+
     {
         static char stepBuf[8];
         snprintf(stepBuf, sizeof stepBuf, "%d", opts->shade_step);
         items[n++] = (IniEntry){ "graphics", "shade_step",
             "; shade_step: 1..5. How far apart the four kit shades are, in sixteenths:\n"
             "; 16, 16-N, 16-2N, 16-3N. The Jaguar's own artwork used about 3, which takes\n"
-            "; a near-white sock down to 37.5% and reads as dark grey; 2 keeps it white.\n",
+            "; a near-white sock down to 37.5% and reads as dark grey; 2 keeps it white.\n"
+            "; Hair shading uses it too: black hair's highlight is lifted by 3 x N.\n",
             stepBuf };
     }
     items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };

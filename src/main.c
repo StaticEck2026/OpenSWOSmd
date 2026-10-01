@@ -167,9 +167,13 @@ static void print_usage(const char *argv0)
         "  --shadow-shading=<on|off> Shade the drop shadow, tinted from the pitch\n"
         "                            it falls on (default on). Off uses SWOS's own\n"
         "                            colour 8, one near-black.\n"
+        "  --hair-shading=<on|off>   Shade hair the game draws in one colour (a\n"
+        "                            black head), by the same step (default on).\n"
+        "                            Off draws it flat, as the Amiga game does.\n"
         "  --shade-step=<1..5>       How far apart the four kit shades are, in\n"
         "                            sixteenths (default 2). Higher is more\n"
         "                            contrast; the Jaguar's own artwork used 3.\n"
+        "                            Hair shading follows it.\n"
         "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
         "                            instead of the Amiga graphics. Default: off.\n"
         "                            PC-only extra; the Amiga look is the default.\n"
@@ -372,14 +376,10 @@ int main(int argc, char **argv)
     opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
-#ifdef SWOS_WASM_BUILD
-    /* The browser build ships the Jaguar art and plays with it unless SWOS.ini
-     * says otherwise: it is the better-looking half of what the web build is for,
-     * and a browser player has no command line to turn it on with. */
-    opts.jag_graphics = 1;
-#else
-    opts.jag_graphics = 0;        /* ... and not the Jaguar's either */
-#endif
+    /* ... and not the Jaguar's either, on any build. The browser one played with
+     * it by default until 2026-10-01; it still ships the banks, so `[graphics]
+     * sprites = jaguar` in its SWOS.ini turns it on. */
+    opts.jag_graphics = 0;
     /* Shading defaults (docs/PALETTE_V2.md §5). Step 2 rather than the Jaguar's
      * own ~3.3: at that depth a near-white sock bottoms out at 37.5% and reads
      * as dark grey. */
@@ -387,6 +387,7 @@ int main(int argc, char **argv)
     opts.widescreen = 1;                 /* fill the display, as it always has */
     opts.outfit_shading = 1;
     opts.shadow_shading = 1;
+    opts.hair_shading = 1;
     opts.shade_step = 2;
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
@@ -597,6 +598,8 @@ int main(int argc, char **argv)
             opts.outfit_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
         } else if ((v = match_kv(a, "shadow-shading")) != NULL) {
             opts.shadow_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
+        } else if ((v = match_kv(a, "hair-shading")) != NULL) {
+            opts.hair_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
         } else if ((v = match_kv(a, "shade-step")) != NULL) {
             int st = atoi(v);
             if (st < 1 || st > 5) {
@@ -907,7 +910,7 @@ int main(int argc, char **argv)
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;
     JagGfx_SetEnabled(opts.jag_graphics);
-    JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.shade_step);
+    JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.hair_shading, opts.shade_step);
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;
