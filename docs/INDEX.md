@@ -151,7 +151,7 @@ docs drift: search by function name.
 
 | doc | what it is | status | read when |
 |---|---|---|---|
-| [TRIAGE.md](TRIAGE.md) | From a Discord ReportBot report to a published fix: queue, reproduce, commit, build the drop, changelog, publish, close, announce. | current | `/triage`, cutting or publishing a drop, posting to #swos-changelog |
+| [TRIAGE.md](TRIAGE.md) | From a Discord ReportBot report or feature request to a published drop: queue, feature approval, reproduce, commit, build the drop, changelog, publish, close, announce. | current | `/triage`, `/requests`, cutting or publishing a drop, posting to #swos-changelog |
 
 ## Known gaps (found by the 2026-09-30 review, not fixed in docs)
 
