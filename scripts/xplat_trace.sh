@@ -16,11 +16,11 @@ recs="${1:-$(ls "$ROOT"/tests/replay/*-scalars.swr | xargs -n1 basename)}"
 
 for r in $recs; do
     base="${r%.swr}"
-    ssh bbaker@192.168.1.37 "cd ~/Programming/OpenSWOS/bin && SWOS_NO_LOG=1 SWOS_REPLAY_ALLOW_FLAGS=1 \
+    ssh bbaker@192.168.1.30 "cd ~/Programming/OpenSWOS/bin && SWOS_NO_LOG=1 SWOS_REPLAY_ALLOW_FLAGS=1 \
         ./SWOS.macos --replay-test=../tests/replay/$r --dos-gameplay=${GAMEPLAY:-on} --rollback=trace \
         --rollback-trace=/tmp/$base.$GP.mac.trace > /tmp/$base.mac.log 2>&1" </dev/null >/dev/null 2>&1
     cmd.exe /c "cd /d C:\\Projects\\AI\\SWOS\\OpenSWOS\\bin && set SWOS_NO_LOG=1&& set SWOS_REPLAY_ALLOW_FLAGS=1&& SWOS.exe --replay-test=C:/Projects/AI/SWOS/OpenSWOS/tests/replay/$r --dos-gameplay=${GAMEPLAY:-on} --rollback=trace --rollback-trace=C:\\Temp\\$base.$GP.win.trace > C:\\Temp\\$base.win.log 2>&1" </dev/null >/dev/null 2>&1
-    scp -q "bbaker@192.168.1.37:/tmp/$base.$GP.mac.trace" "$SCR/trace/" 2>/dev/null
+    scp -q "bbaker@192.168.1.30:/tmp/$base.$GP.mac.trace" "$SCR/trace/" 2>/dev/null
     cp "/mnt/c/Temp/$base.$GP.win.trace" "$SCR/trace/" 2>/dev/null
     m="$SCR/trace/$base.$GP.mac.trace"; w="$SCR/trace/$base.$GP.win.trace"
     if [ -s "$m" ] && [ -s "$w" ]; then

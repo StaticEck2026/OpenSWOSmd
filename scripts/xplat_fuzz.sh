@@ -20,14 +20,14 @@ SEEDS="${SEEDS:-0x5EED5EED 0x00000001 0xA1B2C3D4 0xDEADBEEF 0x13579BDF 0xFFFFFFF
 for rec in $RECS; do
   for seed in $SEEDS; do
     tag="$rec.$GP.$seed"
-    ssh bbaker@192.168.1.37 "cd ~/Programming/OpenSWOS/bin && SWOS_NO_LOG=1 ./SWOS.macos \
+    ssh bbaker@192.168.1.30 "cd ~/Programming/OpenSWOS/bin && SWOS_NO_LOG=1 ./SWOS.macos \
         --replay-test=../tests/replay/$rec.swr --dos-gameplay=$GP --rollback=trace \
         --rollback-seed=$seed --rollback-trace=/tmp/$tag.mac.trace > /dev/null 2>&1" </dev/null >/dev/null 2>&1 &
     macpid=$!
     cmd.exe /c "cd /d C:\\Projects\\AI\\SWOS\\OpenSWOS\\bin && set SWOS_NO_LOG=1&& SWOS.exe --replay-test=C:/Projects/AI/SWOS/OpenSWOS/tests/replay/$rec.swr --dos-gameplay=$GP --rollback=trace --rollback-seed=$seed --rollback-trace=C:\\Temp\\$tag.win.trace > NUL 2>&1" </dev/null >/dev/null 2>&1 &
     winpid=$!
     wait $macpid $winpid
-    scp -q "bbaker@192.168.1.37:/tmp/$tag.mac.trace" "$SCR/fuzz/" 2>/dev/null
+    scp -q "bbaker@192.168.1.30:/tmp/$tag.mac.trace" "$SCR/fuzz/" 2>/dev/null
     cp "/mnt/c/Temp/$tag.win.trace" "$SCR/fuzz/" 2>/dev/null
     m="$SCR/fuzz/$tag.mac.trace"; w="$SCR/fuzz/$tag.win.trace"
     if [ -s "$m" ] && [ -s "$w" ]; then

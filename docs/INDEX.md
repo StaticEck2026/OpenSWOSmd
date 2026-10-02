@@ -228,7 +228,7 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 
 | location | what |
 |---|---|
-| Mac mini `bbaker@192.168.1.37:~/Programming/OpenSWOS` | a checkout of this repo that builds the macOS archives over ssh (`scripts/build_macos.sh`; `MAC_HOST`, `MAC_PATH`) |
+| Mac mini `bbaker@192.168.1.30:~/Programming/OpenSWOS` | a checkout of this repo that builds the macOS archives over ssh (`scripts/build_macos.sh`; `MAC_HOST`, `MAC_PATH`) |
 | `us.swos.eu` (the matchmaking server, run by Redhair) | repo at `/home/redhair/git/OpenSWOS`; deployed to `/srv/swos-matchmaker/`: `bin/swos-matchmaker`, `recordings/` (+ match cards, `index.json`), `reports/`, `playback/`, `tls/` (certificate), `matches.jsonl` (the ledger), `admin/` (the admin page's queue); emsdk in `~/git/emsdk` (the admin page sets `EMSDK_DIR`); systemd unit `swos-matchmaker` ([NETPLAY_SETUP.md](NETPLAY_SETUP.md)) |
 | `https://us.swos.eu/playback/`, `/recordings/`, `/reports/`, `/cc/` | the recordings player, the recordings and reports (fetched by `scripts/fetch_recordings.py` / `fetch_reports.py`), the admin page |
 | `us.swos.eu:19602` (UDP, and TCP for the recorder and the `wss://` gate) | the matchmaker the game logs in to |
