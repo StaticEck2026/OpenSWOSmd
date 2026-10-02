@@ -1101,6 +1101,21 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     /* Initialize in-game team structures */
     InitInGameTeamStructure((TeamFileEx *)team1, &_topTeamInGame, &_team1AppPercent);
     InitInGameTeamStructure((TeamFileEx *)team2, &_bottomTeamInGame, &_team2AppPercent);
+#ifdef SWOS_SDL_BUILD
+    /* The eleven each side kicks off with, in line-up order, for SWOS.log: a match
+     * report then says who was where (the roll for a contested ball goes by line-up
+     * slot, docs/BALL_CONTEST.md), and a line-up that did not reach the match shows. */
+    {
+        const TeamGame *tg[2] = { &_topTeamInGame, &_bottomTeamInGame };
+        int32_t t, i;
+        for (t = 0; t < 2; t++) {
+            fprintf(stderr, "[match] line-up %d, %s:", (int)t + 1, (const char *)tg[t]->teamName);
+            for (i = 0; i < 11; i++)
+                fprintf(stderr, "%s %.15s", i ? "," : "", (const char *)tg[t]->players[i].shortName);
+            fprintf(stderr, "\n");
+        }
+    }
+#endif
 
     /* Calculate allowed injuries for each team */
     if (_gameType == GAME_TYPE_CAREER) {

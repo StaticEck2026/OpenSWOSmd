@@ -153,12 +153,12 @@ run() {   # name, auto, team, extra env...
 # <side>.log is the raw output; <side>.ts the same lines with the time each arrived,
 # to line up against the server's timed [relay] and [record] lines.
 stamp() { gawk '{ print strftime("%H:%M:%S"), $0; fflush() }'; }
-( run "$HNAME" host 50:0B SWOS_MM_AUTO_PEER="$JNAME" ${HOST_START_ENV} SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
+( run "$HNAME" host "${HOST_TEAM:-50:0B}" SWOS_MM_AUTO_PEER="$JNAME" ${HOST_START_ENV} SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
     2>&1 | tee "$OUT/host.log" | stamp > "$OUT/host.ts"
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/host.log" ) &
 HOST_PID=$!
 sleep 3
-( run "$JNAME" join 52:02 SWOS_MM_AUTO_PEER="$HNAME" SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0 HOME="$OUT/home-join" ${JOIN_ENV:-} \
+( run "$JNAME" join "${JOIN_TEAM:-52:02}" SWOS_MM_AUTO_PEER="$HNAME" SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0 HOME="$OUT/home-join" ${JOIN_ENV:-} \
     2>&1 | tee "$OUT/join.log" | stamp > "$OUT/join.ts"
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/join.log" ) &
 JOIN_PID=$!

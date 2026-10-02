@@ -367,6 +367,29 @@ static void assemble_match(void)
         team.team.tactics      = (uint8_t)tactic;
         _selectedTeams[p] = team;
     }
+    /* THE SAME TEAM ON BOTH SIDES. A match finds a team by its NUMBER -- country and
+     * ordinal -- whenever it wants a player (InitInGameTeamStructure -> GetPlayerAtIndex
+     * -> GetTeamPointer, which takes the first selected team with that number), so two
+     * copies of one team were both player 1's: his line-up, his eleven, on both sides
+     * (ReportBot 0019). The game itself never meets this -- a friendly cannot pick one
+     * team twice -- so the second copy is given an ordinal of its own for the match.
+     * Only the number: its name, kit, players and line-up are that player's. It is in
+     * the setup the host sends, so both machines play the same two teams. */
+    {
+        extern uint16_t _currentTeamNumber, _selTeamNumber;
+        TeamFile *a = &_selectedTeams[0].team, *b = &_selectedTeams[1].team;
+        if (a->countryNumber == b->countryNumber && a->teamOrdinal == b->teamOrdinal) {
+            uint8_t ordinal = 0xFE;
+            while (ordinal == a->teamOrdinal ||
+                   PACK_BE_U16(b->countryNumber, ordinal) == _currentTeamNumber ||
+                   PACK_BE_U16(b->countryNumber, ordinal) == _selTeamNumber)
+                ordinal--;
+            fprintf(stderr, "[lobby] both players picked %.16s: player 2's copy plays as team "
+                            "%02X:%02X so the match can tell them apart\n",
+                    (const char *)a->teamName, b->countryNumber, ordinal);
+            b->teamOrdinal = ordinal;
+        }
+    }
     _numSelectedTeams = 2;
 
     _gameLength        = s_lobby.rules.gameLength;
