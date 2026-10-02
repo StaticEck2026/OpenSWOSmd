@@ -9,6 +9,11 @@
 #include "display.h"
 #include "dos_mode.h"
 #include <string.h>
+#ifdef SWOS_SDL_BUILD
+#include "pitch_map.h"
+#include <stdlib.h>
+#include <stdio.h>
+#endif
 
 /* DOS-mode flags (declared in dos_mode.h). Defined here — a SYNCED file — so the
  * Amiga build links even when a synced hook (pitch.c, asset_loader.c, …)
@@ -124,6 +129,32 @@ void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out)
         pal6[dst + 1] = kPitchPalettes[pitchType][i * 3 + 1];
         pal6[dst + 2] = kPitchPalettes[pitchType][i * 3 + 2];
     }
+#ifdef SWOS_SDL_BUILD
+    /* A pitch drawn from a map takes the condition's entries from the map's
+     * `pitch-<condition>` event (src/pitch_map.c). Through the same six bits as the
+     * table above, so the game's own map gives the game's own colours exactly. */
+    {
+        uint8_t entry[64], colour[64][3];
+        int n = PitchMap_Condition(pitchType, entry, colour, 64);
+        int differ = 0;
+        for (int i = 0; i < n; i++) {
+            for (int c = 0; c < 3; c++) {
+                uint8_t v = (uint8_t)(colour[i][c] >> 2);
+                differ += pal6[entry[i] * 3 + c] != v;
+                pal6[entry[i] * 3 + c] = v;
+            }
+        }
+        /* SWOS_PITCH_MAP_CHECK=1: are they the game's own for this condition? */
+        {
+            static uint8_t told[7];
+            if (n && !told[pitchType] && getenv("SWOS_PITCH_MAP_CHECK")) {
+                told[pitchType] = 1;
+                fprintf(stderr, "[pitch-map] check: condition %d: %d entries from the map, %d "
+                                "channels differ from the game's\n", pitchType, n, differ);
+            }
+        }
+    }
+#endif
     for (int i = 0; i < 768; i++)
         rgb888Out[i] = DosGfx_6to8(pal6[i]);
     /* After the conversion: these arrive as 8-bit already. */

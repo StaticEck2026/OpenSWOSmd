@@ -20,6 +20,9 @@
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
+#ifdef SWOS_SDL_BUILD
+#include "pitch_map.h"
+#endif
 
 /* ---- external asm globals ---- */
 extern uint16_t _replayState;
@@ -154,6 +157,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
         SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[137];
         if (spr && patternIndex < 2310) {
             uint8_t *tile = _s_pitchFullPtrs[patternIndex];
+            /* A pitch drawn from a map: the map's tile for this fan, as the pitch
+             * itself is drawn (DrawChunkyPitch). */
+            if (PitchMap_Active()) {
+                tile = (uint8_t *)PitchMap_Tile((int32_t)patternIndex, tile);
+                if (!tile)
+                    return;             /* the map draws nothing in this cell */
+            }
             if (tile) spr->sprData = tile;
         }
     }

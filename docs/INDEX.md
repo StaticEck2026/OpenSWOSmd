@@ -118,7 +118,8 @@ docs drift: search by function name.
 | [DOS_GRAPHICS.md](DOS_GRAPHICS.md) | The DOS asset formats (pitch BLK/DAT, planar sprites, palette) and how they load into the chunky pipeline. | current | `[graphics] style = dos|2020` |
 | [JAGUAR.md](JAGUAR.md) | The Atari Jaguar sprite tier: colour mapping, hair/shadow shading, palette donation, wiring, missing sprites. | current | `--jag-graphics`, `[graphics] sprites`, kit/shadow shading |
 | [PALETTE_V2.md](PALETTE_V2.md) | Two palette banks sharing one kit block; truecolour pitches (parked idea). | plan (step 1 of 5 done) | palette entry allocation, kit shading |
-| [PITCH_FORMAT_V2.md](PITCH_FORMAT_V2.md) | A layered, animated pitch format on Tiled `.tmj` maps. | plan (only `src/easing.c` exists) | pitch layers or animation |
+| [PITCH_MAPS.md](PITCH_MAPS.md) | `[graphics] pitch_maps`: a DOS pitch's picture from a Tile Agent map (`bin/grafs_dos/pitch.tmj`), stage 1 — the ground; why the match is still played on the game's own files; the tile-for-tile check. | current | `pitch_maps`, `src/pitch_map.c`, the Tile Agent runtime |
+| [PITCH_FORMAT_V2.md](PITCH_FORMAT_V2.md) | A layered, animated pitch format on Tiled `.tmj` maps. | plan; §2–§5 superseded by Tile Agent's format (PITCH_MAPS.md), the engine-side sections stand | pitch layers or animation |
 | [CROWD_ANIMATION.md](CROWD_ANIMATION.md) | How the fans animate: tile toggles, the 8-slot pump, the state machine, `Rand()` use, the widescreen mirror, replays and rollback. | current | `animated_patterns.c`, celebrations, the `Rand()` stream |
 | [SHADERS.md](SHADERS.md) | A GL present path (index/palette textures, CRT shader) and an SDL3 assessment. | plan (not started; the CPU CRT effects exist) | GPU, shader or SDL3 work |
 | [WEATHER_FX.md](WEATHER_FX.md) | Weather visuals under a strict "never touch the simulation" rule. | plan (nothing implemented) | any weather effect |

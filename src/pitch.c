@@ -12,7 +12,10 @@
 #ifdef SWOS_SDL_BUILD
 #include "dos_graphics.h"
 #include "jag_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
+#include "pitch_map.h"      /* [graphics] pitch_maps: the picture from a .tmj */
 #include <stdio.h>          /* snprintf for the DOS pitch filenames */
+#include <string.h>
+#include <stdlib.h>         /* getenv */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -84,9 +87,42 @@ static uint16_t pitchFansConvertTable[16] = {
  *   convTable   = color remap table: old_index → new_index
  * ================================================================ */
 __attribute__((used, externally_visible))
+#ifdef SWOS_SDL_BUILD
+/* What the fan recolour gave each tile of the bank: the colours kit slots 10 and
+ * 11 became, for a pitch drawn from a map to give ITS tile for the same cell the
+ * same kit (src/pitch_map.c). The first recolour of a tile is the one recorded --
+ * a second finds no 10 or 11 left to change unless a kit colour is 10 or 11. */
+static uint8_t s_fanTileKit[PITCH_POINTER_COUNT][3];    /* set, slot 10, slot 11 */
+
+int32_t Pitch_FanTileKit(const uint8_t *tile, uint8_t *slot10, uint8_t *slot11)
+{
+    extern uint8_t _pitchChunkyBuffer[];
+    size_t index;
+    if (!tile || tile < _pitchChunkyBuffer)
+        return 0;
+    index = (size_t)(tile - _pitchChunkyBuffer) / 256;
+    if (index >= PITCH_POINTER_COUNT || !s_fanTileKit[index][0])
+        return 0;
+    *slot10 = s_fanTileKit[index][1];
+    *slot11 = s_fanTileKit[index][2];
+    return 1;
+}
+#endif
+
 void AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
 {
 #ifdef SWOS_SDL_BUILD
+    {
+        extern uint8_t _pitchChunkyBuffer[];
+        if (destPattern >= _pitchChunkyBuffer) {
+            size_t index = (size_t)(destPattern - _pitchChunkyBuffer) / 256;
+            if (index < PITCH_POINTER_COUNT && !s_fanTileKit[index][0]) {
+                s_fanTileKit[index][0] = 1;
+                s_fanTileKit[index][1] = (uint8_t)convTable[10];
+                s_fanTileKit[index][2] = (uint8_t)convTable[11];
+            }
+        }
+    }
     /* Chunky form: destPattern is a 16×16 8bpp tile (256 bytes) — our
      * load-time decode in FixupAndColorPitchFile converts fan tiles
      * to the same format as pitch tiles. Color remap is a trivial LUT;
@@ -168,6 +204,13 @@ static void dos_load_pitch(uint16_t mapIndex)
     char name[320];
     uint32_t blkSize = 0, datSize = 0;
     int pitchNum = (int)mapIndex + 1;          /* DOS PITCH1..PITCH6 */
+    /* SWOS_PITCH_NUMBER=1..6 pins the pitch drawn, beside SWOS_PITCH_TYPE's
+     * condition (highlight.c): a test can then look at every one. */
+    {
+        const char *pin = getenv("SWOS_PITCH_NUMBER");
+        if (pin && pin[0] >= '1' && pin[0] <= '6' && !pin[1])
+            pitchNum = pin[0] - '0';
+    }
     if (pitchNum < 1) pitchNum = 1;
     if (pitchNum > 6) pitchNum = 6;
 
@@ -223,6 +266,12 @@ static void dos_load_pitch(uint16_t mapIndex)
     uint32_t *slots = (uint32_t *)_pitchDatBuffer;
     for (int i = 0; i < PITCH_POINTER_COUNT; i++)
         slots[i] = (uint32_t)(uintptr_t)_s_pitchFullPtrs[i];
+
+    /* [graphics] pitch_maps: this pitch's PICTURE from <dir>/pitch<N>.tmj when there
+     * is one. The files above are still what the match is played on (the crowd's
+     * slots); the map is baked once the fans have their kits, at the end of
+     * FixupAndColorPitchFile. */
+    PitchMap_Load(_gDosGraphicsDir, pitchNum);
 }
 #endif /* SWOS_SDL_BUILD */
 
@@ -290,6 +339,7 @@ void LoadPitchMap(uint16_t mapIndex)
     /* Arcade themed pitch: dice the chosen SWCPICH BMP into the tile bank instead
      * of loading a pitch-map file (it's already 256-colour chunky, like the DOS
      * bank). FixupAndColorPitchFile then takes the _gDosGraphics short-circuit. */
+    PitchMap_Drop();                /* until a map is loaded for this pitch */
     { extern int _gArcadePitchActive; extern void Arcade_DicePitchTiles(void);
       if (_gArcadePitchActive) { Arcade_DicePitchTiles(); return; } }
     if (_gDosGraphics) {
@@ -357,6 +407,7 @@ void FixupAndColorPitchFile(void)
      * every one of the seven palette indices matched the artwork histogram, so
      * the crowd was not partly wrong, it was entirely unrecoloured. */
     const int dosPitch = (_gDosGraphics != 0);
+    memset(s_fanTileKit, 0, sizeof s_fanTileKit);
 #else
     const int dosPitch = 0;
 #endif
@@ -732,6 +783,10 @@ void FixupAndColorPitchFile(void)
         #undef PITCH_GRID_ROWS
     }
 
+    /* The pitch from its map, now that every fan tile of the bank has its kit. */
+    { extern int _gArcadePitchActive;
+      if (dosPitch && !_gArcadePitchActive)
+          PitchMap_Bake(); }
 #endif
 }
 
@@ -805,6 +860,7 @@ void DrawChunkyPitch(void)
 
     int tilesAcross = fbW / PITCH_TILE_SIZE + 2;
     int tilesDown   = fbH / PITCH_TILE_SIZE + 2;
+    const int mapped = PitchMap_Active();
 
     for (int ty = 0; ty < tilesDown; ty++) {
         int gridY = startTileY + ty;
@@ -820,6 +876,10 @@ void DrawChunkyPitch(void)
                 int ptrIdx = PITCH_PTR_START + gridY * PITCH_GRID_COLS + gridX;
                 tile = (ptrIdx >= 0 && ptrIdx < PITCH_POINTER_COUNT)
                          ? _s_pitchFullPtrs[ptrIdx] : (uint8_t *)0;
+                /* Drawn from a map: the map's tile for this cell, seated or standing
+                 * as the engine's own tile there is (src/pitch_map.c). */
+                if (mapped && ptrIdx >= 0 && ptrIdx < PITCH_POINTER_COUNT)
+                    tile = (uint8_t *)PitchMap_Tile(ptrIdx, tile);
             }
 
             for (int row = 0; row < PITCH_TILE_SIZE; row++) {

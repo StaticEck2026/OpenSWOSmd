@@ -58,6 +58,8 @@ SDL_ONLY_SRCS := \
     menu_load_json.c      \
     menu_symbols.c        \
     miniz_impl.c          \
+    pitch_map.c           \
+    tileagent_impl.c      \
     mm_client.c           \
     netem_core.c          \
     netplay.c             \

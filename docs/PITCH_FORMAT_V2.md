@@ -12,6 +12,10 @@ sheet of frames, and a cloud layer drifting over the top of the match. A pitch
 author sees the tiles they are animating, in Tiled, before we ever write an
 editor of our own.
 
+> **2026-10-01:** the format became Tile Agent's (`D:\Projects\GitHub\TileAgent`,
+> `docs/FORMAT.md` there), which supersedes §2–§5 below, and its first stage is in the game:
+> [PITCH_MAPS.md](PITCH_MAPS.md). §1, §6 (the Amiga), §7 and §8.1 still describe the engine.
+
 This is the design. Nothing here is implemented yet except the easing
 (`src/easing.c`), which is done and verified. (Still true 2026-09-30: no `.tmj`
 loader or layer code exists in `src/`. Source line numbers below were written
