@@ -3,33 +3,7 @@
   The changelog on baker76.com/swos.html (embedded there in a scrolling frame) and at
   baker76.com/changelog.html on its own.
 
-  ADDING A RELEASE: copy the first <article>
-  <header><code>1c45e03</code><time datetime="2026-10-02T20:37Z">2026-10-02 20:37 UTC</time></header>
-  <ul>
-    <li>Online: when both players pick the same team, each now keeps their own line-up. Before, player 2 got player 1's.</li>
-    <li>The log lists each side's starting eleven at every kick-off.</li>
-  </ul>
-</article>
-
-<article>
-  <header><code>3fa7bad</code><time datetime="2026-10-02T19:55Z">2026-10-02 19:55 UTC</time></header>
-  <ul>
-    <li>PC gameplay in widescreen: players above and below the original 200-line view no longer freeze in a pose (lying down, mid-tackle).</li>
-    <li>New setting <code>pitch_maps = true | false</code> under <code>[graphics]</code> (off): with <code>style = dos</code>, the pitch is drawn from an editable Tile Agent map. It looks the same as before.</li>
-    <li>New setting <code>contest_own_ratings = true | false</code> under <code>[gameplay]</code> (off): when two players contest the ball, each is rated by his own tackling and ball control. The original rates one of them by a team-mate. Offline matches only.</li>
-  </ul>
-</article>
-
-<article>
-  <header><code>82b9d67</code><time datetime="2026-10-02T01:16Z">2026-10-02 01:16 UTC</time></header>
-  <ul>
-    <li>New setting <code>hair_shading = true | false</code> under <code>[graphics]</code> for the Jaguar sprites; hair shading now follows <code>shade_step</code>, like the kit.</li>
-    <li>The web version starts with the Amiga sprites; <code>sprites = jaguar</code> in its SWOS.ini brings the Jaguar ones back.</li>
-    <li>Playback page: a <b>screen</b> button (S) shows the match as played, or what either player's screen showed.</li>
-  </ul>
-</article>
-
-<article>, put the new build (the short hash the main
+  ADDING A RELEASE: copy the first <article>, put the new build (the short hash the main
   menu shows) and its build time in it -- the "Build X . YYYY-MM-DD HH:MM UTC" line at the
   top of dist/swos.html, which gen_downloads_page.sh prints as "built ...". Several drops
   can land on one day, so the time is what tells them apart. Then add a few short lines
@@ -82,6 +56,42 @@
 </style>
 </head>
 <body>
+
+<article>
+  <header><code>9f838fc</code><time datetime="2026-10-02T22:33Z">2026-10-02 22:33 UTC</time></header>
+  <ul>
+    <li>New <b>UNIFORM</b> button on the team screen before a match: pick each side's shirt type and colours for that match. Works in friendlies, cups, leagues, career and online (your own side).</li>
+    <li>New setting <code>kit_art = amiga | jaguar</code> under <code>[graphics]</code>: the kit drawings on the UNIFORM screen.</li>
+    <li><b>MY CUSTOM TEAM</b> on the multiplayer menu: three teams of your own for online play. Start from any team of the database, then change names, faces, kits and line-up. Skills cannot be changed.</li>
+    <li>Online: a team is only accepted if its players match the database.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>1c45e03</code><time datetime="2026-10-02T20:37Z">2026-10-02 20:37 UTC</time></header>
+  <ul>
+    <li>Online: when both players pick the same team, each now keeps their own line-up. Before, player 2 got player 1's.</li>
+    <li>The log lists each side's starting eleven at every kick-off.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>3fa7bad</code><time datetime="2026-10-02T19:55Z">2026-10-02 19:55 UTC</time></header>
+  <ul>
+    <li>PC gameplay in widescreen: players above and below the original 200-line view no longer freeze in a pose (lying down, mid-tackle).</li>
+    <li>New setting <code>pitch_maps = true | false</code> under <code>[graphics]</code> (off): with <code>style = dos</code>, the pitch is drawn from an editable Tile Agent map. It looks the same as before.</li>
+    <li>New setting <code>contest_own_ratings = true | false</code> under <code>[gameplay]</code> (off): when two players contest the ball, each is rated by his own tackling and ball control. The original rates one of them by a team-mate. Offline matches only.</li>
+  </ul>
+</article>
+
+<article>
+  <header><code>82b9d67</code><time datetime="2026-10-02T01:16Z">2026-10-02 01:16 UTC</time></header>
+  <ul>
+    <li>New setting <code>hair_shading = true | false</code> under <code>[graphics]</code> for the Jaguar sprites; hair shading now follows <code>shade_step</code>, like the kit.</li>
+    <li>The web version starts with the Amiga sprites; <code>sprites = jaguar</code> in its SWOS.ini brings the Jaguar ones back.</li>
+    <li>Playback page: a <b>screen</b> button (S) shows the match as played, or what either player's screen showed.</li>
+  </ul>
+</article>
 
 <article>
   <header><code>ed1731d</code><time datetime="2026-09-30T22:39Z">2026-09-30 22:39 UTC</time></header>
