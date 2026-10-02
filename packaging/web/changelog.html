@@ -3,7 +3,16 @@
   The changelog on baker76.com/swos.html (embedded there in a scrolling frame) and at
   baker76.com/changelog.html on its own.
 
-  ADDING A RELEASE: copy the first <article>, put the new build (the short hash the main
+  ADDING A RELEASE: copy the first <article>
+  <header><code>82b9d67</code><time datetime="2026-10-02T01:16Z">2026-10-02 01:16 UTC</time></header>
+  <ul>
+    <li>New setting <code>hair_shading = true | false</code> under <code>[graphics]</code> for the Jaguar sprites; hair shading now follows <code>shade_step</code>, like the kit.</li>
+    <li>The web version starts with the Amiga sprites; <code>sprites = jaguar</code> in its SWOS.ini brings the Jaguar ones back.</li>
+    <li>Playback page: a <b>screen</b> button (S) shows the match as played, or what either player's screen showed.</li>
+  </ul>
+</article>
+
+<article>, put the new build (the short hash the main
   menu shows) and its build time in it -- the "Build X . YYYY-MM-DD HH:MM UTC" line at the
   top of dist/swos.html, which gen_downloads_page.sh prints as "built ...". Several drops
   can land on one day, so the time is what tells them apart. Then add a few short lines
