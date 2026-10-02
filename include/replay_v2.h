@@ -138,6 +138,8 @@ int32_t ReplayV2_PlayerPaused(void);
 void    ReplayV2_PlayerPause(int32_t paused);
 void    ReplayV2_PlayerSeek(int32_t frame);
 void    ReplayV2_PlayerStep(int32_t delta);   /* +-N frames, then paused */
+/* Whose screen is drawn: 0 the match as played, 1 or 2 that player's (SEEN); -1 asks. */
+int32_t ReplayV2_PlayerPerspective(int32_t who);
 int32_t ReplayV2_ViewTestArmed(void);
 void    ReplayV2_ViewTestRun(void);
 

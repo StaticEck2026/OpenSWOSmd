@@ -1179,6 +1179,12 @@ static void load_prediction(const uint8_t *file, uint32_t fileLen)
     if (s_play.pred || s_play.seenAt)
         fprintf(stderr, "[replay] what each player saw: %s%s\n", s_play.pred ? "PRED" : "",
                 s_play.seenAt ? (s_play.pred ? " and SEEN" : "SEEN") : "");
+    /* SWOS_REPLAY_SCREEN=1|2: start on that player's screen (--view-replay has no page). */
+    {
+        const char *e = getenv("SWOS_REPLAY_SCREEN");
+        if (e && *e)
+            ReplayV2_PlayerPerspective(atoi(e));
+    }
     free(pred);
     free(seen);
     free(in);
@@ -1392,6 +1398,83 @@ EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerOverlay(int32_t mode)
     return s_overlay;
 }
 
+/* WHOSE SCREEN the picture is: 0 the match as finally played, 1 or 2 that player's
+ * (docs/PLAYBACK.md, "Three screens"). A player's screen is the match with every man
+ * and the ball that SEEN says he saw elsewhere drawn THERE -- the same sprite, moved.
+ * -1 only asks. */
+static int32_t s_perspective;
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPerspective(int32_t who)
+{
+    if (who >= 0)
+        s_perspective = who <= 2 ? who : 0;
+    return s_perspective;
+}
+
+#define SPR_BALL_SHADOW_IMAGE 1069      /* ball_physics.c SPR_BALL_SHADOW */
+
+/* How far each of the frame's sprites moves to show player `who`'s screen. A SEEN object
+ * is where a man STANDS (the ball: where it is seen), and a recorded sprite is that less
+ * its graphic's centre (ReplayRec_CaptureSprites), so the sprite an object is drawn with
+ * is the one whose position plus its centre is the object's final position -- exactly,
+ * not nearly. Two things on one spot: the ball is the smaller graphic, and two men who
+ * stand on the same pixel (SWOS lets them) are taken in drawing order, so their two
+ * pictures may be exchanged. The ball's shadow follows the ball. */
+static void perspective_shifts(uint32_t f, int32_t who, const uint8_t *sp, uint16_t sprites,
+                               int16_t (*shift)[2])
+{
+    uint32_t at, end;
+    uint8_t used[MAX_FRAME_SPRITES];
+    uint16_t i;
+
+    memset(shift, 0, (size_t)sprites * sizeof *shift);
+    if (!s_play.seenAt || who < 1 || who > 2 || f >= s_play.frameCount)
+        return;
+    memset(used, 0, sizeof used);
+    at = s_play.seenAt[f];
+    end = s_play.seenAt[f + 1];
+    while (at < end) {
+        const uint8_t *r = s_play.seen + at;
+        uint32_t n = r[5], k;
+        at += SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+        if (r[4] != who)
+            continue;
+        for (k = 0; k < n; k++) {
+            const uint8_t *o = r + SRP_SEEN_REC_HEAD + k * SRP_SEEN_OBJ_BYTES;
+            int16_t dx = (int16_t)BE_READ_U16(o + 1), dy = (int16_t)BE_READ_U16(o + 3);
+            int16_t fx = (int16_t)BE_READ_U16(o + 5), fy = (int16_t)BE_READ_U16(o + 7);
+            int32_t ball = o[0] == SRP_SEEN_BALL, best = -1, bestArea = 0;
+            for (i = 0; i < sprites; i++) {
+                const uint8_t *q = sp + (size_t)i * SPRITE_BYTES;
+                uint16_t image = BE_READ_U16(q);
+                const SpriteGraphics *g = graphics(image);
+                int32_t area;
+                if (used[i] || image == SPR_BALL_SHADOW_IMAGE || !g)
+                    continue;
+                if ((int16_t)((int16_t)BE_READ_U16(q + 2) + g->centerX) != fx ||
+                    (int16_t)((int16_t)BE_READ_U16(q + 4) + g->centerY) != fy)
+                    continue;
+                area = (int32_t)g->pixWidth * g->nlines;
+                /* The ball is the smallest thing standing there, a man the largest. */
+                if (best < 0 || (ball ? area < bestArea : area > bestArea)) {
+                    best = i;
+                    bestArea = area;
+                }
+            }
+            if (best < 0)
+                continue;                   /* not drawn on this frame (off the pitch, hidden) */
+            used[best] = 1;
+            shift[best][0] = (int16_t)(dx - fx);
+            shift[best][1] = (int16_t)(dy - fy);
+            if (ball)
+                for (i = 0; i < sprites; i++)
+                    if (BE_READ_U16(sp + (size_t)i * SPRITE_BYTES) == SPR_BALL_SHADOW_IMAGE) {
+                        shift[i][0] = shift[best][0];
+                        shift[i][1] = shift[best][1];
+                    }
+        }
+    }
+}
+
 static void plot(int32_t x, int32_t y, uint8_t colour)
 {
     extern volatile uintptr_t _frontbufferBasePtr;
@@ -1532,6 +1615,7 @@ void ReplayV2_DrawFrame(void)
     int16_t origin, camY;
     int32_t fresh = 1;              /* a frame not drawn before: its sounds play */
     uint16_t adLine;
+    int16_t shift[MAX_FRAME_SPRITES][2];
     extern int32_t Adverts_ApplyStripLine(uint16_t image, uint16_t line);
 
     if (!s_play.loaded)
@@ -1606,14 +1690,19 @@ void ReplayV2_DrawFrame(void)
     adLine = BE_READ_U16(h + 18);
     adLine = adLine ? (uint16_t)(adLine - 1) : 0;     /* older recordings: the first strip */
     sprites = BE_READ_U16(h);
+    if (sprites > MAX_FRAME_SPRITES)
+        sprites = MAX_FRAME_SPRITES;
     sp = h + FRAME_HEAD_BYTES;
+    if (s_perspective)
+        perspective_shifts(s_play.cursor, s_perspective, sp, sprites, shift);
     for (i = 0; i < sprites; i++, sp += SPRITE_BYTES) {
         extern int _menu_draw_x_offset;
         uint16_t image = BE_READ_U16(sp);
         /* Where it lands on screen: the world position through the playback camera, as
-         * live drawing does. */
-        int16_t sx = (int16_t)((int16_t)BE_READ_U16(sp + 2) - origin);
-        int16_t sy = (int16_t)((int16_t)BE_READ_U16(sp + 4) - camY);
+         * live drawing does -- moved to where a player's screen had it, when that is
+         * the screen being shown. */
+        int16_t sx = (int16_t)((int16_t)BE_READ_U16(sp + 2) - origin + (s_perspective ? shift[i][0] : 0));
+        int16_t sy = (int16_t)((int16_t)BE_READ_U16(sp + 4) - camY + (s_perspective ? shift[i][1] : 0));
         const SpriteGraphics *g;
         (void)Adverts_ApplyStripLine(image, adLine);   /* the ad's window, as the match cut it */
         g = graphics(image);

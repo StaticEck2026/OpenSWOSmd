@@ -93,9 +93,41 @@ player's input, corrected a few frames later. When a recording has it, the page 
   colour), and the drawn spot's trail over the frames before: a rollback reads as a ghost
   that runs off and snaps back. At the bottom left a bar a player: its length the frame's
   lag, red when it showed something that did not happen.
+- **Three screens** (**S** / the *screen* button: the match, player 1's screen, player 2's).
+  *The match* is the recording as it was finally played. A player's screen is the same
+  picture with every man and the ball that player's game drew somewhere else drawn THERE
+  -- the sprites themselves moved, not boxes over them -- so a rollback is seen as that
+  player saw it: a man who runs on and snaps back. `&screen=1` or `&screen=2` in a link
+  opens it that way, and *copy link* keeps it. What it cannot show is in "What a
+  player's screen is made from" below.
 - **[ and ]** (the *rollback* buttons): the previous or next moment someone saw something
   that did not happen, for the views shown.
 - The line under the bar says it for this frame: `P1 guessed 6, replayed saw it wrong`.
+
+### What a player's screen is made from
+
+`SEEN` keeps, for each player and frame, where his game drew each of the 22 men and the
+ball when that was not where the match finally had them. A recorded sprite is its
+object's position less its graphic's centre, so the sprite that belongs to an object is
+found exactly (`perspective_shifts`, src/replay_v2.c) -- over a whole match every
+recorded position found its sprite -- and is drawn moved by the difference. The ball's
+shadow moves with the ball.
+
+That makes the POSITIONS exact. Three things are still the final match's, because the
+recording does not hold them per player:
+
+- **the pose**: the animation frame and the way a man faces are the ones finally played;
+- **the camera**: each game aims its own, and only the final one is recorded;
+- **everything else**: the number over the controlled man, the referee, the score.
+
+Two men standing on the same pixel -- SWOS allows it -- are told apart only by drawing
+order, so their two pictures can be exchanged for that frame.
+
+An exact screen, pose and camera included, takes replaying each player's game from the
+inputs and the lag (`INPT` + `PRED` + `STAT` are enough for that, REPLAY_FORMAT_V2.md §4),
+or recording the pose and camera per player in `SEEN`. Neither is done.
+
+`SWOS_REPLAY_SCREEN=1|2` starts `--view-replay` and `--replay-player` on that screen.
 
 To try it with no server, record a match over an emulated bad link and open it locally:
 

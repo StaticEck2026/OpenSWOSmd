@@ -75,9 +75,10 @@
     <div class="row pred" hidden>
       <button id="prevEv" title="The previous moment a player saw something that did not happen ([)">&lsaquo; rollback</button>
       <button id="nextEv" title="The next moment a player saw something that did not happen (])">rollback &rsaquo;</button>
+      <button id="screen" title="Whose screen the picture is: the match as it was finally played, or what one player's screen showed (S)">screen: the match</button>
       <button id="view" title="Whose view the overlay draws (V)">view: both</button>
       <span id="lag"></span>
-      <span id="help2" class="help">[ ] rollbacks &middot; V view</span>
+      <span id="help2" class="help">[ ] rollbacks &middot; S screen &middot; V view</span>
     </div>
   </div>
 
@@ -87,6 +88,7 @@
     // The recordings folder: the server's /recordings/, beside this page's /playback/.
     var base = q.get('base') || '../recordings/';
     var startFrame = parseInt(q.get('f') || '', 10);
+    var startScreen = parseInt(q.get('screen') || '', 10);      // 1 | 2: that player's screen
     var statusEl = document.getElementById('status');
 
     if (!srp || !/^[A-Za-z0-9._-]+\.SRP$/i.test(srp))
@@ -157,6 +159,7 @@
           has:      Module._ReplayV2_PlayerPrediction,
           predAt:   Module._ReplayV2_PlayerPredAt,
           overlay:  Module._ReplayV2_PlayerOverlay,
+          screen:   Module._ReplayV2_PlayerPerspective,
         };
         return api;
       }
@@ -166,7 +169,7 @@
       // 0x20 replayed by a rollback; the player adds 0x40 "its guess was wrong" and
       // 0x80 "SEEN has it drawn elsewhere". 0xFF: that player's half never arrived.
       var pred = null, timeline = document.getElementById('timeline'), lagEl = document.getElementById('lag');
-      var viewBtn = document.getElementById('view');
+      var viewBtn = document.getElementById('view'), screenBtn = document.getElementById('screen');
       // A player by name when the recording's card has one (typed by players, so escaped
       // wherever it goes into HTML), else "P1" / "P2".
       function nameOf(p) {
@@ -182,6 +185,7 @@
       window.onPlayerNames = function () {
         lastShown = -1;                                   /* the line under the bar again */
         viewBtn.textContent = 'view: ' + viewName(api ? api.overlay(-1) : 3);
+        showScreen();
         timeline.title = timeline.title.replace(/top row [^,]*\(yellow\), bottom row [^.]*\(white\)/,
           'top row ' + nameOf(0) + ' (yellow), bottom row ' + nameOf(1) + ' (white)');
       };
@@ -265,6 +269,18 @@
         }
         return out.join(' &middot; ');
       }
+      // Whose screen the picture is: 0 the match as finally played, 1 / 2 that player's --
+      // every man and the ball drawn where that player's game drew them (SEEN).
+      function screenName(m) { return m ? esc(nameOf(m - 1)) + "'s screen" : 'the match'; }
+      function showScreen() {
+        var m = api && api.screen ? api.screen(-1) : 0;
+        screenBtn.innerHTML = 'screen: ' + screenName(m);
+      }
+      screenBtn.onclick = function () {
+        if (!bind() || !api.screen) return;
+        api.screen((api.screen(-1) + 1) % 3);    // the match -> player 1 -> player 2
+        showScreen();
+      };
       viewBtn.onclick = function () {
         if (!bind()) return;
         var m = (api.overlay(-1) + 3) % 4;       // both -> player 2 -> player 1 -> off -> both
@@ -278,6 +294,8 @@
       function frameUrl(f) {
         var u = new URL(location.href);
         u.searchParams.set('f', f);
+        var m = api && api.screen ? api.screen(-1) : 0;   // the screen being shown goes with it
+        if (m) u.searchParams.set('screen', m); else u.searchParams.delete('screen');
         return u.toString();
       }
       function tick() {
@@ -292,6 +310,7 @@
           scrub.max = String(n - 1);
           if (startFrame >= 0) { api.seek(startFrame); api.pause(1); }
           loadPred(n);
+          if ((startScreen === 1 || startScreen === 2) && api.screen) { api.screen(startScreen); showScreen(); }
           // No card (or one without names): the recording itself names its players (PLYR).
           if (!window.playerNames && Module.cwrap) {
             var nm = Module.cwrap('ReplayV2_PlayerName', 'string', ['number']);
@@ -358,6 +377,7 @@
         else if (e.key === ']') { jump(1); e.preventDefault(); }
         else if (e.key === '[') { jump(-1); e.preventDefault(); }
         else if (e.key === 'v' || e.key === 'V') { viewBtn.click(); e.preventDefault(); }
+        else if (e.key === 's' || e.key === 'S') { screenBtn.click(); e.preventDefault(); }
       });
     })();
   </script>
