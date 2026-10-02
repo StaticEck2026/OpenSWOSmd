@@ -112,6 +112,9 @@ typedef struct {
     int                    hair_shading;     /* 1 = shade hair the game leaves flat (black), 0 = as the game has it */
     int                    shade_step;       /* sixteenths between kit shades: 16, 16-N, 16-2N, 16-3N; hair too */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
+    int                    contest_own_ratings; /* 1 = a contested ball's dice rates each side by the man at the
+                                              * ball; 0 (default) = the original's squad-slot lookup
+                                              * (ball_possession.c, _gContestOwnRatings). Offline only. */
     int                    fire_hold_lockout;/* 1 = keep the ORIGINAL Amiga bug where an OPPONENT's tackle
                                               * kills your held fire button's shot charge for good. 0 (default)
                                               * = fixed. See _gOriginalFireHoldLockout in team_control.c */

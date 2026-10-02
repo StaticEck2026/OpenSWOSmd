@@ -187,6 +187,11 @@ static void print_usage(const char *argv0)
         "                            play faster), plus the DOS goalkeeper reach and\n"
         "                            ball-physics constants. Default: off (Amiga\n"
         "                            tuning). PC-only extra.\n"
+        "  --contest-own-ratings=<on|off>\n"
+        "                            The dice for a contested ball rates each side by\n"
+        "                            the man actually at the ball. Default off: the\n"
+        "                            original rates one side by a team-mate\n"
+        "                            (docs/BALL_CONTEST.md). Offline matches only.\n"
         "  --fire-hold-lockout=<on|off>\n"
         "                            Restore an original-Amiga BUG: an OPPONENT's\n"
         "                            tackle wipes your held fire button's shot charge,\n"
@@ -397,6 +402,7 @@ int main(int argc, char **argv)
     opts.shade_step = 2;
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
+    opts.contest_own_ratings = 0; /* default: the original's roll, team-mate's rating and all */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
@@ -524,6 +530,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --dos-graphics value '%s' (expected on|off)\n", v);
                 return 1;
             }
+        } else if ((v = match_kv(a, "contest-own-ratings")) != NULL) {
+            opts.contest_own_ratings = (strcmp(v, "on") == 0 || strcmp(v, "1") == 0);
         } else if ((v = match_kv(a, "fire-hold-lockout")) != NULL) {
             if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.fire_hold_lockout = 1;
             else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.fire_hold_lockout = 0;
@@ -825,6 +833,10 @@ int main(int argc, char **argv)
          * see project_replay_framerate_decouple. */
         if (!Rollback_Enabled())
         opts.fire_hold_lockout = 1;
+        /* And the original's roll: its recordings only replay with the squad-slot lookup
+         * (docs/BALL_CONTEST.md -- playa-10090613 parts at frame 7,009 without it). */
+        if (!Rollback_Enabled())
+        opts.contest_own_ratings = 0;
         /* Replay at the port's OWN native view, not the tester's monitor. The
          * original reason given here — "SWOS's camera constants are all derived
          * from the view size" — no longer holds: 22f370a pinned _sim_view_width
@@ -929,6 +941,8 @@ int main(int argc, char **argv)
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;
       _gOriginalFireHoldLockout = opts.fire_hold_lockout; }
+    { extern int _gContestOwnRatings;
+      _gContestOwnRatings = opts.contest_own_ratings; }
     /* The OPTIONS menu draws its GAMEPLAY row from a uint16_t mirror (the
      * string-table header reads its index as one). Seed it here so the row
      * shows what SWOS.ini / --dos-gameplay actually selected; the toggle
@@ -943,6 +957,9 @@ int main(int argc, char **argv)
             : "AMIGA (the shipped default)");
     /* Say it out loud — this one is a deliberate departure from the original,
      * so a tester comparing against real SWOS can see which half he is on. */
+    fprintf(stderr, "[gameplay] contested ball: %s\n", opts.contest_own_ratings
+            ? "each side rated by the man at the ball (contest_own_ratings; offline matches only)"
+            : "the original's roll (one side rated by a team-mate, as both releases do)");
     fprintf(stderr, "[gameplay] fire-hold lockout: %s\n", opts.fire_hold_lockout
             ? "ON — original Amiga behaviour (an opponent's tackle kills your shot charge)"
             : "off — fixed (an opponent's tackle no longer kills your shot charge)");

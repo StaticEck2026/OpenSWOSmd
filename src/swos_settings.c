@@ -135,6 +135,8 @@ static int handler(void *user, const char *section,
         int b;
         if (eqi(name, "fire_hold_lockout") && parse_bool(value, &b))
             opts->fire_hold_lockout = b;
+        else if (eqi(name, "contest_own_ratings") && parse_bool(value, &b))
+            opts->contest_own_ratings = b;
         else if (eqi(name, "style")) {
             if      (eqi(value, "amiga")) opts->dos_gameplay = 0;
             else if (eqi(value, "dos"))   opts->dos_gameplay = 1;
@@ -350,6 +352,14 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (fixed). Your OWN tackle still spends the press either way — that half is\n"
         "; deliberate in the original. See team_control.c.",
         opts->fire_hold_lockout ? "true" : "false" };
+    items[n++] = (IniEntry){ "gameplay", "contest_own_ratings",
+        "; contest_own_ratings: true | false. When two players contest the ball the game\n"
+        "; rolls a dice weighted by tackling and ball control. The ORIGINAL rates one of the\n"
+        "; two sides by a team-mate (the player with the opponent's line-up number), in both\n"
+        "; the Amiga and PC releases. true rates each side by the man actually at the ball.\n"
+        "; Default false: the original. OFFLINE matches only -- an online match always\n"
+        "; plays the original's. See docs/BALL_CONTEST.md.",
+        opts->contest_own_ratings ? "true" : "false" };
 
 
     items[n++] = (IniEntry){ "gameplay", "style",

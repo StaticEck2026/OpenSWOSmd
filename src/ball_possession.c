@@ -448,6 +448,40 @@ exit_kick:
  *    If diff<0: negate, switch a6 back via OPPONENTSTEAM
  *    Random check determines which team (tracked by a6) wins the ball
  * ================================================================ */
+/* WHOSE RATING THE ROLL TAKES FOR THE TEAM THAT TRIGGERS IT.
+ *
+ * Both originals read it from the wrong man. The roll is entered with a1 = this team's
+ * player and a6 = this team; it loads the OPPONENT's man into a1 (to test there is one)
+ * and calls GetPlayerPointerFromShirtNumber without putting its own back, so the lookup
+ * is "the opponent's man's line-up number, in OUR team": a team-mate who is nowhere near
+ * the ball. SWOS2.s:23439-23443, and the same in swos.asm (whose author wrote "A1 ->
+ * opponent's controlled player, but A6 -> this team?" beside it). The second lookup, for
+ * the opponent, is right. docs/BALL_CONTEST.md, "Whose ratings the roll uses".
+ *
+ * 0 (the default) keeps it, because the game is the original's: a recording of the
+ * original only replays with it. 1 rates this team by the man who is actually at the
+ * ball -- `[gameplay] contest_own_ratings`, or -DSWOS_CONTEST_OWN_RATINGS=1 for a build
+ * with no SWOS.ini (the Amiga's, through EXTRA_CFLAGS).
+ *
+ * OFFLINE ONLY for now. Two netplay peers must roll the same dice, and a recording must
+ * be replayed by the rule it was played with; neither the handshake nor the .SRP says
+ * which rule that is yet, so an online match and every re-simulation play the original's
+ * whatever this says (contestOwnRatings below). */
+#ifndef SWOS_CONTEST_OWN_RATINGS
+#define SWOS_CONTEST_OWN_RATINGS 0
+#endif
+int _gContestOwnRatings = SWOS_CONTEST_OWN_RATINGS;
+
+static int contestOwnRatings(void)
+{
+#ifdef SWOS_SDL_BUILD
+    extern int32_t NetplayMatch_Enabled(void);
+    if (NetplayMatch_Enabled())
+        return 0;
+#endif
+    return _gContestOwnRatings;
+}
+
 void __attribute__((used, externally_visible))
 CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
 {
@@ -491,7 +525,7 @@ CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
 
             /* FIRST GetPlayerPointerFromShirtNumber:
                a1 = opponent's controlled player, a6 = our team (cross-team!) */
-            a4 = GetPlayerPointerFromShirtNumber(oppControlled, a6_reg);
+            a4 = GetPlayerPointerFromShirtNumber(contestOwnRatings() ? player : oppControlled, a6_reg);
             {
                 PlayerInfo *pi = a4;
                 d1_skill = (uint8_t)((pi->tackling + pi->ballControl) >> 1);
