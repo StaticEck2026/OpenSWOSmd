@@ -256,6 +256,9 @@ static void print_usage(const char *argv0)
         "  --menu=<name>             Open a menu that exists only as JSON before the\n"
         "                            main menu, e.g. swos2020/logInMenu (a file under\n"
         "                            data_json/menus/, docs/MENUS.md section 10).\n"
+        "  --convert-teams=<in>,<out> Convert every .TEAM team record in <in> (SWOS\n"
+        "                            2020, editors) to a custom team under the same name in <out>,\n"
+        "                            and say why any could not be. Exits.\n"
         "  --custom-team-selftest    Check every database team against the custom team\n"
         "                            rule (names, faces, kits and line-up only) and\n"
         "                            through the team file's text. Exits.\n"
@@ -646,6 +649,17 @@ int main(int argc, char **argv)
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
+        } else if ((v = match_kv(a, "convert-teams")) != NULL) {
+            static char dirs[2048];
+            char *comma;
+            snprintf(dirs, sizeof dirs, "%s", v);
+            comma = strchr(dirs, ',');
+            if (!comma) {
+                fprintf(stderr, "--convert-teams=<folder of .TEAM files>,<folder for the .json>\n");
+                return 1;
+            }
+            *comma = '\0';
+            return CustomTeam_ConvertDir(dirs, comma + 1) ? 0 : 1;
         } else if (strcmp(a, "--custom-team-selftest") == 0) {
             return CustomTeam_SelfTest() ? 0 : 1;
         } else if (strncmp(a, "--matchmaker-selftest", 21) == 0) {

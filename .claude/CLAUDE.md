@@ -136,9 +136,11 @@ travels inside the team (both kits become it), so no wire format changed. Its dr
 amiga; `bin/grafs_jag/JAGKITS.BIN` from `scripts/make_jag_graphics.py`). MY CUSTOM TEAM
 (`src/custom_team.c`) is three slots of `CUSTOMn.TEAM` (JSON) in the save folder, edited on the
 game's EDIT TEAM screen (IMPORT takes a database team whole, UNDO is LINEUP). **A custom team is a
-database team with only names, faces, kits and line-up changed -- no skill can differ**: the file
-has no field for one, and the lobby refuses any team from the other player that is not that
-(`CustomTeam_Allowed`, every team, custom or not). `--custom-team-selftest` runs all 1,631 database
+database team with only names, faces, nationalities, shirt numbers, kits and line-up changed --
+no position, skill or value can differ**: the file has no field for one, and the lobby refuses any
+team from the other player that is not that (`CustomTeam_Allowed`, every team, custom or not). A raw
+684-byte `.TEAM` (SWOS 2020, editors) in a slot is converted to the JSON, its base team found BY ITS
+PLAYERS -- SWOS 2020 renumbers custom teams. `--custom-team-selftest` runs all 1,631 database
 teams through the rule and the file; run it after touching either.
 
 **Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
