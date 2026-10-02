@@ -47,6 +47,7 @@ VPATH     = $(SRC_DIRS) support asm
 # the merge; don't "fix" a shared file by adding it to this list.
 SDL_ONLY_SRCS := \
     arcade.c              \
+    contest_log.c         \
     audio_sdl.c           \
     crt_effects.c         \
     ini.c                 \

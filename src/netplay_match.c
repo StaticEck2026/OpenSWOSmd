@@ -14,6 +14,7 @@
 #include "netplay_match.h"
 #include "audio_sfx_filter.h"
 #include "dos_gameplay.h"   /* DosGameplay_TargetFps: the match's frame rate */
+#include "contest_log.h"    /* --contest-log, while a recording is re-simulated */
 #include "display.h"        /* _sim_draw_width, _screen_width */
 #include "game_loop.h"
 #include "match_step.h"
@@ -2166,7 +2167,132 @@ static struct {
     uint32_t        frames, frame, matched;
     int32_t         loaded, firstDiff;
     uint32_t        diffHave, diffWant;
+    /* What each player's own game showed (NetplayMatch_SetResimViews). */
+    const uint8_t  *pred;           /* 2 bytes a frame, as PRED has them */
+    const uint8_t  *seen;           /* SEEN whole */
+    uint32_t        seenLen, seenAt;
+    uint8_t        *ring[16];       /* the match's state at the start of the last 16 frames */
+    uint32_t        viewFrames[2], viewSame[2], viewSkipped[2];
 } s_resim;
+
+/* ---- what each player's game SHOWED --------------------------------------------------
+ *
+ * The match as played is what both machines ended on. What a player WATCHED is his own
+ * game the first time it showed each frame: the last frame it had the other player's real
+ * input for (this frame less the lag PRED recorded), then every frame since played on a
+ * guess -- the other player's input of that frame, repeated, which is what GGPO-X guesses
+ * (docs/REPLAY_FORMAT_V2.md, "What each player SAW"). That is replayed here, for each
+ * player and each frame his game first played on a guess, with the contest log taking the
+ * LAST of those frames: the one he was shown. So the log can say what a player saw
+ * happen at the ball before a rollback corrected it (docs/CONTEST_LOG.md, "Views").
+ *
+ * It checks itself: where SEEN says that player's screen drew a man or the ball, this
+ * must put him there, and everywhere else where the match finally had him. */
+static uint8_t *s_viewPred, *s_viewSeen;
+static uint32_t s_viewSeenLen;
+
+void NetplayMatch_SetResimViews(uint8_t *pred, uint8_t *seen, uint32_t seenLen)
+{
+    s_viewPred = pred;
+    s_viewSeen = seen;
+    s_viewSeenLen = seenLen;
+}
+
+static void viewPositions(int16_t (*xy)[2])
+{
+    extern Sprite *_teamSpritesTable[];
+    extern Sprite  _ballSprite;
+    int32_t i;
+    for (i = 0; i < 22; i++) {
+        const Sprite *s = _teamSpritesTable[i];
+        xy[i][0] = s ? s->x.s.i : 0;
+        xy[i][1] = s ? s->y.s.i : 0;
+    }
+    xy[22][0] = _ballSprite.x.s.i;
+    xy[22][1] = (int16_t)(_ballSprite.y.s.i - _ballSprite.z.s.i);
+}
+
+/* Player `p`'s game at frame `f`, played from the state at the start of frame f - lag + 1
+ * on the other player's input of frame f - lag. `final` is where the match had everything
+ * after frame f. */
+static void resimView(uint32_t f, int32_t p, uint32_t lag, int16_t (*final)[2])
+{
+    uint32_t first = f + 1 - lag, k, at;
+    const uint8_t *guess;
+    static const uint8_t none[MATCH_INPUT_SIZE];
+    int16_t want[23][2], got[23][2];
+    int32_t i, same = 1;
+
+    guess = first > 0 ? s_resim.inputs + (size_t)(first - 1) * SRP_INPUT_BYTES + (1 - p) * MATCH_INPUT_SIZE
+                      : none;
+    SimState_Load(s_resim.ring[first & 15], SIM_TIER_ALL);
+    for (k = first; k <= f; k++) {
+        uint8_t in[SRP_INPUT_BYTES];
+        GameFrameResult r;
+        memcpy(in + p * MATCH_INPUT_SIZE,
+               s_resim.inputs + (size_t)k * SRP_INPUT_BYTES + p * MATCH_INPUT_SIZE, MATCH_INPUT_SIZE);
+        memcpy(in + (1 - p) * MATCH_INPUT_SIZE, guess, MATCH_INPUT_SIZE);
+        ContestLog_SetFrame(k);
+        ContestLog_SetView(p + 1, k != f);
+        soundFrameBegin((int32_t)k, 1);
+        r = step(in, -1, 0);
+        soundFrameEnd();
+        if (r != GAME_FRAME_DONE) {         /* a guess that leaves the match loop: not replayed */
+            s_resim.viewSkipped[p]++;
+            return;
+        }
+    }
+    /* Where the recording says this screen drew everything. */
+    memcpy(want, final, sizeof want);
+    at = s_resim.seenAt;
+    while (s_resim.seen && at + SRP_SEEN_REC_HEAD <= s_resim.seenLen &&
+           BE_READ_U32(s_resim.seen + at) <= f) {
+        const uint8_t *rec = s_resim.seen + at;
+        uint32_t n = rec[5], o;
+        if (at + SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES > s_resim.seenLen)
+            break;
+        if (BE_READ_U32(rec) == f && rec[4] == p + 1)
+            for (o = 0; o < n; o++) {
+                const uint8_t *q = rec + SRP_SEEN_REC_HEAD + o * SRP_SEEN_OBJ_BYTES;
+                if (q[0] < 23) {
+                    want[q[0]][0] = (int16_t)BE_READ_U16(q + 1);
+                    want[q[0]][1] = (int16_t)BE_READ_U16(q + 3);
+                }
+            }
+        at += SRP_SEEN_REC_HEAD + n * SRP_SEEN_OBJ_BYTES;
+    }
+    viewPositions(got);
+    for (i = 0; i < 23; i++)
+        if (got[i][0] != want[i][0] || got[i][1] != want[i][1])
+            same = 0;
+    s_resim.viewFrames[p]++;
+    s_resim.viewSame[p] += same;
+}
+
+static void resimViews(uint32_t f)
+{
+    int16_t final[23][2];
+    int32_t p, any = 0;
+
+    viewPositions(final);
+    for (p = 0; p < 2; p++) {
+        uint8_t b = s_resim.pred[2 * f + p];
+        uint32_t lag = b & SRP_PRED_LAG;
+        if (b == SRP_PRED_UNKNOWN || lag == 0 || lag > 15 || lag > f + 1)
+            continue;
+        resimView(f, p, lag, final);
+        any = 1;
+    }
+    /* SEEN's records are in frame order: step past this frame's. */
+    while (s_resim.seen && s_resim.seenAt + SRP_SEEN_REC_HEAD <= s_resim.seenLen &&
+           BE_READ_U32(s_resim.seen + s_resim.seenAt) <= f)
+        s_resim.seenAt += SRP_SEEN_REC_HEAD + (uint32_t)s_resim.seen[s_resim.seenAt + 5] * SRP_SEEN_OBJ_BYTES;
+    if (any) {
+        /* Back to the match: the state after frame f, saved for the next frame's start. */
+        SimState_Load(s_resim.ring[(f + 1) & 15], SIM_TIER_ALL);
+        ContestLog_SetView(0, 0);
+    }
+}
 
 int32_t NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, const uint8_t *inputs,
                                 const uint32_t *hashes, uint32_t frames, int32_t simWidth)
@@ -2182,6 +2308,17 @@ int32_t NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, con
     s_resim.hashes = hashes;
     s_resim.frames = frames;
     s_resim.firstDiff = -1;
+    /* Each player's own view too, when the contest log is on and the recording has PRED. */
+    if (g_contestLogOn && s_viewPred) {
+        uint32_t size = SimState_Size(SIM_TIER_ALL), i;
+        s_resim.pred = s_viewPred;
+        s_resim.seen = s_viewSeen;
+        s_resim.seenLen = s_viewSeenLen;
+        s_resim.seenAt = SRP_SEEN_HEAD;
+        for (i = 0; i < 16; i++)
+            if ((s_resim.ring[i] = (uint8_t *)malloc(size)) == NULL)
+                s_resim.pred = NULL;
+    }
     /* The clock and the controls as a live match starts them (NetplayMatch_StartLive). */
     {
         extern volatile uint16_t _currentGameTick;
@@ -2203,6 +2340,16 @@ int32_t NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, con
         _sim_draw_width = simWidth;
     }
     return rc;
+}
+
+void NetplayMatch_ResimViewStats(uint32_t frames[2], uint32_t same[2], uint32_t skipped[2])
+{
+    int32_t p;
+    for (p = 0; p < 2; p++) {
+        frames[p] = s_resim.viewFrames[p];
+        same[p] = s_resim.viewSame[p];
+        skipped[p] = s_resim.viewSkipped[p];
+    }
 }
 
 void NetplayMatch_ResimResult(uint32_t *played, uint32_t *matched, int32_t *firstDiff,
@@ -2264,9 +2411,17 @@ static int32_t resimFrame(void)
     }
     s_resim.matched++;
 
+    /* The start of this frame, kept for the views that begin here. */
+    if (s_resim.pred && s_resim.ring[f & 15])
+        SimState_Save(s_resim.ring[f & 15], SIM_TIER_ALL);
     soundFrameBegin((int32_t)f, 0);
+    CONTEST_LOG(ContestLog_SetFrame(f));
     r = step(s_resim.inputs + (size_t)f * SRP_INPUT_BYTES, (int32_t)f, 0);
     soundFrameEnd();
+    if (r == GAME_FRAME_DONE && s_resim.pred && s_resim.ring[(f + 1) & 15]) {
+        SimState_Save(s_resim.ring[(f + 1) & 15], SIM_TIER_ALL);
+        resimViews(f);
+    }
     if (r == GAME_FRAME_DONE) {
         s_resim.frame++;
         s_np.frames++;

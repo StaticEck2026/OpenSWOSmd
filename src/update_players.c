@@ -7,6 +7,7 @@
 #include "dos_mode.h"       /* _gDosGameplay: the DOS-only clear on the keeper handoff */
 #include "ball_physics.h"
 #include "ball_possession.h"
+#include "contest_log.h"    /* --contest-log: reads only, changes nothing */
 #include "goalkeeper.h"
 #include "tackle_foul.h"
 #include "headers.h"
@@ -1470,15 +1471,19 @@ not_in_penalty:
             if (!opp->playerHasBall)
                 team->wonTheBallTimer = 0;
 
-            if (team->wonTheBallTimer)
+            if (team->wonTheBallTimer) {
+                CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_SELF_LOCKED));
                 goto compute_oob_dir_mask_and_block;
+            }
 
-            if (!team->plVeryCloseToBall)
+            if (!team->plVeryCloseToBall) {
+                CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_NOT_ON_IT));
                 goto attempt_quick_pass;
-            if (team->ballAbove17)
+            }
+            if (team->ballAbove17 || team->ball12To17) {
+                CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_BALL_HIGH));
                 goto attempt_quick_pass;
-            if (team->ball12To17)
-                goto attempt_quick_pass;
+            }
 
             if (!team->prevPlVeryCloseToBall)
                 team->ballCanBeControlled = 0;
@@ -1953,6 +1958,7 @@ not_in_penalty:
                 opp->passingToPlayer = 0;
                 opp->passingKickingPlayer = (Sprite *)0;
                 opp->spinTimer = (int16_t)0xFFFF;
+                CONTEST_LOG(ContestLog_Tackle(team, player));
                 opp->wonTheBallTimer = 12;
             }
             goto finalize;
@@ -2296,10 +2302,12 @@ not_in_penalty:
         player->destX = player->x.s.i;
         player->destY = player->y.s.i;
 
+        CONTEST_LOG(ContestLog_TrapBefore());
         if (player->playerOrdinal == 1)
             UpdateBallWithControllingGoalkeeper(player);
         else
             UpdateControllingPlayer(player);
+        CONTEST_LOG(ContestLog_Trap(team, player));
 
         team->passKickTimer = 0;
         team->passingKickingPlayer = (Sprite *)0;

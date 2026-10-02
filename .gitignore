@@ -144,3 +144,5 @@ include/swos_build.h
 scratch/*.py
 !scratch/copa_drive.py
 !scratch/wc_drive2.py
+# scripts/netplay_width_test.sh output.
+tests/netplay-width/

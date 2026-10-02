@@ -48,6 +48,7 @@
 #include "netplay_setup.h"      /* --netplay-selftest: the match setup round trip */
 #include "netplay_live_test.h"  /* --netplay-live-pair */
 #include "srp_resim.h"          /* --srp-resim */
+#include "contest_log.h"        /* --contest-log */
 #include "jag_graphics.h"       /* --jag-graphics */
 #include "pitch_map.h"          /* --pitch-maps */
 #include "netplay_match.h"      /* --netplay-match */
@@ -578,6 +579,11 @@ int main(int argc, char **argv)
 #endif
             /* Straight to the recording: paced, the intro would play first, a minute of it. */
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
+        } else if ((v = match_kv(a, "contest-log")) != NULL) {
+            if (ContestLog_Open(v) != 0) {
+                fprintf(stderr, "--contest-log: cannot write %s\n", v);
+                return 1;
+            }
         } else if ((v = match_kv(a, "srp-resim")) != NULL) {
             /* Play a recorded match again and check every frame (src/srp_resim.c). */
             if (SrpResim_Arm(v) != 0) {

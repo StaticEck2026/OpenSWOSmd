@@ -96,6 +96,8 @@ typedef struct {
  * name is looked for in the save folder, like LOAD. */
 int32_t ReplayV2_LoadResume(const char *name, ReplayResume *out);
 void    ReplayV2_FreeResume(ReplayResume *r);
+int32_t ReplayV2_LoadPrediction(const char *name, uint32_t frames, uint8_t **pred, uint8_t **seen,
+                                uint32_t *seenLen);
 
 /* ---- playback -------------------------------------------------------------- */
 

@@ -90,6 +90,13 @@ int32_t     NetplayMatch_IsLive(void);
  * packet), every frame's input and the SIM hash each frame started with, from a
  * resumable .SRP. The pointers must outlive the match. Then InitAndPlayGame; each frame's
  * hash is checked before it is played, and the first that differs ends it. */
+/* A recording's PRED (2 bytes a frame) and SEEN, set before NetplayMatch_StartResim: with
+ * the contest log on, each player's own view of every guessed frame is replayed too
+ * (docs/CONTEST_LOG.md, "Views"). The stats: frames replayed for each player, how many
+ * put every man and the ball where the recording says that screen drew them, and how
+ * many could not be replayed. */
+void        NetplayMatch_SetResimViews(uint8_t *pred, uint8_t *seen, uint32_t seenLen);
+void        NetplayMatch_ResimViewStats(uint32_t frames[2], uint32_t same[2], uint32_t skipped[2]);
 int32_t     NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, const uint8_t *inputs,
                                     const uint32_t *hashes, uint32_t frames, int32_t simWidth);
 /* After it: frames played, how many started as recorded, the first that did not (-1:

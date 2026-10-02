@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "replay_test.h"
+#include "contest_log.h"
 #include "dos_mode.h"      /* _gDosGameplay: the DOS timer ISR has no stats gate */
 #include "game_types.h"
 #include "display.h"    /* _sim_view_width/_height — the simulation view */
@@ -1445,6 +1446,7 @@ void ReplayTest_FrameStart(void)
 {
     if (!s_running) return;
     ReplayTest_PrepareFirstFrame();
+    CONTEST_LOG(ContestLog_SetFrame(s_frame));     /* --contest-log under the rig too */
     if (Rollback_Enabled()) {
         Rollback_FrameBoundary(s_frame);    /* may rewind s_frame */
         /* The rollback rig plays its own match, which can end before the recorded

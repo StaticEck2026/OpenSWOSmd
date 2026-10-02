@@ -6,6 +6,7 @@
 #include "ball_possession.h"
 #include "math68k.h"  /* M68kShiftLeft16: a signed left shift is UB, and the two platforms differ */
 #include "game_types.h"
+#include "contest_log.h"    /* --contest-log: reads only, changes nothing */
 
 /* ---- External globals ---- */
 extern Sprite           _ballSprite;
@@ -459,14 +460,20 @@ CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
     {
         TeamGeneralInfo *oppTeam = team->opponentsTeam;  /* a0 = *(a6+0) */
 
-        if (oppTeam->wonTheBallTimer != 0)
+        if (oppTeam->wonTheBallTimer != 0) {
+            CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_OPP_LOCKED));
             goto set_default_ball_target;
+        }
 
-        if (oppTeam->playerHasBall == 0)
+        if (oppTeam->playerHasBall == 0) {
+            CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_OPP_NOT_ON_BALL));
             goto set_default_ball_target;
+        }
 
-        if (oppTeam->currentAllowedDirection < 0)
+        if (oppTeam->currentAllowedDirection < 0) {
+            CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_OPP_STILL));
             goto set_default_ball_target;
+        }
 
         /* Ball possession contest -- track a6 register explicitly */
         {
@@ -477,8 +484,10 @@ CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
 
             /* a1 = *(a0 + controlledPlayer) = opponent's controlled player */
             oppControlled = oppTeam->controlledPlayer;
-            if (oppControlled == (Sprite *)0)
+            if (oppControlled == (Sprite *)0) {
+                CONTEST_LOG(ContestLog_NoRoll(team, player, CONTEST_NO_OPP_NOBODY));
                 goto skip_possession;
+            }
 
             /* FIRST GetPlayerPointerFromShirtNumber:
                a1 = opponent's controlled player, a6 = our team (cross-team!) */
@@ -524,6 +533,9 @@ CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
                 } else {
                     a6_reg = a6_reg->opponentsTeam;
                 }
+                CONTEST_LOG(ContestLog_Roll(team, player, d1_skill, d0_skill,
+                                            (uint8_t)_plAvgTacklingBallControlDiffChance[diff_ext],
+                                            rnd, a6_reg));
             }
 
             /* award_ball_possession */
@@ -612,6 +624,8 @@ calculate_ball_destination:
         }
 
         /* Lost ball on turn */
+        CONTEST_LOG(ContestLog_Turn(team, player, team->ballControlTurnTimer,
+                                    _ballControlTurnThresholds[a4->ballControl]));
         team->wonTheBallTimer = 8;
     }
 

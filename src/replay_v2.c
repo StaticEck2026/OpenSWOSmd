@@ -1026,6 +1026,37 @@ int32_t ReplayV2_LoadResume(const char *name, ReplayResume *out)
     return rc;
 }
 
+/* What each player's game knew frame by frame, for a re-simulation of what each SAW
+ * (NetplayMatch_SetResimViews): PRED's two bytes a frame, and SEEN whole. 0 when the
+ * recording has PRED for `frames` frames; the caller frees both. */
+int32_t ReplayV2_LoadPrediction(const char *name, uint32_t frames, uint8_t **pred, uint8_t **seen,
+                                uint32_t *seenLen)
+{
+    uint32_t len = 0, predLen = 0;
+    uint8_t *file, *chunk;
+
+    *pred = *seen = NULL;
+    *seenLen = 0;
+    file = read_file(name, &len);
+    if (!file || memcmp(file, "SWRP", 4) != 0) {
+        free(file);
+        return 1;
+    }
+    chunk = chunk_get(file, len, CHUNK_PRED, &predLen);
+    if (chunk && predLen >= SRP_PRED_HEAD + 2 * frames && BE_READ_U16(chunk) == SRP_PRED_VERSION &&
+        BE_READ_U32(chunk + 4) == frames && (*pred = (uint8_t *)malloc(2 * (size_t)frames + 1)) != NULL)
+        memcpy(*pred, chunk + SRP_PRED_HEAD, 2 * (size_t)frames);
+    free(chunk);
+    *seen = chunk_get(file, len, CHUNK_SEEN, seenLen);
+    if (*seen && (*seenLen < SRP_SEEN_HEAD || BE_READ_U16(*seen) != SRP_SEEN_VERSION)) {
+        free(*seen);
+        *seen = NULL;
+        *seenLen = 0;
+    }
+    free(file);
+    return *pred ? 0 : 2;
+}
+
 void ReplayV2_FreeResume(ReplayResume *r)
 {
     free(r->setup);

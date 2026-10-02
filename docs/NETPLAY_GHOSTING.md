@@ -6,6 +6,10 @@ for years, and it appeared in OpenSWOS's first multiplayer weekend (2026-09-27, 
 MLADEN, "BALL CONTROL SECOND HALF"). This is what is known, what the game now records
 about it, and how to reproduce it without testers.
 
+> **Settled 2026-10-02:** it is the game itself. [BALL_CONTEST.md](BALL_CONTEST.md) has the
+> rules, the proof, and the measurements from 37 recorded matches; what follows is the
+> investigation as it stood before, and what every match records.
+
 ## Two possible causes
 
 | | what happens | what it looks like |

@@ -95,7 +95,14 @@ static void resim_finished(void)
 
     NetplayMatch_ResimResult(&played, &matched, &firstDiff, &have, &want);
     if (firstDiff < 0 && matched == s_rec.frames) {
+        uint32_t vf[2], vs[2], vk[2];
         printf("[resim] %u frames, every one as recorded\n", (unsigned)matched);
+        NetplayMatch_ResimViewStats(vf, vs, vk);
+        if (vf[0] || vf[1] || vk[0] || vk[1])
+            printf("[resim] views: player 1's game replayed for %u guessed frames, %u put everything "
+                   "where the recording says his screen drew it (%u not replayable); player 2's %u, %u "
+                   "(%u)\n", (unsigned)vf[0], (unsigned)vs[0], (unsigned)vk[0], (unsigned)vf[1],
+                   (unsigned)vs[1], (unsigned)vk[1]);
         fflush(stdout);
         exit(0);
     }
@@ -146,6 +153,13 @@ void SrpResim_Run(void)
     }
     NetplaySetup_ArmTieRules(1);    /* a cup tie is settled as it was live */
 
+    /* With --contest-log: what each player's own game showed, too. */
+    {
+        uint8_t *pred = NULL, *seen = NULL;
+        uint32_t seenLen = 0;
+        if (ReplayV2_LoadPrediction(s_path, s_rec.frames, &pred, &seen, &seenLen) == 0)
+            NetplayMatch_SetResimViews(pred, seen, seenLen);
+    }
     if (NetplayMatch_StartResim(s_rec.kickoff, s_rec.kickoffLen, s_rec.inputs, s_rec.hashes,
                                 s_rec.frames, s_rec.simWidth) != 0) {
         printf("[resim] the match would not start\n");
