@@ -118,6 +118,87 @@ the ball; on frame 11707 it has left his foot and is 4 pixels ahead of him, at s
 Predi's R. Mussi is standing 4 pixels behind him. On the next frame the ball is 7 pixels
 back, stopped, at Mussi's feet.
 
+## The roll, exactly
+
+`CalculateIfPlayerWinsBall` (`src/ball_possession.c`) and the gates before it in
+`UpdatePlayers` (`src/update_players.c`); `data/SWOS2.s` lines 23430 and 30256.
+
+**When it runs.** The game updates ONE team a frame, alternating (`frameCount` in the
+Amiga release, `teamSwitchCounter` in the PC one). On team A's turn, with A's controlled
+player P, there is a roll only if all of these hold:
+
+| # | condition | if it fails |
+|---|---|---|
+| 1 | the match is in open play | nothing |
+| 2 | P holds a direction | P does not go for the ball |
+| 3 | team A is not locked out — after its lock is cleared if B's man is no longer on the ball | P cannot play the ball (`self-locked`) |
+| 4 | P is within reach: squared distance to the ball ≤ 32, about 5.7 px | P does not touch it (`not-on-it`) |
+| 5 | the ball is low: height under 12 | no touch (`ball-high`) |
+| 6 | team B is not locked out | no roll: P plays the ball freely (`opp-locked`) |
+| 7 | B's controlled player Q is "on the ball": squared distance ≤ 72 (about 8.5 px), B not pressing fire, not shooting. The flag is set on B's own turn | no roll: P plays the ball (`opp-not-on-ball`) |
+| 8 | Q holds a direction | no roll: P plays the ball (`opp-still`) |
+
+(The words in brackets are the reasons the contest log prints, [CONTEST_LOG.md](CONTEST_LOG.md).)
+
+**The roll.**
+
+```
+ratingA = (tackling + ball control) >> 1   of team A's player in Q's LINE-UP SLOT
+ratingB = (tackling + ball control) >> 1   of Q himself
+
+diff = ratingA - ratingB
+if diff >= 0:  weaker = B                  ; a tie counts B as the weaker
+else:          weaker = A,  diff = -diff
+
+odds = plAvgTacklingBallControlDiffChance[diff]     ; 16, 17, 18, 19, 20, 21, 22, 23
+r    = Rand() & 31                                  ; 0..31
+
+if r < odds:   loser = weaker
+else:          loser = the other team
+
+loser.wonTheBallTimer = 12                 ; the lock: the name notwithstanding
+ball.speed = 0;  ball.dest = ball.position ; the ball is stopped dead
+```
+
+Tackling and ball control are the skills as they stand in the match, 0 to 7, after the
+game's form and position adjustment. `Rand()` is the match's own generator, part of the
+state two netplay peers share.
+
+| ratings apart | odds the weaker side is locked out |
+|---|---|
+| 0 | 16 in 32 = 50.0% |
+| 1 | 17 in 32 = 53.1% |
+| 2 | 18 in 32 = 56.3% |
+| 3 | 19 in 32 = 59.4% |
+| 4 | 20 in 32 = 62.5% |
+| 5 | 21 in 32 = 65.6% |
+| 6 | 22 in 32 = 68.8% |
+| 7 | 23 in 32 = 71.9% |
+
+Skill moves the odds very little: the rating is two skills averaged and rounded down, so
+two whole points of tackling shift the chance by about 3%. In the 37 recorded matches
+1,027 of 1,169 rolls had ratings 0 or 1 apart.
+
+**`ratingA` is the original's oddity**: not P's rating but that of A's player in the same
+line-up slot as Q (next section). The slot is the player's place in the eleven on the
+pitch, 1 to 11 with the keeper at 1 (`Sprite.playerOrdinal`) — not the shirt number
+printed on him, which is a separate value the roll never reads. It follows the slot, not
+the person: a player moved in the line-up, or a substitute, takes the slot over.
+
+**The lock.** `wonTheBallTimer` counts down once each time its team is updated, so 12
+is up to **24 frames**: 0.48 s in Amiga gameplay (50 frames a second), 0.34 s in PC
+gameplay (70). It is the TEAM's — no player of that side can play the ball — and while
+either side's is running there is no new roll. It ends early, on the locked team's turn,
+if the other side's man is no longer on the ball (more than 8.5 px away, or pressing
+fire). The two other locks are a slide tackle that reaches the ball (the other team, 12)
+and an over-turn (the dribbler's own team, 8 = up to 16 frames).
+
+**When the dice is rolled again.** As soon as the conditions hold with neither side
+locked. In the 37 matches the same two men rolled again within about a second 99 times,
+in two groups: 23 to 25 frames later (about 35 cases: they stayed together for the whole
+lock) and 3 to 8 frames later (about 30: the winner came off the ball for a moment, which
+cleared the lock, and came straight back).
+
 ## Whose ratings the roll uses
 
 A roll between two players should use those two players' tackling (T) and ball control
