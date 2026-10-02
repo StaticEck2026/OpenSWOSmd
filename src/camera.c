@@ -131,6 +131,28 @@ int16_t Sim_DrawCameraX(void)
 {
     return (int16_t)(viewOriginX16(_sim_draw_width) >> 16);
 }
+
+/* The HEIGHT that goes with the simulation draw width, and its origin. A picture wider
+ * than the simulation view is, in the DOS view, also TALLER than it: widescreen there
+ * shows SCREEN_HEIGHT lines of a match simulated in 200 (main.c, WIDESCREEN.md "The DOS
+ * view"). So whoever animates the side margin must animate the rows above and below
+ * the 200 as well, or the men drawn there hold their last pose -- lying on the ground,
+ * mid-tackle (ReportBot 0018). Derived from the simulation draw width, never from this
+ * display's own height: two netplay peers agree that width, so they agree this, and a
+ * peer whose own picture is 200 lines animates rows it does not show. The simulation
+ * view's own height whenever the draw width is the view's (the rig, a 4:3 peer pair,
+ * every Amiga-view match), where nothing changes. */
+int16_t Sim_DrawHeight(void)
+{
+    if (_sim_draw_width > SCREEN_WIDTH && _sim_view_height < SCREEN_HEIGHT)
+        return SCREEN_HEIGHT;
+    return _sim_view_height;
+}
+
+int16_t Sim_DrawCameraY(void)
+{
+    return (int16_t)(viewOriginY16(Sim_DrawHeight()) >> 16);
+}
 #endif
 
 /* ---- Sub-pixel scroll residual -------------------------------------------

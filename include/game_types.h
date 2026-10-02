@@ -461,6 +461,8 @@ int     Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
  * from. For what the match DECIDES from the drawn view; placing pixels stays on
  * Render_CameraX(). Equal to it whenever the two widths are. */
 int16_t Sim_DrawCameraX(void);
+int16_t Sim_DrawCameraY(void);      /* the same for the height that goes with that width */
+int16_t Sim_DrawHeight(void);
 /* The vertical render origin (camera.c): `_cameraY` scaled onto a picture taller than
  * the simulation view (the DOS view with widescreen on); identity otherwise. Draw with
  * it; never make a game decision from it. And its inverse, for a recorded drawn camera. */
@@ -470,6 +472,8 @@ int16_t Render_SimCameraYFromRender(int16_t renderY);
 #else
 #define Render_CameraX() (_cameraX.s.i)
 #define Sim_DrawCameraX() (_cameraX.s.i)
+#define Sim_DrawCameraY() (_cameraY.s.i)
+#define Sim_DrawHeight()  (_sim_view_height)
 #define Render_CameraY() (_cameraY.s.i)
 #define Render_SimCameraYFromRender(y) (y)
 #endif

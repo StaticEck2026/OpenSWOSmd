@@ -2485,8 +2485,14 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
              * depended on the display -- and nothing animates it anyway. */
             if (!onScreen && _sim_draw_width > SCREEN_WIDTH && a1->z.s.i < HUD_LAYER_Z_MIN) {
                 int16_t d1draw = a1->x.s.i - a0->centerX - Sim_DrawCameraX();
-                int animVis = !(d1draw >= _sim_draw_width || d2sim >= _sim_view_height ||
-                                d1draw <= negW || d2sim <= negH);
+                /* The rows too, where the picture that goes with that width is taller
+                 * than the view (the DOS view, widescreen: Sim_DrawHeight in camera.c).
+                 * Otherwise this is d2sim against the view's height, as it always was. */
+                int16_t drawH = Sim_DrawHeight();
+                int16_t d2draw = drawH == _sim_view_height ? d2sim
+                               : (int16_t)(a1->y.s.i - a0->centerY - Sim_DrawCameraY() - a1->z.s.i);
+                int animVis = !(d1draw >= _sim_draw_width || d2draw >= drawH ||
+                                d1draw <= negW || d2draw <= negH);
                 if (animVis && g_spriteAnimVisibleCount < SPRITE_ANIMVIS_MAX)
                     g_spriteAnimVisible[g_spriteAnimVisibleCount++] = a1;
             }
