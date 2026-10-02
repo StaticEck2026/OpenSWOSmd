@@ -193,6 +193,10 @@ static int handler(void *user, const char *section,
             int v = atoi(value);
             if (v >= 1 && v <= 5) opts->shade_step = v;
         }
+        else if (eqi(name, "kit_art")) {
+            if      (eqi(value, "amiga"))  opts->kit_art = 0;
+            else if (eqi(value, "jaguar")) opts->kit_art = 1;
+        }
     } else if (eqi(section, "arcade")) {
         int b;
         if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
@@ -447,6 +451,12 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
             "; Hair shading uses it too: black hair's highlight is lifted by 3 x N.\n",
             stepBuf };
     }
+    items[n++] = (IniEntry){ "graphics", "kit_art",
+        "; kit_art: amiga | jaguar. The shirts, shorts and socks drawn on the UNIFORM\n"
+        "; screen: the Amiga's flat drawings, or the Atari Jaguar's shaded ones (shaded by\n"
+        "; shade_step, like its sprites). That screen only: it changes nothing in a match,\n"
+        "; and does not follow the sprites setting.\n",
+        opts->kit_art ? "jaguar" : "amiga" };
     items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
     items[n++] = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
     items[n++] = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };

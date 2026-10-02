@@ -354,6 +354,7 @@ extern void TransferPlayerOnSelect11(void);
 extern void TransferPlayerOnSelect12(void);
 extern void TransfersMenu(void);
 extern void UndoTactics(void);
+extern void UniformSelected(void);
 extern void UseMatchTeamSelect(void);
 extern void User_A_Tactics(void);
 extern void User_B_Tactics(void);
@@ -549,6 +550,7 @@ extern char _aTransferMarket[];
 extern char _aTransfers[];
 extern char _aType[];
 extern char _aUndo[];
+extern char _aUniform[];
 extern char _aUseMatchTeam[];
 extern char _aV[];
 extern char _aViewCompetitio[];
@@ -1014,6 +1016,7 @@ const MenuSymbol _menuSymbols[] = {
     { "TransferPlayerOnSelect12", (void*)TransferPlayerOnSelect12, SYM_FUNC },
     { "TransfersMenu", (void*)TransfersMenu, SYM_FUNC },
     { "UndoTactics", (void*)UndoTactics, SYM_FUNC },
+    { "UniformSelected", (void*)UniformSelected, SYM_FUNC },
     { "UseMatchTeamSelect", (void*)UseMatchTeamSelect, SYM_FUNC },
     { "User_A_Tactics", (void*)User_A_Tactics, SYM_FUNC },
     { "User_B_Tactics", (void*)User_B_Tactics, SYM_FUNC },
@@ -1206,6 +1209,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aTransfers", (void*)_aTransfers, SYM_STRING },
     { "_aType", (void*)_aType, SYM_STRING },
     { "_aUndo", (void*)_aUndo, SYM_STRING },
+    { "_aUniform", (void*)_aUniform, SYM_STRING },
     { "_aUseMatchTeam", (void*)_aUseMatchTeam, SYM_STRING },
     { "_aV", (void*)_aV, SYM_STRING },
     { "_aViewCompetitio", (void*)_aViewCompetitio, SYM_STRING },

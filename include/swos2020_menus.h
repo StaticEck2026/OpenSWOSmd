@@ -40,9 +40,44 @@
     X(myRankedStatsMenu, "swos2020/myRankedStatsMenu", MyRankedStatsMenu, 107) \
     X(myFriendlyStatsMenu, "swos2020/myFriendlyStatsMenu", MyFriendlyStatsMenu, 107) \
     X(creditsMenu, "swos2020/creditsMenu", CreditsMenu, 31) \
+    X(selectUniformMenu, "swos2020/selectUniformMenu", SelectUniformMenu, 39) \
 
-/* Every handler name the imported menus reference (233), sorted. */
+/* Every handler name the imported menus reference (271), sorted. */
 #define SWOS2020_MENU_CALLBACKS(X) \
+    X(LeftBasicColor_Dec_onSelect) \
+    X(LeftBasicColor_Inc_onSelect) \
+    X(LeftReset_onSelect) \
+    X(LeftShirtType0_onSelect) \
+    X(LeftShirtType1_onSelect) \
+    X(LeftShirtType2_onSelect) \
+    X(LeftShirtType3_onSelect) \
+    X(LeftShirts_onSelect) \
+    X(LeftShortsColor_Dec_onSelect) \
+    X(LeftShortsColor_Inc_onSelect) \
+    X(LeftShorts_onSelect) \
+    X(LeftSocksColor_Dec_onSelect) \
+    X(LeftSocksColor_Inc_onSelect) \
+    X(LeftSocks_onSelect) \
+    X(LeftStripesColor_Dec_onSelect) \
+    X(LeftStripesColor_Inc_onSelect) \
+    X(LeftSwitch_onSelect) \
+    X(RightBasicColor_Dec_onSelect) \
+    X(RightBasicColor_Inc_onSelect) \
+    X(RightReset_onSelect) \
+    X(RightShirtType0_onSelect) \
+    X(RightShirtType1_onSelect) \
+    X(RightShirtType2_onSelect) \
+    X(RightShirtType3_onSelect) \
+    X(RightShirts_onSelect) \
+    X(RightShortsColor_Dec_onSelect) \
+    X(RightShortsColor_Inc_onSelect) \
+    X(RightShorts_onSelect) \
+    X(RightSocksColor_Dec_onSelect) \
+    X(RightSocksColor_Inc_onSelect) \
+    X(RightSocks_onSelect) \
+    X(RightStripesColor_Dec_onSelect) \
+    X(RightStripesColor_Inc_onSelect) \
+    X(RightSwitch_onSelect) \
     X(SetExitMenuFlag) \
     X(aboutMPMenu_OnDraw) \
     X(bestNewsMenu_OnSelect) \
@@ -263,6 +298,10 @@
     X(selectRankedModeOption1) \
     X(selectTeamDB1) \
     X(selectTournament) \
+    X(selectUniformMenuOnDraw) \
+    X(selectUniformMenuOnInit) \
+    X(selectUniformMenuOnReturn) \
+    X(selectUniformMenu_OkOnSelect) \
     X(selectXBLARankingsMenu) \
     X(showPassword_OnSelect) \
     X(tournaInfoMenu_AwayUser_OnSelect) \
@@ -2204,5 +2243,49 @@ enum {
     CreditsMenu_exit = 30,
 };
 #define CreditsMenu_numEntries 31
+
+/* ---- selectUniformMenu -- src/menus/selectUniform.mnu ---- */
+enum {
+    SelectUniformMenu_Header = 0,
+    SelectUniformMenu_LeftTeamName = 1,
+    SelectUniformMenu_RightTeamName = 2,
+    SelectUniformMenu_LeftShirtType0 = 3,
+    SelectUniformMenu_LeftShirtType1 = 4,
+    SelectUniformMenu_LeftShirtType2 = 5,
+    SelectUniformMenu_LeftShirtType3 = 6,
+    SelectUniformMenu_LeftStripesColor_Dec = 7,
+    SelectUniformMenu_LeftBasicColor_Dec = 8,
+    SelectUniformMenu_LeftShortsColor_Dec = 9,
+    SelectUniformMenu_LeftSocksColor_Dec = 10,
+    SelectUniformMenu_LeftStripesColor_Inc = 11,
+    SelectUniformMenu_LeftBasicColor_Inc = 12,
+    SelectUniformMenu_LeftShortsColor_Inc = 13,
+    SelectUniformMenu_LeftSocksColor_Inc = 14,
+    SelectUniformMenu_LeftShirts = 15,
+    SelectUniformMenu_LeftShorts = 16,
+    SelectUniformMenu_LeftSocks = 17,
+    SelectUniformMenu_LeftSwitch = 18,
+    SelectUniformMenu_LeftReset = 19,
+    SelectUniformMenu_RightShirtType0 = 20,
+    SelectUniformMenu_RightShirtType1 = 21,
+    SelectUniformMenu_RightShirtType2 = 22,
+    SelectUniformMenu_RightShirtType3 = 23,
+    SelectUniformMenu_RightStripesColor_Dec = 24,
+    SelectUniformMenu_RightBasicColor_Dec = 25,
+    SelectUniformMenu_RightShortsColor_Dec = 26,
+    SelectUniformMenu_RightSocksColor_Dec = 27,
+    SelectUniformMenu_RightStripesColor_Inc = 28,
+    SelectUniformMenu_RightBasicColor_Inc = 29,
+    SelectUniformMenu_RightShortsColor_Inc = 30,
+    SelectUniformMenu_RightSocksColor_Inc = 31,
+    SelectUniformMenu_RightShirts = 32,
+    SelectUniformMenu_RightShorts = 33,
+    SelectUniformMenu_RightSocks = 34,
+    SelectUniformMenu_RightSwitch = 35,
+    SelectUniformMenu_RightReset = 36,
+    SelectUniformMenu_Ok = 37,
+    SelectUniformMenu_HelpMsg = 38,
+};
+#define SelectUniformMenu_numEntries 39
 
 #endif /* SWOS2020_MENUS_H */

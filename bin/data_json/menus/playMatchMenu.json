@@ -1508,6 +1508,38 @@
           "flags": "0x8000"
         }
       ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 63,
+        "y": -50,
+        "w": 68,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 10,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aUniform"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "UniformSelected"
+        }
+      ]
     }
   ]
 }

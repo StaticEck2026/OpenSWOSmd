@@ -29,6 +29,8 @@ char _aCareer_1[]     = "CAREER";
 char _aMultiplayer[]  = "MULTIPLAYER";
 /* OpenSWOS: the main menu's CREDITS button (CreditsMenuSelected). */
 char _aCredits[]      = "CREDITS";
+/* OpenSWOS: the PLAY MATCH screen's UNIFORM button (UniformSelected). */
+char _aUniform[]      = "UNIFORM";
 char _aDataEurocupTmd[] = "data/eurocup.tmd";
 char _aDataEurocwcTmd[] = "data/eurocwc.tmd";
 char _aDataTeamNnn[] = "data/team.nnn";

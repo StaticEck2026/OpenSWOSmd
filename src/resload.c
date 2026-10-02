@@ -47,14 +47,15 @@ static const char *known_save_exts[] = {
     ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT",
     ".RPL", /* PC whole-match replay (not native to the Amiga) */
     ".SRP", /* OpenSWOS whole-match replay (src/replay_v2.c) */
+    ".TEAM", /* a custom team for online play (src/custom_team.c) */
     NULL
 };
 
+/* By the whole extension, from the name's last dot: they are not all three letters. */
 static int has_save_ext(const char *name)
 {
-    size_t len = strlen(name);
-    if (len < 4) return 0;
-    const char *tail = name + len - 4;
+    const char *tail = strrchr(name, '.');
+    if (!tail) return 0;
     for (const char **e = known_save_exts; *e; ++e)
         if (strcasecmp(*e, tail) == 0) return 1;
     return 0;

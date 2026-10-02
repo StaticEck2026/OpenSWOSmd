@@ -27,6 +27,10 @@ void    JagGfx_SetEnabled(int32_t on);
  *           down to 37.5% and reads as dark grey; 2 keeps it white. */
 void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t hair, int32_t step);
 
+/* One shade of the kit ramp, in sixteenths of the colour (shade 0 = 16, the colour
+ * itself). What shade_step set; the menus' Jaguar kit drawings use it too. */
+int32_t JagGfx_KitShade(int32_t shade);
+
 /* True for a bank the Jaguar tier provides (by the name an image script asks for,
  * with or without its folder). The loader uses it to know whose pixels it has. */
 int32_t JagGfx_IsBank(const char *name);

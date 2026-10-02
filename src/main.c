@@ -50,6 +50,8 @@
 #include "srp_resim.h"          /* --srp-resim */
 #include "contest_log.h"        /* --contest-log */
 #include "jag_graphics.h"       /* --jag-graphics */
+#include "kit_art.h"            /* --kit-art */
+#include "custom_team.h"        /* --custom-team-selftest */
 #include "pitch_map.h"          /* --pitch-maps */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
@@ -178,6 +180,8 @@ static void print_usage(const char *argv0)
         "  --shade-step=<1..5>       How far apart the four kit shades are, in\n"
         "                            sixteenths (default 2). Higher is more\n"
         "                            contrast; the Jaguar's own artwork used 3.\n"
+        "  --kit-art=<amiga|jaguar>  The kit drawings on the UNIFORM screen (default\n"
+        "                            amiga). That screen only.\n"
         "                            Hair shading follows it.\n"
         "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
         "                            instead of the Amiga graphics. Default: off.\n"
@@ -252,6 +256,9 @@ static void print_usage(const char *argv0)
         "  --menu=<name>             Open a menu that exists only as JSON before the\n"
         "                            main menu, e.g. swos2020/logInMenu (a file under\n"
         "                            data_json/menus/, docs/MENUS.md section 10).\n"
+        "  --custom-team-selftest    Check every database team against the custom team\n"
+        "                            rule (names, faces, kits and line-up only) and\n"
+        "                            through the team file's text. Exits.\n"
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
         "  --version                 Print the build (commit and date) and exit.\n"
@@ -628,6 +635,10 @@ int main(int argc, char **argv)
                 return 1;
             }
             opts.shade_step = st;
+        } else if ((v = match_kv(a, "kit-art")) != NULL) {
+            if      (strcmp(v, "amiga") == 0)  opts.kit_art = 0;
+            else if (strcmp(v, "jaguar") == 0) opts.kit_art = 1;
+            else { fprintf(stderr, "--kit-art must be amiga or jaguar (got %s)\n", v); return 1; }
         } else if ((v = match_kv(a, "menu")) != NULL) {
             OnlineMenus_SetStartMenu(v);
             /* Same reason as --matchmaker-menu: this flag exists to reach a menu,
@@ -635,6 +646,8 @@ int main(int argc, char **argv)
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
+        } else if (strcmp(a, "--custom-team-selftest") == 0) {
+            return CustomTeam_SelfTest() ? 0 : 1;
         } else if (strncmp(a, "--matchmaker-selftest", 21) == 0) {
             /* --matchmaker-selftest[=host[:port]] — talks to a real server, so
              * scripts/run_matchmaker.sh has to be running. Defaults to the local
@@ -937,6 +950,7 @@ int main(int argc, char **argv)
     JagGfx_SetEnabled(opts.jag_graphics);
     PitchMap_SetEnabled(opts.pitch_maps);
     JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.hair_shading, opts.shade_step);
+    KitArt_SetJaguar(opts.kit_art);
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;

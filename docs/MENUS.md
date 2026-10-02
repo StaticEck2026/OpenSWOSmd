@@ -767,8 +767,10 @@ C++ `CodeGenerator` with a JSON backend.
 | `bin/data_json/menus/swos2020/<menu>.json` | one per menu, loaded at run time |
 | `include/swos2020_menus.h` | entry ordinals (`LogInMenu::header` -> `LogInMenu_header`), exported constants (`MatchMakingMenu_kGS_MaxRows`), `SWOS2020_MENUS(X)`, `SWOS2020_MENU_CALLBACKS(X)` |
 
-The default set is `MULTIPLAYER_MENUS` in the script: 30 menus (the 29 online ones plus
-`credits`, since the CREDITS button, ac2a161), 1352 entries, 233 handler names, from
+The default set is `MULTIPLAYER_MENUS` in the script: 31 menus (the 29 online ones,
+`credits` since the CREDITS button, ac2a161, and `selectUniform` since the UNIFORM button,
+docs/UNIFORM.md), 1391 entries, 271 handler names; before `selectUniform` it was 30 menus,
+1352 entries, 233 handler names, from
 swos-2020 @ `ebf1cc4` (the header's `Source:` line says which commit; the first import was
 29 menus / 1321 entries / 220 names @ `22b96d3`). Re-run with
 `python3 scripts/import_swos2020_menus.py [--swos2020 DIR] [menu ...]`. It overwrites
@@ -854,6 +856,10 @@ All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
   the Amiga and any SDL build made without `NETPLAY=1`. (The web build has netplay on by
   default since 2026-09-24, over the WebSocket gate.) **CREDITS** (entry 15,
   `CreditsMenuSelected`) opens `swos2020/creditsMenu`; it is hidden on the Amiga.
+  The PLAY MATCH screen's **UNIFORM** (entry 68, `UniformSelected`) opens
+  `swos2020/selectUniformMenu` the same way (docs/UNIFORM.md), and the matchmaking menu's
+  MY CUSTOM TEAM opens `swos2020/selectMyCustomTeams` (docs/CUSTOM_TEAMS.md); their handlers
+  are in `src/uniform_menu.c` and `src/custom_team.c`, each with a symbol table of its own.
 - `--menu-selftest` loads every JSON-only menu -- the imported ones (`SWOS2020_MENUS`),
   `p2p/rateMatchMenu` (HOW WAS THE MATCH?) and `p2p/p2pMenu` -- unpacks each into scratch
   memory and checks its entries' ordinals, rectangles, nav links and text against its

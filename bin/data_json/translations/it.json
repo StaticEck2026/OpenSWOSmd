@@ -1,6 +1,7 @@
 {
   "_aMultiplayer": "MULTIGIOCATORE",
   "_aCredits": "RICONOSCIMENTI",
+  "_aUniform": "DIVISA",
  "language": "it",
  "strings": {
   "_a001Season": "STAGIONE %0/0%1",

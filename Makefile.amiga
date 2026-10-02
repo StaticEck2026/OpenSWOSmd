@@ -52,6 +52,9 @@ SDL_ONLY_SRCS := \
     crt_effects.c         \
     ini.c                 \
     input_sdl.c           \
+    custom_team.c         \
+    kit_art.c             \
+    uniform_menu.c        \
     match_prediction.c    \
     match_record.c        \
     match_report.c        \

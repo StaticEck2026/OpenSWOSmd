@@ -40,6 +40,8 @@
 #include "match_record.h"     /* MatchRecord_SetConfigured: the RECORD MATCHES row */
 #include "match_report.h"     /* the match report: HOW WAS THE MATCH?, SEND MATCH REPORTS */
 #include "match_prediction.h" /* both players' PRED and SEEN cross after the match */
+#include "uniform.h"          /* the UNIFORM screen, from the lobby's team screen */
+#include "custom_team.h"      /* MY CUSTOM TEAM */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +80,56 @@ static void set_entry(int32_t ordinal, const char *text, int32_t enabled, uint16
     e->fg = (uintptr_t)text;
     e->isDisabled = enabled ? 0 : 1;
     e->bgColor = color;
+}
+
+/* ---- this player's team, as picked ----
+ *
+ * A kit chosen on the UNIFORM screen goes to the other player INSIDE the team: both of
+ * its kits become the chosen one (lineup_end), so the match on both machines dresses
+ * the side from the same record and nothing else needs sending. What that loses is the
+ * team's own two kits -- which the UNIFORM screen needs again for SWITCH and RESET the
+ * next time it is opened -- so they are remembered here from the moment a team is
+ * picked, with enough of the team to know it is still the same one. */
+static struct {
+    int32_t valid;
+    uint8_t country, ordinal;
+    KitLook kit[2];
+} s_picked;
+
+/* 0 = not taken: the other player's game would refuse it (CustomTeam_Allowed), and say
+ * so only there, so this one says so here. */
+static int32_t lobby_pick_team(const TeamFileEx *team)
+{
+    extern void ShowErrorMenu(uint8_t *errorTextStr);
+    static char notDatabase[] = "ONLY TEAMS OF THE DATABASE CAN BE PLAYED ONLINE";
+
+    if (!CustomTeam_Allowed(team)) {
+        ShowErrorMenu((uint8_t *)notDatabase);
+        return 0;
+    }
+    s_picked.valid = 1;
+    s_picked.country = team->team.countryNumber;
+    s_picked.ordinal = team->team.teamOrdinal;
+    KitArt_FromTeam(&team->team, 0, &s_picked.kit[0]);
+    KitArt_FromTeam(&team->team, 1, &s_picked.kit[1]);
+    NetplayLobby_SetTeam(team);
+    return 1;
+}
+
+/* The lobby's team with its own kits back, and the kit it was sent in (if that is not
+ * its own first kit) as the choice the UNIFORM screen starts from. */
+static void lobby_unbake_kit(TeamFileEx *team)
+{
+    KitLook sent;
+
+    if (!s_picked.valid || s_picked.country != team->team.countryNumber ||
+        s_picked.ordinal != team->team.teamOrdinal)
+        return;
+    KitArt_FromTeam(&team->team, 0, &sent);
+    KitArt_ToTeam(&s_picked.kit[0], 0, &team->team);
+    KitArt_ToTeam(&s_picked.kit[1], 1, &team->team);
+    if (memcmp(&sent, &s_picked.kit[0], sizeof sent) != 0)
+        Uniform_Choose(&team->team, &sent);
 }
 
 void OnlineMenus_Show(const char *name)
@@ -750,7 +802,7 @@ static void lobby_test_knobs(void)
         TeamFileEx *rec = (TeamFileEx *)(_teamFileBuffer + 2);
         for (i = 0; i < count; i++) {
             if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ordinal) {
-                NetplayLobby_SetTeam(&rec[i]);
+                lobby_pick_team(&rec[i]);
                 lineup_test_swap();
                 break;
             }
@@ -1081,6 +1133,8 @@ static void mpGameSetupMenu_OnDraw(void)
                 line = "YOUR OPPONENT IS CHOOSING A TEAM";
             else if (other->known && other->activity == LOBBY_ACTIVITY_ARRANGING_TEAM)
                 line = "YOUR OPPONENT IS ARRANGING THEIR TEAM";
+            else if (other->known && other->refused)
+                line = "YOUR OPPONENT'S TEAM IS NOT A DATABASE TEAM";
             else if (!self->hasTeam)
                 line = "CHOOSE YOUR TEAM";
             else if (!self->ready)
@@ -1120,12 +1174,22 @@ static void mpGameSetup_teams_onSelect(void)
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_CHOOSING_TEAM);
     NetplayLobby_Poll();
 
+    /* A player with custom teams is offered those first (MY CUSTOM TEAM, src/
+     * custom_team.c), with OTHER TEAMS for the game's own list; one without goes
+     * straight to the list, as before. */
+    {
+        static TeamFileEx custom;
+        if (CustomTeam_Pick(&custom) > 0) {
+            if (lobby_pick_team(&custom))
+                lineup_screen();
+            NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
+            return;
+        }
+    }
     ChooseTeamsDialog(1, 1, 1, (uint8_t *)title, (void *)0);
 
-    if ((int16_t)_selectedTeamCountryNumber != -1 && _selectedTeamPtr) {
-        NetplayLobby_SetTeam(_selectedTeamPtr);
+    if ((int16_t)_selectedTeamCountryNumber != -1 && _selectedTeamPtr && lobby_pick_team(_selectedTeamPtr))
         lineup_screen();                /* straight on to the line-up, then CONFIRM = ready */
-    }
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
 }
 
@@ -1168,6 +1232,9 @@ static void lineup_begin(void)
 
     _selectedTeams[0] = p->team;
     _selectedTeams[1] = other && other->hasTeam ? other->team : p->team;
+    Uniform_Clear();
+    lobby_unbake_kit(&_selectedTeams[0]);   /* its own kits back; what it was sent in is a choice */
+    UniformMenu_SetOnline(other && other->hasTeam, NetplayLobby_LocalPlayer() == 1);
     s_lineup.before = p->team;
     s_lineup.before.team.tactics = (uint8_t)p->tactic;
     s_lineup.controls = p->team.team.teamControls;
@@ -1217,7 +1284,17 @@ static void lineup_end(void)
     extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
     extern uint16_t   _gameType, _isCareer, _trainingGame;
     TeamFileEx arranged = _selectedTeams[0];
+    KitLook kit;
 
+    /* A kit chosen on the UNIFORM screen: both of the team's kits become it, so SWOS's
+     * own kit rule, run on each machine at kick-off, can only dress this side in it. */
+    if (Uniform_Take(&_selectedTeams[0].team, &kit)) {
+        KitArt_ToTeam(&kit, 0, &arranged.team);
+        KitArt_ToTeam(&kit, 1, &arranged.team);
+        fprintf(stderr, "[lobby] team screen: a kit was chosen (type %d, colours %d/%d/%d/%d)\n",
+                kit.type, kit.stripes, kit.basic, kit.shorts, kit.socks);
+    }
+    UniformMenu_SetOnline(-1, 0);
     lineup_log(&s_lineup.before, &arranged);
     arranged.team.teamControls = s_lineup.controls;
     _selectedTeams[0] = s_lineup.keep[0];
@@ -1633,6 +1710,12 @@ static void matchMaking_exit_onSelect(void)
     SetExitMenuFlag();
 }
 
+/* MY CUSTOM TEAM: the player's three teams for online play (src/custom_team.c). */
+static void matchMaking_menuCustomTeam_onSelect(void)
+{
+    CustomTeam_Manage();
+}
+
 static void matchMaking_menuSettings_onSelect(void)
 {
     OnlineMenus_Show(SWOS2020_MENU(mmSettingsMenu));
@@ -1969,6 +2052,7 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(matchMakingMenu_OnInit),
     HANDLER(matchMakingMenu_OnDraw),
     HANDLER(matchMaking_menuSettings_onSelect),
+    HANDLER(matchMaking_menuCustomTeam_onSelect),
     /* MULTIPLAYER SETTINGS: its first row is RECORD MATCHES. */
     HANDLER(mmsOnInit),
     HANDLER(mmsOnDraw),
@@ -2115,6 +2199,8 @@ void OnlineMenus_ShowStartMenu(void)
     P2PMenu_Init();             /* --menu=p2p/p2pMenu wants its handlers too */
     if (!strcmp(name, SWOS2020_MENU(creditsMenu)))
         OnlineMenus_ShowCredits();  /* with its photos' palette, as the button opens it */
+    else if (!strcmp(name, SWOS2020_MENU(selectMyCustomTeams)))
+        CustomTeam_Manage();        /* the slots AND what choosing one does, as its button */
     else
         OnlineMenus_Show(name);
 }

@@ -51,6 +51,7 @@
 #include "sim_state.h"
 #include "state_wire.h"
 #include "replay_v2.h"     /* ReplayRec_SetSetup: the resumable recording */
+#include "custom_team.h"   /* CustomTeam_Allowed: what a team from the other player may be */
 
 #include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
 #include <time.h>
@@ -278,6 +279,15 @@ static void read_peer_state(void)
     memcpy(&got.userTactic, q, TACTIC_BYTES);
     if (got.tactic < 0 || got.tactic > LOBBY_TACTIC_MAX)
         got.tactic = 0;
+    /* A team is a team of the database, with at most its names, faces, kits and line-up
+     * changed (a custom team, src/custom_team.c). One with different players or skills
+     * is not played: the other player has no team here until they pick one that is, so
+     * a match cannot start. Their own game says the same about what it was given. */
+    if (got.hasTeam && !CustomTeam_Allowed(&got.team)) {
+        got.hasTeam = 0;
+        got.ready = 0;
+        got.refused = 1;
+    }
 
     if (theirs()->known && side_differs(theirs(), &got))
         drop_my_ready();

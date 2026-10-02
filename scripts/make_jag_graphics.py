@@ -21,6 +21,13 @@ RGB triplets, which the game installs into free palette entries at run time
 Only the in-match banks are converted. Everything else -- menus, charset, the
 loader pictures -- keeps falling back to grafs_aga/grafs through resload's
 existing tier search, so Jaguar mode changes the players and nothing else.
+
+One more file comes from the Jaguar's own sheet rather than the converted banks:
+JAGKITS.BIN, the big shirts, shorts, socks and shirt-type icons the Jaguar game
+drew for its kit screen. They are not in the Amiga layout at all (the Amiga keeps
+its kit art in the MENUS bank), so they are cut from CJCGRAFS_JAGSHEET.bmp by the
+boxes in KIT_BOXES and stored chunky, with the sheet's palette: src/kit_art.c
+draws them in the menus when [graphics] kit_art = jaguar.
 """
 import argparse
 import os
@@ -31,6 +38,41 @@ WIDTH, HEIGHT, PLANES = 320, 256, 8
 ROW_BYTES = WIDTH // 8                      # 40, one bitplane row
 DEFAULT_SRC = ("/mnt/c/Projects/GitHub/SwosGfx/SwosGfx/bin/Debug/net8.0/"
                "Amiga_Images_256_Jag")
+
+
+# The kit art in CJCGRAFS_JAGSHEET.bmp: (x, y, w, h), drop shadow included. In the
+# order src/kit_art.c reads them: a shirt and an icon per shirt type (0 ordinary,
+# 1 coloured sleeves, 2 vertical stripes, 3 hoops), the shorts, the two socks.
+KIT_SHEET = "CJCGRAFS_JAGSHEET"
+KIT_BOXES = [
+    (209, 63, 44, 40), (257, 1, 44, 40), (161, 1, 44, 41), (209, 1, 44, 40),
+    (161, 42, 21, 20), (257, 42, 21, 20), (193, 42, 21, 20), (225, 42, 21, 20),
+    (289, 42, 28, 22), (161, 63, 14, 25), (183, 63, 15, 25),
+]
+
+
+def write_kits(src, out, Image):
+    """JAGKITS.BIN: "JGK1", the sheet's 768 palette bytes, a count, then per
+    graphic its width, height and width*height sheet colours (0 = nothing)."""
+    path = os.path.join(src, KIT_SHEET + ".bmp")
+    if not os.path.exists(path):
+        print("  skip kits      (%s.bmp is not in %s)" % (KIT_SHEET, src))
+        return
+    im = Image.open(path)
+    if im.mode != "P" or im.size != (WIDTH, HEIGHT):
+        sys.exit("make_jag_graphics: %s is %s %dx%d, expected an 8bpp %dx%d sheet"
+                 % (KIT_SHEET, im.mode, im.width, im.height, WIDTH, HEIGHT))
+    pixels = bytes(im.tobytes())
+    blob = bytearray(b"JGK1")
+    blob += bytes(im.getpalette()[:768])
+    blob.append(len(KIT_BOXES))
+    for x, y, w, h in KIT_BOXES:
+        blob += bytes((w, h))
+        for row in range(y, y + h):
+            blob += pixels[row * WIDTH + x:row * WIDTH + x + w]
+    with open(os.path.join(out, "JAGKITS.BIN"), "wb") as f:
+        f.write(blob)
+    print("  kits      -> JAGKITS.BIN  (%d graphics, %d bytes)" % (len(KIT_BOXES), len(blob)))
 
 
 def to_planar(pixels):
@@ -105,6 +147,7 @@ def main():
         f.write(bytes(palette))
         f.write(bytes(used))
     print("  palette   -> JAG.PAL   (256 RGB triplets, %d of them used)" % sum(used))
+    write_kits(args.src, args.out, Image)
     print("%d bank(s) written to %s" % (written, args.out))
 
 

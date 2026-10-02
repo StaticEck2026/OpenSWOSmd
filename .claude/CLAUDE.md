@@ -126,6 +126,21 @@ the clock SDL asks for, and SDL's wall-clock fallback steps -- NETPLAY.md §8). 
 open `wss://`, which the gate speaks with `--tls-cert`/`--tls-key` (TLS on the same port;
 NETPLAY_SETUP.md §10, `TLS=1 scripts/wasm_netplay_test.sh`).
 
+**UNIFORM and MY CUSTOM TEAM** (SDL only; docs/UNIFORM.md, docs/CUSTOM_TEAMS.md). The PLAY MATCH
+screen's UNIFORM button (entry 68, hidden on the Amiga) opens SWOS 2020's uniform selector
+(`src/uniform_menu.c`): a kit per side for ONE match, kept beside the team and applied at kick-off
+on copies of the team headers (`Uniform_Kits` in `InitializeInGameTeamsAndStartGame`) -- never
+written into a team, and `SetInGameTeamsPrimaryColors` still decides a clash. Online the choice
+travels inside the team (both kits become it), so no wire format changed. Its drawings are
+`src/kit_art.c`: the Amiga's EDIT TEAM sprites or the Jaguar's (`[graphics] kit_art`, default
+amiga; `bin/grafs_jag/JAGKITS.BIN` from `scripts/make_jag_graphics.py`). MY CUSTOM TEAM
+(`src/custom_team.c`) is three slots of `CUSTOMn.TEAM` (JSON) in the save folder, edited on the
+game's EDIT TEAM screen (IMPORT takes a database team whole, UNDO is LINEUP). **A custom team is a
+database team with only names, faces, kits and line-up changed -- no skill can differ**: the file
+has no field for one, and the lobby refuses any team from the other player that is not that
+(`CustomTeam_Allowed`, every team, custom or not). `--custom-team-selftest` runs all 1,631 database
+teams through the rule and the file; run it after touching either.
+
 **Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
 recorded from every match that is not training, the arcade cabinet or the rig: `LATEST.SRP` in the
 save folder, plus a dated copy under `[replays] auto_save`. They play through the highlights viewer

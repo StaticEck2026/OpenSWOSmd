@@ -3247,6 +3247,7 @@ typedef struct Menu_PlayMatch
   MenuMark_StartMenu menu1Start3;
   MenuEntry_Byte_SpriteFgOnly entry56;
   MenuEntry_Byte_TextNoPtrOnly entries57_67[11];
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry68;   /* UNIFORM (SDL only) */
   MenuMark markEndMenu;
 } Menu_PlayMatch;
 #pragma pack(pop)

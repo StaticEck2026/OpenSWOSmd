@@ -61,6 +61,8 @@ MULTIPLAYER_MENUS = [
     "myRankedStats", "myFriendlyStats",
     # the credits, from the main menu                               (game.cpp)
     "credits",
+    # the pre-match uniform selector, from the PLAY MATCH screen    (game.cpp)
+    "selectUniform",
 ]
 
 # SWOS 2020's skip opcodes, by NUMBER (menuCodes.h: kLeftSkip = 17 ... kDownSkip = 20),

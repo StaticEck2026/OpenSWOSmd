@@ -20,6 +20,9 @@
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "game_types.h"
+#ifdef SWOS_SDL_BUILD
+#include "uniform.h"            /* the UNIFORM button (entry 68) */
+#endif
 
 /* Prevent GCC from converting byte loops to memcpy/memset (no libc) */
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
@@ -501,6 +504,73 @@ void SetPlayerSurnamesOnSidePitch(void) {
     }
 }
 
+/* ================================================================
+ * UNIFORM (entry 68) -- OpenSWOS, SDL only: the kit each side wears for this match
+ * (src/uniform_menu.c, docs/UNIFORM.md). It is there whenever this screen is about to
+ * start a match somebody can still arrange: not while the other team is being looked
+ * at, not before a training match, not when the screen only shows a result.
+ *
+ * The bottom row has no room for a fifth button, so UNIFORM shares EDIT TACTICS' place:
+ * the two are stacked, each 10 px high, in the 23 the PLAY button beside them takes.
+ * Where EDIT TACTICS is not shown (computer v computer) UNIFORM has the place alone.
+ * Positions are taken from EXIT's (entry 8), which never moves, because this runs
+ * again on every change of the screen without the menu being unpacked afresh.
+ * ================================================================ */
+enum { kUniformEntry = 68 };
+
+#ifdef SWOS_SDL_BUILD
+/* Set by a screen that shows this one for the line-up alone (the custom team editor,
+ * whose kits are edited beside it): no UNIFORM button. */
+int32_t g_playMatchNoUniform;
+#endif
+
+static void UpdateUniformButton(void) {
+    MenuEntry *exitBtn = &_menuEntries[8];
+    MenuEntry *tactics = &_menuEntries[10];
+    MenuEntry *viewOpp = &_menuEntries[7];
+    MenuEntry *uniform = &_menuEntries[kUniformEntry];
+#ifdef SWOS_SDL_BUILD
+    int16_t shown = _squadChangesAllowed && !_viewingOpponentTeam && !_trainingGame &&
+                    !g_playMatchNoUniform;
+#else
+    int16_t shown = 0;          /* the screen behind it is a JSON menu, which the Amiga does not run */
+#endif
+
+    uniform->isInvisible = !shown;
+    tactics->y = exitBtn->y;
+    tactics->dwHeight = exitBtn->dwHeight;
+    tactics->downEntry = -1;
+    viewOpp->rightEntry = 10;
+    if (!shown)
+        return;
+    uniform->x = tactics->x;
+    uniform->dwWidth = tactics->dwWidth;
+    uniform->leftEntry = 7;
+    if (tactics->isInvisible) {
+        uniform->y = exitBtn->y;
+        uniform->dwHeight = exitBtn->dwHeight;
+        uniform->upEntry = 55;                  /* the formation above, as EDIT TACTICS' */
+        viewOpp->rightEntry = kUniformEntry;
+    } else {
+        tactics->y = exitBtn->y - 2;
+        tactics->dwHeight = 10;
+        tactics->downEntry = kUniformEntry;
+        uniform->y = exitBtn->y + 9;
+        uniform->dwHeight = 10;
+        uniform->upEntry = 10;
+    }
+}
+
+/* UniformSelected -- the UNIFORM button. This screen is shown to each player in turn
+ * with the teams the other way round, so "first team" is the one it shows only for the
+ * first of them. */
+__attribute__((used, externally_visible))
+void UniformSelected(void) {
+#ifdef SWOS_SDL_BUILD
+    UniformMenu_Open(_playMatchTeam1Ptr, _playMatchTeam2Ptr, _isFirstPlayerChoosingTeam != 0);
+#endif
+}
+
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void SetVariableButtons(void) {
@@ -661,6 +731,8 @@ void SetVariableButtons(void) {
         if (_viewingOpponentTeam) tm = _playMatchTeam2Ptr;
         _menuEntries[4].fg = (uintptr_t)tm->team.coachName;
     }
+
+    UpdateUniformButton();
 }
 
 /* ================================================================ */

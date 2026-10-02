@@ -1,0 +1,1189 @@
+{
+  "name": "selectUniformMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/selectUniform.mnu",
+    "commit": "ebf1cc4"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "selectUniformMenuOnInit",
+  "onReturn": "selectUniformMenuOnReturn",
+  "onDraw": "selectUniformMenuOnDraw",
+  "defaultEntry": 37,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "Header",
+      "coords": {
+        "x": 84,
+        "y": 0,
+        "w": 142,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SELECT UNIFORM"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftTeamName",
+      "coords": {
+        "x": 0,
+        "y": 24,
+        "w": 136,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x10"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightTeamName",
+      "coords": {
+        "x": 167,
+        "y": 24,
+        "w": 136,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x10"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShirtType0",
+      "coords": {
+        "x": 29,
+        "y": 56,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 7,
+          "up": -1,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShirtType0_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShirtType1",
+      "coords": {
+        "x": 29,
+        "y": 75,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShirtType1_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShirtType2",
+      "coords": {
+        "x": 29,
+        "y": 94,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 9,
+          "up": 4,
+          "down": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShirtType2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShirtType3",
+      "coords": {
+        "x": 29,
+        "y": 113,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 10,
+          "up": 5,
+          "down": 37
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShirtType3_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftStripesColor_Dec",
+      "coords": {
+        "x": 67,
+        "y": 66,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 15,
+          "up": -1,
+          "down": 8
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftStripesColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftBasicColor_Dec",
+      "coords": {
+        "x": 67,
+        "y": 78,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 15,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftBasicColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShortsColor_Dec",
+      "coords": {
+        "x": 67,
+        "y": 97,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 16,
+          "up": 8,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShortsColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftSocksColor_Dec",
+      "coords": {
+        "x": 67,
+        "y": 114,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 17,
+          "up": 9,
+          "down": 18
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftSocksColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftStripesColor_Inc",
+      "coords": {
+        "x": 127,
+        "y": 66,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 24,
+          "up": -1,
+          "down": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftStripesColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftBasicColor_Inc",
+      "coords": {
+        "x": 127,
+        "y": 78,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 25,
+          "up": 11,
+          "down": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftBasicColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShortsColor_Inc",
+      "coords": {
+        "x": 127,
+        "y": 97,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 16,
+          "right": 26,
+          "up": 12,
+          "down": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftShortsColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftSocksColor_Inc",
+      "coords": {
+        "x": 127,
+        "y": 114,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 17,
+          "right": 27,
+          "up": 13,
+          "down": 18
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftSocksColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShirts",
+      "coords": {
+        "x": 79,
+        "y": 62,
+        "w": 46,
+        "h": 31
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 11,
+          "up": -1,
+          "down": 16
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "LeftShirts_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftShorts",
+      "coords": {
+        "x": 79,
+        "y": 93,
+        "w": 46,
+        "h": 17
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 9,
+          "right": 13,
+          "up": 15,
+          "down": 17
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "LeftShorts_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftSocks",
+      "coords": {
+        "x": 79,
+        "y": 110,
+        "w": 46,
+        "h": 17
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 14,
+          "up": 15,
+          "down": 18
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "LeftSocks_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftSwitch",
+      "coords": {
+        "x": 79,
+        "y": 130,
+        "w": 46,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWITCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 35,
+          "up": 17,
+          "down": 19
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftSwitch_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "LeftReset",
+      "coords": {
+        "x": 79,
+        "y": 142,
+        "w": 46,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "RESET"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 36,
+          "up": 18,
+          "down": 37
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LeftReset_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShirtType0",
+      "coords": {
+        "x": 253,
+        "y": 56,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 28,
+          "right": -1,
+          "up": -1,
+          "down": 21
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShirtType0_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShirtType1",
+      "coords": {
+        "x": 253,
+        "y": 75,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 29,
+          "right": -1,
+          "up": 20,
+          "down": 22
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShirtType1_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShirtType2",
+      "coords": {
+        "x": 253,
+        "y": 94,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 30,
+          "right": -1,
+          "up": 21,
+          "down": 23
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShirtType2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShirtType3",
+      "coords": {
+        "x": 253,
+        "y": 113,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 31,
+          "right": -1,
+          "up": 22,
+          "down": 37
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShirtType3_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightStripesColor_Dec",
+      "coords": {
+        "x": 168,
+        "y": 66,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 11,
+          "right": 32,
+          "up": -1,
+          "down": 25
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightStripesColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightBasicColor_Dec",
+      "coords": {
+        "x": 168,
+        "y": 78,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 12,
+          "right": 32,
+          "up": 24,
+          "down": 26
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightBasicColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShortsColor_Dec",
+      "coords": {
+        "x": 168,
+        "y": 97,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 13,
+          "right": 33,
+          "up": 25,
+          "down": 27
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShortsColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightSocksColor_Dec",
+      "coords": {
+        "x": 168,
+        "y": 114,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 14,
+          "right": 34,
+          "up": 26,
+          "down": 35
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightSocksColor_Dec_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightStripesColor_Inc",
+      "coords": {
+        "x": 228,
+        "y": 66,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 32,
+          "right": 20,
+          "up": -1,
+          "down": 29
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightStripesColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightBasicColor_Inc",
+      "coords": {
+        "x": 228,
+        "y": 78,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 32,
+          "right": 21,
+          "up": 28,
+          "down": 30
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightBasicColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShortsColor_Inc",
+      "coords": {
+        "x": 228,
+        "y": 97,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 33,
+          "right": 22,
+          "up": 29,
+          "down": 31
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightShortsColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightSocksColor_Inc",
+      "coords": {
+        "x": 228,
+        "y": 114,
+        "w": 10,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 34,
+          "right": 23,
+          "up": 30,
+          "down": 35
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightSocksColor_Inc_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShirts",
+      "coords": {
+        "x": 180,
+        "y": 62,
+        "w": 46,
+        "h": 31
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 24,
+          "right": 28,
+          "up": -1,
+          "down": 33
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "RightShirts_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightShorts",
+      "coords": {
+        "x": 180,
+        "y": 93,
+        "w": 46,
+        "h": 17
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 26,
+          "right": 30,
+          "up": 32,
+          "down": 34
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "RightShorts_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightSocks",
+      "coords": {
+        "x": 180,
+        "y": 110,
+        "w": 46,
+        "h": 17
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 27,
+          "right": 31,
+          "up": 33,
+          "down": 35
+        },
+        {
+          "op": "input_func",
+          "mask": "0x1F",
+          "func": "RightSocks_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightSwitch",
+      "coords": {
+        "x": 180,
+        "y": 130,
+        "w": 46,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWITCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": 18,
+          "right": -1,
+          "up": 34,
+          "down": 36
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightSwitch_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "RightReset",
+      "coords": {
+        "x": 180,
+        "y": 142,
+        "w": 46,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "RESET"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": 19,
+          "right": -1,
+          "up": 35,
+          "down": 37
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RightReset_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "Ok",
+      "coords": {
+        "x": 102,
+        "y": 187,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SELECT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 19,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectUniformMenu_OkOnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "HelpMsg",
+      "coords": {
+        "x": 102,
+        "y": 166,
+        "w": 101,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    }
+  ]
+}

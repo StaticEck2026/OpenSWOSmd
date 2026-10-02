@@ -9,6 +9,9 @@
 #include "game_types.h"
 #include "play_match_menu.h"
 #include "string_utils.h"
+#ifdef SWOS_SDL_BUILD
+#include "uniform.h"        /* a kit chosen for this match (UNIFORM screen) */
+#endif
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
 extern uintptr_t _currentScorer;
@@ -738,6 +741,9 @@ void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
     _careerTeamCoachOnly = 0;
 
 #ifdef SWOS_SDL_BUILD
+    /* A kit chosen on the UNIFORM screen is for one match: whatever was chosen before
+     * the last one is forgotten before this one's team screens come up. */
+    Uniform_Clear();
     {
         /* Recorded-game replay: the two ShowPlayMatchMenu prompts are
          * replaced by the control assignment the recording's header carries
@@ -1085,6 +1091,35 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
         _team2Computer = 0x00FF;
 
     /* Set secondary colors for both teams */
+#ifdef SWOS_SDL_BUILD
+    {
+        /* The kits come from the teams -- or, for a side that chose one on the UNIFORM
+         * screen, from that choice, written over both kits of a COPY of the team's
+         * header (src/uniform_menu.c). Nothing after this reads a kit from the team
+         * file: the match, its replay and a rollback all work from the in-game teams. */
+        static TeamFile kit1, kit2;
+        extern int32_t NetplayMatch_Enabled(void);
+        /* A netplay match (live, or one replayed from its recording) is dressed from
+         * the teams alone: a choice made online is already IN the team both machines
+         * have (online_menus.c lineup_end), and one left over on this machine would
+         * dress the side differently here than there. */
+        if (NetplayMatch_Enabled())
+            Uniform_Clear();
+        Uniform_Kits(team1, team2, &kit1, &kit2);
+        SetTeamSecondaryColors((uint16_t)kit1.prShirtType, kit1.prStripesColor,
+            kit1.prBasicColor, kit1.prShortsColor, kit1.prSocksColor, &_topTeamInGame);
+        SetTeamSecondaryColors((uint16_t)kit2.prShirtType, kit2.prStripesColor,
+            kit2.prBasicColor, kit2.prShortsColor, kit2.prSocksColor, &_bottomTeamInGame);
+        SetInGameTeamsPrimaryColors(&kit1, &kit2);
+        /* What each side kicks off in, for SWOS.log: shirt type, then the palette
+         * entries of the shirt, its second colour, the shorts and the socks. */
+        fprintf(stderr, "[match] kits: %.16s type %d colours %d/%d/%d/%d, %.16s type %d colours %d/%d/%d/%d\n",
+                (const char *)team1->teamName, _topTeamInGame.prShirtType, _topTeamInGame.prShirtCol,
+                _topTeamInGame.prStripesCol, _topTeamInGame.prShortsCol, _topTeamInGame.prSocksCol,
+                (const char *)team2->teamName, _bottomTeamInGame.prShirtType, _bottomTeamInGame.prShirtCol,
+                _bottomTeamInGame.prStripesCol, _bottomTeamInGame.prShortsCol, _bottomTeamInGame.prSocksCol);
+    }
+#else
     SetTeamSecondaryColors((uint16_t)team1->prShirtType, team1->prStripesColor,
         team1->prBasicColor, team1->prShortsColor, team1->prSocksColor, &_topTeamInGame);
     SetTeamSecondaryColors((uint16_t)team2->prShirtType, team2->prStripesColor,
@@ -1092,6 +1127,7 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
 
     /* Set primary colors */
     SetInGameTeamsPrimaryColors(team1, team2);
+#endif
 
     /* If not career and all player teams are equal, compute average price */
     if (_gameType != GAME_TYPE_CAREER && _allPlayerTeamsEqual != 0) {

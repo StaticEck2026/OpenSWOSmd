@@ -37,6 +37,8 @@ typedef struct {
     int32_t    ready;
     int32_t    activity;            /* LobbyActivity */
     int32_t    hasTeam;
+    int32_t    refused;             /* the other player's only: they sent a team that is not a
+                                     * database team (CustomTeam_Allowed), so they have none here */
     int32_t    tactic;              /* TACTIC_*: 0..LOBBY_TACTIC_MAX */
     TeamFileEx team;
     TeamTactics userTactic;         /* the tactic itself when it is a USER one */

@@ -146,6 +146,11 @@ void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t hair, int32_t ste
     }
 }
 
+int32_t JagGfx_KitShade(int32_t shade)
+{
+    return shade < 0 || shade >= JAG_KIT_SHADES ? 16 : k_shade[shade];
+}
+
 static const char *const k_banks[] = {
     "CJCTEAM1", "CJCTEAM2", "CJCTEAM3", "CJCTEAMG", "CJCBITS", "CJCBENCH"
 };
@@ -747,6 +752,7 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
          * chip RAM and bandwidth of the 4bpp ones the A1200 draws today. */
 
 int32_t        JagGfx_Enabled(void) { return 0; }
+int32_t        JagGfx_KitShade(int32_t shade) { (void)shade; return 16; }
 void           JagGfx_SetEnabled(int32_t on) { (void)on; }
 int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
 const uint8_t *JagGfx_SheetRemap(void) { return 0; }

@@ -1,6 +1,7 @@
 {
   "_aMultiplayer": "MULTIPLAYER",
   "_aCredits": "CREDITS",
+  "_aUniform": "TENUE",
  "language": "nl",
  "strings": {
   "_a001Season": "SEIZOEN %0/0%1",

@@ -364,6 +364,7 @@ extern void TransferPlayerOnSelect12(void);
 extern void TransfersMenu(void);
 extern void UndoTactics(void);
 extern void UseMatchTeamSelect(void);
+extern void UniformSelected(void);
 extern void User_A_Tactics(void);
 extern void User_B_Tactics(void);
 extern void User_C_Tactics(void);
@@ -557,6 +558,7 @@ extern char _aTransferMarket[];
 extern char _aTransfers[];
 extern char _aType[];
 extern char _aUndo[];
+extern char _aUniform[];
 extern char _aUseMatchTeam[];
 extern char _aV[];
 extern char _aViewCompetitio[];
@@ -8981,6 +8983,14 @@ Menu_PlayMatch _playMatchMenu = {
             { MENU_CMD_TEXT_NO_PTR, 0x8000 },
             MENU_CMD_END
         }
+    },
+    {
+        { 63, -50, 68, 11 },
+        { MENU_CMD_NAV, 7, -1, 10, -1 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_TEXT_PTR, 0x0, _aUniform },
+        { MENU_CMD_ONSELECT_FIRE, UniformSelected },
+        MENU_CMD_END
     },
     MENU_MARK_END_MENU
 };
