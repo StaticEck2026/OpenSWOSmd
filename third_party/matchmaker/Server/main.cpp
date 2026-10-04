@@ -12,6 +12,7 @@
 #include <iostream>
 #include "Utils.h"
 #include "Relay.h"
+#include "TeamDesk.h"
 #include "Recorder.h"
 #include "ReportDesk.h"
 #include "WebGate.h"
@@ -44,11 +45,13 @@ int main(int argc, char** argv)
     std::string recordings = "recordings";
     std::string reportsDir;
     std::string ledgerPath;
+    std::string teamsFile;
     std::string tlsCert, tlsKey;
     auto usage = [&]() {
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
                      "       [--reports DIR] [--websocket [--tls-cert FILE --tls-key FILE]]\n"
+                     "       [--teams FILE]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
                      "  --netem     a misbehaving network in the middle of every relayed\n"
@@ -65,6 +68,8 @@ int main(int argc, char** argv)
                      "  --recordings  where those go (default: recordings/)\n"
                      "  --reports   keep the match reports players send after an online match\n"
                      "              (both players' logs and ratings, a zip each) in DIR/<match id>/\n"
+                     "  --teams     more canonical teams than the ones compiled in, one\n"
+                     "              \"uuid checksum name\" a line (the team check, TeamDesk.h)\n"
                      "  --ledger    append a JSON line per relay session, recorded match, desync\n"
                      "              and match report\n"
                      "  --websocket browsers (the web build) connect over WebSocket on TCP, the\n"
@@ -99,6 +104,8 @@ int main(int argc, char** argv)
             tlsCert = argv[++i];
         } else if (a == "--tls-key" && i + 1 < argc) {
             tlsKey = argv[++i];
+        } else if (a == "--teams" && i + 1 < argc) {
+            teamsFile = argv[++i];
         } else if (a == "--ledger" && i + 1 < argc) {
             ledgerPath = argv[++i];
         } else {
@@ -127,6 +134,17 @@ int main(int argc, char** argv)
         std::cout << (ledger.IsOpen() ? "ledger: " : "cannot open the ledger ") << ledgerPath << "\n";
     Relay relay(connections.Host(), relayOptions, ledger);
     connections.SetRelay(&relay);
+    // The team check answers on the same UDP port as the relay's control packets, so
+    // one intercept serves both: the desk first, then the relay (which does nothing
+    // unless it is on).
+    static TeamDesk* s_teams = nullptr;
+    TeamDesk teams(connections.Host(), ledger, teamsFile);
+    s_teams = &teams;
+    connections.Host()->intercept = [](ENetHost* host, ENetEvent* event) -> int {
+        if (s_teams && s_teams->OnDatagram(host->receivedAddress, host->receivedData, host->receivedDataLength))
+            return 1;
+        return Relay::Intercept(host, event);
+    };
     Recorder recorder(record, (uint16_t)port, ledger, recordings);
     // Both take TCP on the port number the game uses for UDP: a browser's WebSocket
     // arrives there, because the browser build sends its datagrams to that port.

@@ -665,6 +665,7 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
             P2PLink_SetRelay(0, st->playerNumber);
         }
         snprintf(peerName, sizeof peerName, "%s", st->peerName);
+        P2PLink_SetServer(st->serverAddr);  /* the lobby asks it about the two teams (team_proto.h) */
 
         /* The lobby is done with; from here the two of us talk directly. */
         MmClient_Disconnect();
@@ -1135,6 +1136,10 @@ static void mpGameSetupMenu_OnDraw(void)
                 line = "YOUR OPPONENT IS ARRANGING THEIR TEAM";
             else if (other->known && other->refused)
                 line = "YOUR OPPONENT'S TEAM IS NOT A DATABASE TEAM";
+            else if (self->verified == LOBBY_TEAM_REFUSED_UNKNOWN || self->verified == LOBBY_TEAM_REFUSED_CHANGED)
+                line = "THE SERVER DOES NOT KNOW YOUR TEAM - CHOOSE ANOTHER";
+            else if (other->verified == LOBBY_TEAM_REFUSED_UNKNOWN || other->verified == LOBBY_TEAM_REFUSED_CHANGED)
+                line = "THE SERVER DOES NOT KNOW YOUR OPPONENT'S TEAM";
             else if (!self->hasTeam)
                 line = "CHOOSE YOUR TEAM";
             else if (!self->ready)

@@ -52,6 +52,7 @@
 #include "state_wire.h"
 #include "replay_v2.h"     /* ReplayRec_SetSetup: the resumable recording */
 #include "custom_team.h"   /* CustomTeam_Allowed: what a team from the other player may be */
+#include "team_proto.h"    /* the server's word on both teams */
 
 #include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
 #include <time.h>
@@ -231,6 +232,9 @@ static int32_t side_differs(const LobbyPlayer *a, const LobbyPlayer *b)
     return 0;
 }
 
+static void team_check(void);      /* the matchmaking server's word on both teams */
+static int32_t team_blocks(const LobbyPlayer *p);
+
 static void drop_my_ready(void)
 {
     if (mine()->ready) {
@@ -291,6 +295,7 @@ static void read_peer_state(void)
 
     if (theirs()->known && side_differs(theirs(), &got))
         drop_my_ready();
+    got.verified = theirs()->verified;      /* the server's word stands until the team changes (team_check) */
     *theirs() = got;
 
     if (s_lobby.me == 2) {
@@ -478,7 +483,9 @@ static void read_start(void)
          /* built on our newest side, which we have not changed since */
          BE_READ_U16(m + 6) == P2PLink_SentGeneration(CH_STATE) && !s_lobby.dirty &&
          BE_READ_U16(m + 8) == s_lobby.rulesGen &&
-         mine()->ready && mine()->hasTeam;
+         mine()->ready && mine()->hasTeam &&
+         /* and the server has vouched for both teams, or is not there (team_check) */
+         !team_blocks(mine()) && !team_blocks(theirs());
     {
         uint32_t setupLen = ok ? BE_READ_U32(m + START_HEADER) : 0;
         const uint8_t *setup = m + START_HEADER + 4;
@@ -703,6 +710,8 @@ void NetplayLobby_Poll(void)
         return;
     }
 
+    if (s_lobby.state == LOBBY_OPEN)
+        team_check();
     if (s_lobby.state == LOBBY_OPEN && s_lobby.dirty)
         send_state();
 }
@@ -810,10 +819,137 @@ void NetplayLobby_SetRules(const LobbyRules *rules)
     set_notice("");
 }
 
+/* ---- the team check ----
+ *
+ * In a match the matchmaking server arranged, this game asks the server about BOTH
+ * teams -- its own and the one the other player sent -- each as the id and checksum of
+ * what it would actually play (CustomTeam_Claim). A team the server refuses stops the
+ * match being started here, whatever the other game says of it: that is what makes a
+ * doctored team the honest player's to refuse.
+ *
+ * One datagram, sent again every 400 ms until it is answered, eight times at most. A
+ * server that never answers (an old one, or one that is down) leaves the teams
+ * unverified and the match playable: the local checks still stand, and a player cannot
+ * silence the OTHER game's question. */
+enum { kCheckResendMs = 400, kCheckTries = 8 };
+
+static struct {
+    TeamCheckTeam asked[2];         /* by player, what was last asked of each */
+    int32_t       has[2];
+    uint32_t      nonce;
+    uint32_t      sentAt;
+    int32_t       tries;            /* > 0 while an answer is awaited */
+} s_check;
+
+static int32_t refused(const LobbyPlayer *p)
+{
+    return p->verified == LOBBY_TEAM_REFUSED_UNKNOWN || p->verified == LOBBY_TEAM_REFUSED_CHANGED;
+}
+
+/* A match may not start on this player's team: the server refused it, or -- where
+ * there is a server to ask -- has not answered about it yet. (An answer that never
+ * comes ends as LOBBY_TEAM_NO_ANSWER after kCheckTries, about three seconds.) A start
+ * that did not wait would begin on a team whose refusal was still on its way. */
+static int32_t team_blocks(const LobbyPlayer *p)
+{
+    return refused(p) || (P2PLink_HasServer() && p->hasTeam && p->verified == LOBBY_TEAM_UNASKED);
+}
+
+static void team_check_send(void)
+{
+    uint8_t packet[TEAMCHECK_MAX_LEN];
+    TeamCheck c;
+    int32_t p;
+
+    memset(&c, 0, sizeof c);
+    c.type = TEAMCHECK_ASK;
+    c.nonce = s_check.nonce;
+    for (p = 0; p < 2; p++)
+        if (s_check.has[p])
+            c.team[c.count++] = s_check.asked[p];
+    if (c.count)
+        P2PLink_AskServer(packet, TeamCheck_Write(packet, &c));
+    s_check.sentAt = SDL_GetTicks();
+}
+
+static void team_check(void)
+{
+    uint8_t packet[TEAMCHECK_MAX_LEN];
+    TeamCheck c;
+    int32_t p, i, n, changed = 0;
+
+    if (!P2PLink_HasServer()) {
+        memset(&s_check, 0, sizeof s_check);
+        return;
+    }
+    /* What each side would play, now. A team that has changed is asked about afresh. */
+    for (p = 0; p < 2; p++) {
+        LobbyPlayer *pl = &s_lobby.players[p];
+        TeamCheckTeam now;
+        int32_t has = pl->hasTeam && (p == s_lobby.me - 1 || pl->known);
+
+        memset(&now, 0, sizeof now);
+        if (has)
+            CustomTeam_Claim(&pl->team, now.uuid, now.checksum);
+        /* For a test (TEAMCHECK_REFUSE=1 scripts/relay_test.sh): the other player's
+         * team as if it had been doctored -- a checksum that is not its data's. */
+        if (has && p != s_lobby.me - 1 && getenv("SWOS_TEAMCHECK_CORRUPT"))
+            now.checksum[0] ^= 0x5A;
+        if (has != s_check.has[p] || (has && memcmp(&now, &s_check.asked[p], sizeof now) != 0)) {
+            s_check.has[p] = has;
+            s_check.asked[p] = now;
+            pl->verified = LOBBY_TEAM_UNASKED;
+            changed = 1;
+        }
+    }
+    if (changed) {
+        s_check.nonce = s_check.nonce * 1664525u + 1013904223u + SDL_GetTicks();
+        s_check.tries = (s_check.has[0] || s_check.has[1]) ? 1 : 0;
+        if (s_check.tries)
+            team_check_send();
+    }
+
+    n = P2PLink_ServerAnswer(TEAMCHECK_MAGIC, packet, (int32_t)sizeof packet);
+    if (n > 0 && TeamCheck_Read(packet, n, &c) == 0 && c.type == TEAMCHECK_ANSWER && c.nonce == s_check.nonce &&
+        s_check.tries > 0) {
+        for (i = 0; i < c.count; i++)
+            for (p = 0; p < 2; p++) {
+                LobbyPlayer *pl = &s_lobby.players[p];
+                if (!s_check.has[p] || memcmp(c.team[i].uuid, s_check.asked[p].uuid, 16) != 0 ||
+                    memcmp(c.team[i].checksum, s_check.asked[p].checksum, 8) != 0)
+                    continue;
+                pl->verified = c.team[i].status == TEAMCHECK_OK      ? LOBBY_TEAM_CANONICAL :
+                               c.team[i].status == TEAMCHECK_UNKNOWN ? LOBBY_TEAM_REFUSED_UNKNOWN :
+                                                                       LOBBY_TEAM_REFUSED_CHANGED;
+                fprintf(stderr, "[lobby] team check: player %d's %.16s is %s\n", (int)p + 1,
+                        (const char *)pl->team.team.teamName,
+                        pl->verified == LOBBY_TEAM_CANONICAL ? "canonical" :
+                        pl->verified == LOBBY_TEAM_REFUSED_UNKNOWN ? "REFUSED: the server has no team with that id" :
+                        "REFUSED: the server's copy of that team is other data");
+                /* Nobody stays ready to play a team the server refuses. */
+                if (refused(pl))
+                    drop_my_ready();
+            }
+        s_check.tries = 0;
+    } else if (s_check.tries > 0 && SDL_GetTicks() - s_check.sentAt >= (uint32_t)kCheckResendMs) {
+        if (s_check.tries >= kCheckTries) {
+            for (p = 0; p < 2; p++)
+                if (s_check.has[p] && s_lobby.players[p].verified == LOBBY_TEAM_UNASKED)
+                    s_lobby.players[p].verified = LOBBY_TEAM_NO_ANSWER;
+            fprintf(stderr, "[lobby] team check: the server did not answer; the teams are unverified\n");
+            s_check.tries = 0;
+        } else {
+            s_check.tries++;
+            team_check_send();
+        }
+    }
+}
+
 int32_t NetplayLobby_CanStart(void)
 {
     const LobbyPlayer *host = &s_lobby.players[0], *joiner = &s_lobby.players[1];
     return s_lobby.me == 1 && s_lobby.state == LOBBY_OPEN &&
+           !team_blocks(host) && !team_blocks(joiner) &&     /* the server has vouched for both, or is not there */
            P2PLink_State() == P2P_CONNECTED &&
            host->hasTeam && host->ready && joiner->known && joiner->hasTeam && joiner->ready &&
            s_lobby.peerRulesSeen == s_lobby.rulesGen &&

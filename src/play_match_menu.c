@@ -22,6 +22,7 @@
 #include "game_types.h"
 #ifdef SWOS_SDL_BUILD
 #include "uniform.h"            /* the UNIFORM button (entry 68) */
+#include "custom_team.h"        /* (CUSTOM) where the country would be named */
 #endif
 
 /* Prevent GCC from converting byte loops to memcpy/memset (no libc) */
@@ -603,6 +604,14 @@ void SetVariableButtons(void) {
             if (_viewingOpponentTeam) tm = _playMatchTeam2Ptr;
             uint8_t *cname = (uint8_t *)_countriesTable[tm->team.countryNumber];
             cname++;
+#ifdef SWOS_SDL_BUILD
+            /* A custom team (src/custom_team.c) is a database team under another name,
+             * so this would name the country of the team it was made from -- BORUSSIA
+             * FULDA, made from BRAZIL, "(SOUTH AMERICA)". It says what the team is. */
+            static uint8_t custom[] = "CUSTOM";
+            if (CustomTeam_IsCustom(tm))
+                cname = custom;
+#endif
             *nameOut++ = '(';
             nameOut = StringCopy(cname, nameOut);
             *nameOut++ = ')';

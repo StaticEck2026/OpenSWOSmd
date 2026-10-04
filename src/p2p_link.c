@@ -196,6 +196,12 @@ typedef struct {
     /* 1 or 2 when punching to several candidates, 0 when unknown: which side settles
      * the path (see the CONNECTED case of handle_packet). */
     int32_t            punchPlayer;
+    /* The matchmaking server (P2PLink_SetServer), and the last thing it answered an
+     * AskServer with. Like the relay's fields, the session's and not one link's. */
+    struct sockaddr_in server;
+    int32_t            haveServer;
+    uint8_t            serverAnswer[96];
+    int32_t            serverAnswerLen;
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
@@ -1203,6 +1209,16 @@ static void link_poll(P2PLink *l, uint32_t now)
                 continue;
             break;
         }
+        /* The matchmaking server's answer to an AskServer: kept for whoever asked. Only
+         * from the server's own address, and only a datagram that is not one of ours
+         * (ours carry a checksum trailer and never start with a letter magic). */
+        if (l->haveServer && from.sin_family == AF_INET && n >= 4 && n <= (int)sizeof l->serverAnswer &&
+            from.sin_addr.s_addr == l->server.sin_addr.s_addr && from.sin_port == l->server.sin_port &&
+            buf[0] == 'S' && buf[1] == 'W' && buf[2] == 'T') {
+            memcpy(l->serverAnswer, buf, (size_t)n);
+            l->serverAnswerLen = (int32_t)n;
+            continue;
+        }
         if (from.sin_family == AF_INET && relay_answer(l, buf, (int32_t)n)) {
             if (l->sock < 0)
                 break;                  /* the relay refused us: the link is over */
@@ -1457,14 +1473,68 @@ void P2PLink_SetRelay(uint64_t token, int32_t player)
 
 uint64_t P2PLink_RelayToken(void) { return s_link.relayToken; }
 
-/* The direct-IP menu: never relayed, whatever the last matchmaking session was. */
+void P2PLink_SetServer(const char *address)
+{
+    char text[64];
+    char *colon;
+    struct in_addr host;
+    int port = 0;
+
+    s_link.haveServer = 0;
+    s_link.serverAnswerLen = 0;
+    if (!address || !address[0])
+        return;
+    snprintf(text, sizeof text, "%s", address);
+    colon = strchr(text, ':');
+    if (colon) {
+        *colon = '\0';
+        port = atoi(colon + 1);
+    }
+    if (port <= 0 || port > 65535 || inet_pton(AF_INET, text, &host) != 1)
+        return;
+    memset(&s_link.server, 0, sizeof s_link.server);
+    s_link.server.sin_family = AF_INET;
+    s_link.server.sin_addr   = host;
+    s_link.server.sin_port   = htons((uint16_t)port);
+    s_link.haveServer = 1;
+}
+
+int32_t P2PLink_HasServer(void) { return s_link.haveServer; }
+
+/* Raw, as the relay's control packets are: the server's own formats, not the link's. */
+int32_t P2PLink_AskServer(const uint8_t *data, int32_t len)
+{
+    P2PLink *l = &s_link;
+    if (!l->haveServer || l->sock < 0 || len <= 0)
+        return 1;
+    if (Netem_LinkSend(l->sock, (const char *)data, (int)len, 0,
+                       (const struct sockaddr *)&l->server, (int)sizeof l->server))
+        sendto(l->sock, (const char *)data, (size_t)len, 0,
+               (const struct sockaddr *)&l->server, (socklen_t)sizeof l->server);
+    return 0;
+}
+
+int32_t P2PLink_ServerAnswer(const char *magic, uint8_t *out, int32_t max)
+{
+    int32_t n = s_link.serverAnswerLen;
+    if (n <= 0 || n > max || memcmp(s_link.serverAnswer, magic, 4) != 0)
+        return 0;
+    memcpy(out, s_link.serverAnswer, (size_t)n);
+    s_link.serverAnswerLen = 0;
+    return n;
+}
+
+/* The direct-IP menu: never relayed, and no server arranged it, whatever the last
+ * matchmaking session was. */
 int32_t P2PLink_Host(uint16_t port)
 {
+    P2PLink_SetServer(NULL);
     P2PLink_SetRelay(0, 0);
     return link_host(&s_link, port);
 }
 int32_t P2PLink_Join(const char *address, uint16_t port)
 {
+    P2PLink_SetServer(NULL);
     P2PLink_SetRelay(0, 0);
     return link_join(&s_link, address, port, NULL);
 }
@@ -1942,6 +2012,14 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
 }
 void           P2PLink_SetRelay(uint64_t token, int32_t player) { (void)token; (void)player; }
 uint64_t       P2PLink_RelayToken(void) { return 0; }
+void           P2PLink_SetServer(const char *address) { (void)address; }
+int32_t        P2PLink_HasServer(void) { return 0; }
+int32_t        P2PLink_AskServer(const uint8_t *data, int32_t len) { (void)data; (void)len; return 1; }
+int32_t        P2PLink_ServerAnswer(const char *magic, uint8_t *out, int32_t max)
+{
+    (void)magic; (void)out; (void)max;
+    return 0;
+}
 uint8_t        P2PLink_GameplayFlags(void) { return 0; }
 int32_t        P2PLink_AgreedDelay(void)       { return -1; }
 int32_t        P2PLink_AgreedSimWidth(void)    { return -1; }

@@ -479,6 +479,11 @@ static void parse_start(const char *p, size_t len)
             st.localPort = local.port;
     }
 
+    if (s_mm.server) {
+        char dotted[16];
+        addr_u32_to_dotted(s_mm.server->address.host, dotted, (int32_t)sizeof dotted);
+        snprintf(st.serverAddr, sizeof st.serverAddr, "%s:%u", dotted, (unsigned)s_mm.server->address.port);
+    }
     /* Relayed: the peer is the server. Only if RELAY: named the player number
      * START did -- a token for one seat is no good in the other. */
     if (s_mm.haveRelay && s_mm.relayPlayer == st.playerNumber && s_mm.server) {

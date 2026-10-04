@@ -176,12 +176,38 @@ if [ -n "$SERVER_PID" ]; then
     trap - EXIT
 fi
 
+# TEAMCHECK_REFUSE=1: the host's game asks the server about a team it has "doctored"
+# (SWOS_TEAMCHECK_CORRUPT, netplay_lobby.c: the joiner's team with a checksum that is
+# not its own). The server must refuse it, the host must not start, and no match may be
+# played -- so this run is expected to time out in the lobby, and that is its pass.
+if [ "${TEAMCHECK_REFUSE:-0}" = 1 ]; then
+    echo "================ team check, refused ================"
+    grep -h "team check" "$OUT/host.log" "$OUT/join.log"
+    grep "^\[teams\]" "$OUT/server.log"
+    if grep -q "team check: player 2's .* is REFUSED" "$OUT/host.log" &&
+       grep -q "^\[teams\] .*REFUSED" "$OUT/server.log" &&
+       ! grep -q "p2p match:" "$OUT/host.log" && ! grep -q "p2p match:" "$OUT/join.log"; then
+        echo "relay-test: PASSED — the server refused the doctored team and no match was played (logs in $OUT)"
+        exit 0
+    fi
+    echo "relay-test: FAILED — a refused team did not stop the match (logs in $OUT)"
+    exit 1
+fi
+
 fail=0
 for side in host join; do
     echo "================ $side ================"
     grep -E "^\[p2p\] (relay|link (failed|closed))|^\[netplay\] (p2p match|live match|desync|the peer|network)|^\[live\] final sim|^\[record\]|^\[relay-test\]" \
         "$OUT/$side.log"
     grep -q '^\[relay-test\] exit 0$' "$OUT/$side.log" || { echo "!! $side did not exit 0"; fail=1; }
+    # The team check (include/team_proto.h): each game asked the server about both
+    # teams, and both are on its list. Only where the server is ours to know.
+    if [ "$REMOTE" != 1 ]; then
+        for n in 1 2; do
+            grep -q "team check: player $n's .* is canonical" "$OUT/$side.log" ||
+                { echo "!! $side: the server did not vouch for player $n's team"; fail=1; }
+        done
+    fi
     # Relayed: the match's peer must be the server itself.
     if [ "$RELAY" = 1 ]; then
         if grep -q "^\[netplay\] p2p match:" "$OUT/$side.log" &&

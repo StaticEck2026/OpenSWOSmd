@@ -92,6 +92,15 @@ int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16
 void           P2PLink_SetRelay(uint64_t token, int32_t player);
 /* The token of the relayed match in progress, or 0 when it is played direct. */
 uint64_t       P2PLink_RelayToken(void);
+/* The matchmaking server that arranged this match ("a.b.c.d:port"; "" or NULL = none,
+ * which the direct-IP entry points also set). The lobby asks it whether the two teams
+ * are canonical (include/team_proto.h): AskServer sends one datagram to it from the
+ * link's own socket (0 = sent), and ServerAnswer hands over the newest datagram that
+ * came back carrying `magic` (its length, 0 = none; taken once). */
+void           P2PLink_SetServer(const char *address);
+int32_t        P2PLink_HasServer(void);
+int32_t        P2PLink_AskServer(const uint8_t *data, int32_t len);
+int32_t        P2PLink_ServerAnswer(const char *magic, uint8_t *out, int32_t max);
 /* The rules this build and these settings play a match by (P2P_RULE_*): what the
  * handshake compares, and what a recording reports. */
 uint8_t        P2PLink_GameplayFlags(void);

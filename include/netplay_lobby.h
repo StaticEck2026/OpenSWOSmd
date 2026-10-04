@@ -32,6 +32,16 @@ typedef enum {
     LOBBY_ACTIVITY_ARRANGING_TEAM,  /* ... "ARRANGING THEIR TEAM": line-up and formation */
 } LobbyActivity;
 
+/* The matchmaking server's word on a player's team (include/team_proto.h). Only a match
+ * the server arranged is asked about; the two REFUSED ones stop it starting. */
+typedef enum {
+    LOBBY_TEAM_UNASKED,             /* no server (a direct match), no team, or not answered yet */
+    LOBBY_TEAM_CANONICAL,           /* on the server's list, with this data */
+    LOBBY_TEAM_REFUSED_UNKNOWN,     /* the server has no team with that id */
+    LOBBY_TEAM_REFUSED_CHANGED,     /* it has the team, and its data is not this */
+    LOBBY_TEAM_NO_ANSWER,           /* the server did not answer: played unverified */
+} LobbyVerified;
+
 typedef struct {
     int32_t    known;               /* heard from (always true for ourselves) */
     int32_t    ready;
@@ -39,6 +49,7 @@ typedef struct {
     int32_t    hasTeam;
     int32_t    refused;             /* the other player's only: they sent a team that is not a
                                      * database team (CustomTeam_Allowed), so they have none here */
+    int32_t    verified;            /* LobbyVerified: what the matchmaking server said of this team */
     int32_t    tactic;              /* TACTIC_*: 0..LOBBY_TACTIC_MAX */
     TeamFileEx team;
     TeamTactics userTactic;         /* the tactic itself when it is a USER one */

@@ -88,6 +88,9 @@ typedef struct {
     int32_t  relay;
     uint64_t relayToken;
     char     relayAddr[MM_ADDR_TEXT_MAX];
+    /* The server itself, as we reached it ("a.b.c.d:port"), relayed or not: where the
+     * lobby asks whether the two teams are canonical (include/team_proto.h). */
+    char     serverAddr[MM_ADDR_TEXT_MAX];
 } MmStartInfo;
 
 /* Connect and log in. `gameId` is the server's compatibility tag: it refuses a

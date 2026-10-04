@@ -53,6 +53,7 @@ SDL_ONLY_SRCS := \
     ini.c                 \
     input_sdl.c           \
     custom_team.c         \
+    team_db.c             \
     kit_art.c             \
     uniform_menu.c        \
     match_prediction.c    \

@@ -2812,6 +2812,7 @@ int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, in
 }
 
 #ifdef SWOS_SDL_BUILD
+#include "team_db.h"        /* struct TeamDbIds: the ids a teams file states */
 /* Read a whole file into a malloc'd NUL-terminated buffer (*out_len = byte len).
    Caller frees. Returns NULL on any error. */
 static char *dj_slurp(const char *path, int *out_len)
@@ -2911,14 +2912,15 @@ static int dj_find_comp_record(const char *path, const char *arrkey, const char 
    (>0) on success, or -1 to tell the caller to FALL BACK to the binary file
    (country not in the JSON corpus, file missing, or parse failure). No byteswap
    is needed afterwards — fields are parsed as logical host-native ints. */
-int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams)
+/* The teams file of a country, read whole (caller frees), with its name under
+   data_json/ in `team_file`. NULL if the country is not in the JSON corpus. */
+static char *dj_slurp_country_teams(int countryNum, char *team_file, int team_file_size, int *out_len)
 {
     int clen = 0;
     char *cj = dj_slurp("data_json/competitions/countries.json", &clen);
     if (!cj)
-        return -1;
+        return NULL;
 
-    char team_file[128];
     team_file[0] = '\0';
     const char *arr;
     int arr_len;
@@ -2931,19 +2933,66 @@ int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, 
             if (mjson_get_number(arr + voff, vlen, "$.number", &num) &&
                 (int)num == countryNum) {
                 mjson_get_string(arr + voff, vlen, "$.team_file",
-                                 team_file, (int)sizeof team_file);
+                                 team_file, team_file_size);
                 break;
             }
         }
     }
     free(cj);
     if (!team_file[0])
-        return -1;   /* country not represented in the JSON corpus */
+        return NULL;   /* country not represented in the JSON corpus */
 
     char path[256];
     snprintf(path, sizeof path, "data_json/%s", team_file);
+    return dj_slurp(path, out_len);
+}
+
+/* The ids a country's teams file states (docs/TEAM_IDS.md): for each team of its
+   "teams" array, in order -- the same order DataJson_LoadTeamFileForCountry gives the
+   records -- its "uuid", its "checksum" and each player's "uuid"; "" for one that is
+   not there. Returns the team count, or -1 as that function does. */
+int DataJson_LoadTeamIdsForCountry(int countryNum, struct TeamDbIds *out, int maxTeams)
+{
+    char team_file[128];
     int jlen = 0;
-    char *jj = dj_slurp(path, &jlen);
+    char *jj = dj_slurp_country_teams(countryNum, team_file, (int)sizeof team_file, &jlen);
+    if (!jj)
+        return -1;
+
+    const char *arr;
+    int arr_len, n = 0;
+    if (mjson_find(jj, jlen, "$.teams", &arr, &arr_len) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt;
+        while (n < maxTeams && (pos = fast_array_next(arr, arr_len, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT)
+                continue;
+            struct TeamDbIds *ids = &out[n++];
+            const char *players;
+            int players_len;
+            memset(ids, 0, sizeof *ids);
+            mjson_get_string(arr + voff, vlen, "$.uuid", ids->uuid, (int)sizeof ids->uuid);
+            mjson_get_string(arr + voff, vlen, "$.checksum", ids->checksum, (int)sizeof ids->checksum);
+            if (mjson_find(arr + voff, vlen, "$.players", &players, &players_len) == MJSON_TOK_ARRAY) {
+                int pos2 = 0, voff2, vlen2, vt2, p = 0;
+                while (p < TEAM_PLAYERS &&
+                       (pos2 = fast_array_next(players, players_len, pos2, &voff2, &vlen2, &vt2)) != 0) {
+                    if (vt2 == MJSON_TOK_OBJECT)
+                        mjson_get_string(players + voff2, vlen2, "$.uuid",
+                                         ids->player[p], (int)sizeof ids->player[p]);
+                    p++;
+                }
+            }
+        }
+    }
+    free(jj);
+    return n > 0 ? n : -1;
+}
+
+int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams)
+{
+    char team_file[128];
+    int jlen = 0;
+    char *jj = dj_slurp_country_teams(countryNum, team_file, (int)sizeof team_file, &jlen);
     if (!jj)
         return -1;
 

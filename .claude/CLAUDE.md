@@ -137,8 +137,20 @@ amiga; `bin/grafs_jag/JAGKITS.BIN` from `scripts/make_jag_graphics.py`). MY CUST
 (`src/custom_team.c`) is three slots of `CUSTOMn.TEAM` (JSON) in the save folder, edited on the
 game's EDIT TEAM screen (IMPORT takes a database team whole, UNDO is LINEUP). **A custom team is a
 database team with only names, faces, nationalities, shirt numbers, kits and line-up changed --
-no position, skill or value can differ**: the file has no field for one, and the lobby refuses any
-team from the other player that is not that (`CustomTeam_Allowed`, every team, custom or not). A raw
+no position, skill or value can differ**: the file has NO player data -- it is a `CustomTeam`,
+the UUID and checksum of the database team it was made from plus the changes, resolved against
+the database on load -- and the lobby refuses any team from the other player that is not that
+(`CustomTeam_Allowed`, every team, custom or not). **Every database team and player has a `uuid`,
+every team a `checksum` of its positions, skills and values** (`bin/data_json/teams`,
+`src/team_db.c`, docs/TEAM_IDS.md): an id names fixed data, the 96/97 ids are derived (uuid5) so
+the binary database has them too, `scripts/assign_team_uuids.py [--check] [--registry]` writes and
+verifies them. **The matchmaking server is the authority**: its list of id + checksum is compiled
+in (`Server/TeamDesk.cpp`, `TeamRegistry.inc` -- rerun `--registry` and rebuild the server when the
+database's teams change), and in a server-arranged match each game asks it about BOTH teams before
+START (`include/team_proto.h`, one `SWTC` datagram on the server's UDP port; `team_check` in
+`src/netplay_lobby.c`) -- a refused team stops the start, no answer in ~3 s plays unverified.
+`scripts/relay_test.sh` asserts it; `TEAMCHECK_REFUSE=1` (with `HOST_ENV=SWOS_TEAMCHECK_CORRUPT=1`)
+proves a refusal. A raw
 684-byte `.TEAM` (SWOS 2020, editors) in a slot is converted to the JSON, its base team found BY ITS
 PLAYERS -- SWOS 2020 renumbers custom teams. `--custom-team-selftest` runs all 1,631 database
 teams through the rule and the file; run it after touching either.

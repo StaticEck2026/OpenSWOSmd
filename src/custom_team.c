@@ -1,4 +1,4 @@
-/* custom_team.c -- MY CUSTOM TEAM. SDL only. docs/CUSTOM_TEAMS.md.
+/* custom_team.c -- MY CUSTOM TEAM. SDL only. docs/CUSTOM_TEAMS.md, docs/TEAM_IDS.md.
  *
  * A custom team is a team of the database that its owner has renamed and redressed:
  * the team's name and coach; the players' names, faces, nationalities and shirt
@@ -6,11 +6,12 @@
  * with different players: every player's position, skills and value are the
  * database's. That rule is the whole design, and it is kept in three places:
  *
- *   THE FILE has nowhere to put a skill. CUSTOMn.TEAM in the save folder is JSON that
- *   names the database team it came from and lists only what may be changed; each
- *   player is "the database team's player N" with a name, a face, a nationality and a
- *   number. Loading it reads the database team and applies those -- so editing the
- *   file by hand cannot make a player better, only rename him.
+ *   THE FILE HAS NO PLAYER DATA. CUSTOMn.TEAM in the save folder is a CustomTeam
+ *   (custom_team.h) as JSON: the ID of the database team it was made from, that team's
+ *   checksum, and what the owner changed -- each player being "the database's player
+ *   <id>" under another name. Loading it RESOLVES it: the team is looked up by its id
+ *   (src/team_db.c), has to be the data the checksum says, and gives every position,
+ *   skill and value. There is no number in the file to edit.
  *
  *   THE EDITOR is the game's own EDIT TEAM screen, which never could edit skills. Here
  *   its IMPORT takes a whole database team (identity included) and its UNDO button is
@@ -23,7 +24,7 @@
  * SWOS 2020, and the team editors, keep a team as the raw 684-byte team record (.TEAM).
  * A file like that put in the save folder under a slot's name is CONVERTED: the database
  * team it was made from is found by its players (not by the number in the record, which
- * SWOS 2020 sets to a custom team's own), what may be changed is taken from it, and the
+ * SWOS 2020 sets to a custom team's own), the differences become a CustomTeam, and the
  * slot is rewritten as JSON, the original kept beside it as CUSTOMn.TEAM.684. */
 #include <stdarg.h>
 #include <stdint.h>
@@ -44,6 +45,8 @@
 #include "netplay_lobby.h"      /* LOBBY_TACTIC_MAX */
 #include "swos2020_menus.h"
 #include "swos_io.h"
+#include "team_db.h"
+#include "team_proto.h"
 #include "teams.h"
 
 extern TeamFileEx  _selectedTeams[100];
@@ -56,8 +59,6 @@ extern const char *g_playMatchStartLabel;
 extern int32_t     g_playMatchNoUniform;
 
 extern int16_t WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
-extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
-extern int     DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams);
 extern void    ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showOrigCustom,
                                  uint8_t *title, void *onSelect);
 extern void    EditTeamsCallback(TeamFileEx *team);
@@ -67,95 +68,22 @@ extern int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes, i
 extern void    SetExitMenuFlag(void);
 
 enum {
-    kPlayers = 16,
+    kPlayers = TEAM_PLAYERS,
     kTeamRecord = 684,
-    kMaxTeamsInFile = 93,           /* what the game's own team buffer holds (teams.c) */
     kFaces = 3,                     /* EditTeamsChangePlayerFace: white, ginger, black */
+    kFormatVersion = 3,             /* 3: links to the database by id; no player data */
     kNationalities = 155,           /* the three-letter names a nationality indexes (_shortCountryNames) */
     kMaxShirtNumber = 99,
+    kCountries = 256,
+    kJsonMax = 8192,
     kPlayerCoach = 2,               /* TEAM_PLAYER_COACH: a side whose line-up can be arranged */
 };
 
-static const char *const k_colourNames[10] = {
-    "grey", "white", "black", "orange", "red", "blue", "brown", "light_blue", "green", "yellow",
-};
-static const char *const k_shirtNames[4] = { "plain", "sleeves", "stripes", "hoops" };
+int32_t g_customTeamQuiet;          /* the self-test's and the converter's: they refuse on purpose */
 
 /* ======================================================================
- * The database team a custom team is made from
+ * The rule: which database team a team is, player for player
  * ====================================================================== */
-
-/* Each country's teams in memory of our own, read once: the game's buffer
- * (_teamFileBuffer) belongs to whatever menu the player is in, and this is also called
- * from the lobby's polling -- and finding the team a .TEAM record was made from reads
- * every country. s_db is the country db_load last made current. */
-static uint8_t  s_dbLoad[2 + kMaxTeamsInFile * kTeamRecord];
-static uint8_t *s_dbCache[256];
-static uint8_t  s_dbAbsent[256];
-static uint8_t *s_db;
-
-static int32_t db_read(int32_t country)
-{
-    const char *json = getenv("SWOS_DATA_JSON");
-    char name[32];
-    uint32_t size = 0;
-
-    /* As LoadTeamFile reads a country: the JSON database unless it is turned off or
-     * has no such country, then the binary TEAM.nnn (big-endian count). */
-    if (!(json && json[0] == '0' && json[1] == '\0') &&
-        DataJson_LoadTeamFileForCountry(country, s_dbLoad, kMaxTeamsInFile) > 0)
-        return 1;
-    snprintf(name, sizeof name, "data/team.%03d", (int)country);
-    {
-        /* LoadFileEx asks for the disk again, for ever, when a file is not there --
-         * and a country number from the other player's team may be any byte. */
-        char anchored[1024];
-        FILE *f = fopen(swos_data_path(name, anchored, (uint32_t)sizeof anchored), "rb");
-        if (!f)
-            return 0;
-        fclose(f);
-    }
-    if (LoadFileEx((uint8_t *)name, s_dbLoad, &size) != 0 || size < 2 || size > sizeof s_dbLoad)
-        return 0;
-    *(uint16_t *)s_dbLoad = BE_READ_U16(s_dbLoad);
-    return (uint32_t)*(uint16_t *)s_dbLoad * kTeamRecord + 2 <= size;
-}
-
-static int32_t db_load(int32_t country)
-{
-    size_t bytes;
-
-    if (country < 0 || country > 255 || s_dbAbsent[country])
-        return 0;
-    if (!s_dbCache[country]) {
-        if (!db_read(country)) {
-            s_dbAbsent[country] = 1;
-            return 0;
-        }
-        bytes = 2 + (size_t)*(uint16_t *)s_dbLoad * kTeamRecord;
-        s_dbCache[country] = (uint8_t *)malloc(bytes);
-        if (!s_dbCache[country])
-            return 0;
-        memcpy(s_dbCache[country], s_dbLoad, bytes);
-    }
-    s_db = s_dbCache[country];
-    return 1;
-}
-
-static const TeamFileEx *db_team(int32_t country, int32_t ordinal)
-{
-    const TeamFileEx *rec;
-    uint16_t count, i;
-
-    if (!db_load(country))
-        return NULL;
-    rec = (const TeamFileEx *)(s_db + 2);
-    count = *(uint16_t *)s_db;
-    for (i = 0; i < count; i++)
-        if (rec[i].team.countryNumber == country && rec[i].team.teamOrdinal == ordinal)
-            return &rec[i];
-    return NULL;
-}
 
 /* What makes a player the player he is: his position, his skills and his value --
  * everything a match plays him by. A custom team may change none of it. His name, face,
@@ -198,32 +126,102 @@ static int32_t match_players(const TeamFileEx *team, const TeamFileEx *base, uin
     return 1;
 }
 
-int32_t g_customTeamQuiet;          /* the self-test's: it refuses a team per team on purpose */
-
 int32_t CustomTeam_Allowed(const TeamFileEx *team)
 {
     /* The last answer, kept: the lobby asks about the same team several times a second. */
     static TeamFileEx asked;
     static int32_t answer = -1;
-    const TeamFileEx *base;
+    const TeamDbEntry *base;
     uint8_t is[kPlayers];
-    extern int32_t g_customTeamQuiet;
 
     if (answer >= 0 && memcmp(&asked, team, sizeof asked) == 0)
         return answer;
     asked = *team;
-    base = db_team(team->team.countryNumber, team->team.teamOrdinal);
-    answer = base && match_players(team, base, is);
+    base = TeamDb_Team(team->team.countryNumber, team->team.teamOrdinal);
+    answer = base && base->canonical && match_players(team, &base->team, is);
     if (!answer && !g_customTeamQuiet)
         fprintf(stderr, "[custom-team] %.16s (team %d of country %d) is not that team of the database: %s\n",
                 (const char *)team->team.teamName, team->team.teamOrdinal, team->team.countryNumber,
-                base ? "a player's position, skills or value differ"
-                     : "the database has no such team");
+                !base ? "the database has no such team" :
+                !base->canonical ? "this database's copy of it has been changed" :
+                "a player's position, skills or value differ");
     return answer;
 }
 
+int32_t CustomTeam_IsCustom(const TeamFileEx *team)
+{
+    const TeamDbEntry *base = TeamDb_Team(team->team.countryNumber, team->team.teamOrdinal);
+    const TeamFile *a = &team->team, *b;
+    uint8_t is[kPlayers];
+    KitLook mine, his;
+    int32_t i, kit;
+
+    if (!base || !match_players(team, &base->team, is))
+        return 0;                   /* not a database team at all: the screen says what it always did */
+    b = &base->team.team;
+    if (strncmp((const char *)a->teamName, (const char *)b->teamName, sizeof a->teamName) != 0 ||
+        strncmp((const char *)a->coachName, (const char *)b->coachName, sizeof a->coachName) != 0)
+        return 1;
+    for (kit = 0; kit < 2; kit++) {
+        KitArt_FromTeam(a, kit, &mine);
+        KitArt_FromTeam(b, kit, &his);
+        if (memcmp(&mine, &his, sizeof mine) != 0)
+            return 1;
+    }
+    for (i = 0; i < kPlayers; i++) {
+        const PlayerFile *p = &team->players[i], *q = &base->team.players[is[i]];
+        if (strncmp((const char *)p->playerName, (const char *)q->playerName, sizeof p->playerName) != 0 ||
+            p->nationality != q->nationality ||
+            (p->positionAndFace & PF_FACE_MASK) != (q->positionAndFace & PF_FACE_MASK))
+            return 1;
+    }
+    return 0;
+}
+
+void CustomTeam_Claim(const TeamFileEx *team, uint8_t uuid[16], uint8_t checksum[8])
+{
+    const TeamDbEntry *base = TeamDb_Team(team->team.countryNumber, team->team.teamOrdinal);
+    char id[TEAM_UUID_TEXT], sum[TEAM_CHECKSUM_TEXT];
+    TeamFileEx ordered = *team;
+    uint8_t is[kPlayers];
+    int32_t i;
+
+    /* The checksum is of the sixteen in the DATABASE's order, and a custom team may
+     * hold them in another: put each back where the database has him. A team whose
+     * players are not that team's is hashed as it stands, which is what gives it away. */
+    if (base && match_players(team, &base->team, is))
+        for (i = 0; i < kPlayers; i++)
+            ordered.players[is[i]] = team->players[i];
+    if (base)
+        snprintf(id, sizeof id, "%s", base->ids.uuid);
+    else
+        TeamDb_DerivedTeamUuid(team->team.countryNumber, team->team.teamOrdinal, id);
+    TeamDb_Checksum(&ordered, sum);
+    TeamCheck_Hex(id, uuid, 16);
+    TeamCheck_Hex(sum, checksum, 8);
+}
+
+/* Which database team a team was made from, judged by its PLAYERS: the number in a
+ * record is no guide, since SWOS 2020 gives a custom team a number of its own
+ * (PLAYAVELI.TEAM, made from BRAZIL -- country 82, team 2 -- says country 72, team 17,
+ * which is GAMESMASTER here). Its own number is tried first, then every team of every
+ * file. NULL if no team of the database has those sixteen players. */
+static const TeamDbEntry *find_base(const TeamFileEx *team, uint8_t is[kPlayers])
+{
+    const TeamDbEntry *e = TeamDb_Team(team->team.countryNumber, team->team.teamOrdinal);
+    int32_t country, i;
+
+    if (e && e->canonical && match_players(team, &e->team, is))
+        return e;
+    for (country = 0; country < kCountries; country++)
+        for (i = 0; (e = TeamDb_Entry(country, i)) != NULL; i++)
+            if (e->team.team.countryNumber == country && e->canonical && match_players(team, &e->team, is))
+                return e;
+    return NULL;
+}
+
 /* ======================================================================
- * What a custom team may change, taken from one team and put on another
+ * CustomTeam: a link to a database team, and what its owner changed
  * ====================================================================== */
 
 static void clean_name(int8_t *to, int32_t size, const char *from)
@@ -252,38 +250,47 @@ static int32_t is_permutation(const uint8_t *order)
     return 1;
 }
 
-/* `out` = the database team `base`, with `from`'s changes; `is[i]` says which of the
- * base's players `from`'s i-th is. Everything else in `out` is the database's. */
-static void apply_changes(const TeamFileEx *base, const TeamFileEx *from, const uint8_t is[kPlayers],
-                          TeamFileEx *out)
+/* A team as a CustomTeam: which database team it is (found by its number, then by its
+ * players) and everything about it that a custom team may change. 0 if it is no
+ * database team's players. */
+int32_t CustomTeam_FromTeam(const TeamFileEx *team, CustomTeam *out)
 {
-    KitLook kit;
+    uint8_t is[kPlayers];
+    const TeamDbEntry *base = find_base(team, is);
+    char name[32];
     int32_t i;
 
-    *out = *base;
-    clean_name(out->team.teamName, sizeof out->team.teamName, (const char *)from->team.teamName);
-    clean_name(out->team.coachName, sizeof out->team.coachName, (const char *)from->team.coachName);
-    if (from->team.tactics <= LOBBY_TACTIC_MAX)
-        out->team.tactics = from->team.tactics;
-    for (i = 0; i < 2; i++) {
-        KitArt_FromTeam(&from->team, i, &kit);      /* brings every value into range */
-        KitArt_ToTeam(&kit, i, &out->team);
-    }
-    if (is_permutation(from->team.playerNumbers))
-        memcpy(out->team.playerNumbers, from->team.playerNumbers, sizeof out->team.playerNumbers);
+    if (!base)
+        return 0;
+    memset(out, 0, sizeof *out);
+    snprintf(out->madeFrom, sizeof out->madeFrom, "%s", base->ids.uuid);
+    snprintf(out->checksum, sizeof out->checksum, "%s", base->computed);
+    snprintf(name, sizeof name, "%.17s", (const char *)team->team.teamName);
+    clean_name(out->name, sizeof out->name, name);
+    snprintf(name, sizeof name, "%.23s", (const char *)team->team.coachName);
+    clean_name(out->coach, sizeof out->coach, name);
+    out->tactics = team->team.tactics <= LOBBY_TACTIC_MAX ? team->team.tactics : base->team.team.tactics;
+    KitArt_FromTeam(&team->team, 0, &out->kit[0]);      /* brings every value into range */
+    KitArt_FromTeam(&team->team, 1, &out->kit[1]);
+    memcpy(out->lineup, is_permutation(team->team.playerNumbers) ? team->team.playerNumbers
+                                                                 : base->team.team.playerNumbers,
+           sizeof out->lineup);
     for (i = 0; i < kPlayers; i++) {
-        PlayerFile *p = &out->players[i];
-        *p = base->players[is[i]];
-        clean_name(p->playerName, sizeof p->playerName, (const char *)from->players[i].playerName);
-        if ((uint8_t)from->players[i].nationality < kNationalities)
-            p->nationality = from->players[i].nationality;
-        if (from->players[i].shirtNumber >= 1 && from->players[i].shirtNumber <= kMaxShirtNumber)
-            p->shirtNumber = from->players[i].shirtNumber;
+        const PlayerFile *theirs = &team->players[i], *his = &base->team.players[is[i]];
+        CustomPlayer *p = &out->players[i];
+        uint8_t face = (uint8_t)((theirs->positionAndFace & PF_FACE_MASK) >> PF_FACE_SHIFT);
+
+        snprintf(p->uuid, sizeof p->uuid, "%s", base->ids.player[is[i]]);
+        snprintf(name, sizeof name, "%.23s", (const char *)theirs->playerName);
+        clean_name(p->name, sizeof p->name, name);
         /* The three faces the game has; a fourth value fits the bits and is nobody's. */
-        if ((from->players[i].positionAndFace & PF_FACE_MASK) >> PF_FACE_SHIFT < kFaces)
-            p->positionAndFace = (uint8_t)((p->positionAndFace & ~PF_FACE_MASK) |
-                                           (from->players[i].positionAndFace & PF_FACE_MASK));
+        p->face = face < kFaces ? face : (uint8_t)((his->positionAndFace & PF_FACE_MASK) >> PF_FACE_SHIFT);
+        p->nationality = (uint8_t)theirs->nationality < kNationalities ? (uint8_t)theirs->nationality
+                                                                       : (uint8_t)his->nationality;
+        p->shirtNumber = theirs->shirtNumber >= 1 && theirs->shirtNumber <= kMaxShirtNumber
+                       ? theirs->shirtNumber : his->shirtNumber;
     }
+    return 1;
 }
 
 /* The database team as the GAME hands it out (LoadTeamFile: global numbers set), for
@@ -294,7 +301,7 @@ static int32_t game_team(int32_t country, int32_t ordinal, TeamFileEx *out)
     const TeamFileEx *rec = (const TeamFileEx *)(_teamFileBuffer + 2);
     uint16_t count, i;
 
-    if (!db_team(country, ordinal))             /* LoadTeamFile panics on a file that is not there */
+    if (!TeamDb_Team(country, ordinal))         /* LoadTeamFile panics on a file that is not there */
         return 0;
     if (LoadTeamFile((uint16_t)country) != 0)
         return 0;
@@ -307,8 +314,74 @@ static int32_t game_team(int32_t country, int32_t ordinal, TeamFileEx *out)
     return 0;
 }
 
+/* The team a CustomTeam plays as: the database team its id names -- which has to be
+ * there, be canonical, and be the data the file's checksum says -- with the owner's
+ * changes on it. Every position, skill and value comes from the database. */
+int32_t CustomTeam_Resolve(const CustomTeam *custom, TeamFileEx *out)
+{
+    const TeamDbEntry *base = TeamDb_ByUuid(custom->madeFrom);
+    uint8_t taken[kPlayers] = { 0 };
+    TeamFileEx game;
+    const char *why = NULL;
+    int32_t i, j;
+
+    if (!base)
+        why = "this game's database has no team with that id";
+    else if (!base->canonical)
+        why = "this database's copy of that team has been changed";
+    else if (custom->checksum[0] && strcmp(custom->checksum, base->computed) != 0)
+        why = "the team with that id here is not the data it was made from";
+    else if (!game_team(base->team.team.countryNumber, base->team.team.teamOrdinal, &game))
+        why = "the game could not load that team";
+    if (why) {
+        if (!g_customTeamQuiet)
+            fprintf(stderr, "[custom-team] %.16s (made from %s) is not used: %s\n",
+                    (const char *)custom->name, custom->madeFrom, why);
+        return 0;
+    }
+    *out = game;
+    memcpy(out->team.teamName, custom->name, sizeof out->team.teamName);
+    memcpy(out->team.coachName, custom->coach, sizeof out->team.coachName);
+    if (custom->tactics <= LOBBY_TACTIC_MAX)
+        out->team.tactics = custom->tactics;
+    KitArt_ToTeam(&custom->kit[0], 0, &out->team);
+    KitArt_ToTeam(&custom->kit[1], 1, &out->team);
+    if (is_permutation(custom->lineup))
+        memcpy(out->team.playerNumbers, custom->lineup, sizeof out->team.playerNumbers);
+    for (i = 0; i < kPlayers; i++) {
+        const CustomPlayer *c = &custom->players[i];
+        PlayerFile *p = &out->players[i];
+
+        for (j = 0; j < kPlayers; j++)
+            if (!taken[j] && strcmp(c->uuid, base->ids.player[j]) == 0)
+                break;
+        if (j == kPlayers) {
+            if (!g_customTeamQuiet)
+                fprintf(stderr, "[custom-team] %.16s is not used: its player %d (%s) is not a player of %.16s, "
+                                "or is there twice\n", (const char *)custom->name, (int)i + 1, c->uuid,
+                        (const char *)base->team.team.teamName);
+            return 0;
+        }
+        taken[j] = 1;
+        *p = game.players[j];
+        memcpy(p->playerName, c->name, sizeof p->playerName);
+        if (c->face < kFaces)
+            p->positionAndFace = (uint8_t)((p->positionAndFace & ~PF_FACE_MASK) | (c->face << PF_FACE_SHIFT));
+        if (c->nationality < kNationalities)
+            p->nationality = (int8_t)c->nationality;
+        if (c->shirtNumber >= 1 && c->shirtNumber <= kMaxShirtNumber)
+            p->shirtNumber = c->shirtNumber;
+    }
+    return 1;
+}
+
 /* ======================================================================
  * The file: <save folder>/CUSTOMn.TEAM
+ *
+ * The CustomTeam as JSON. Its field names are the team database's own where the two
+ * have the same thing (team_name, coach_name, tactics, the kits, player_numbers,
+ * player_name, face, nationality, shirt_number) -- and it has none of the database's
+ * others.
  * ====================================================================== */
 
 static void slot_file(int32_t slot, char *name, size_t size)
@@ -316,27 +389,81 @@ static void slot_file(int32_t slot, char *name, size_t size)
     snprintf(name, size, "CUSTOM%d.TEAM", (int)slot + 1);
 }
 
-static int32_t name_index(const char *text, const char *const *names, int32_t count)
+typedef struct Text { char *at; size_t left; int32_t full; } Text;
+
+static void put(Text *t, const char *format, ...)
 {
-    int32_t i;
-    for (i = 0; i < count; i++)
-        if (strcmp(text, names[i]) == 0)
-            return i;
-    return -1;
+    va_list args;
+    int n;
+    va_start(args, format);
+    n = vsnprintf(t->at, t->left, format, args);
+    va_end(args);
+    if (n > 0 && (size_t)n < t->left) {
+        t->at += n;
+        t->left -= (size_t)n;
+    } else if (n > 0) {
+        t->full = 1;
+    }
 }
 
-/* A JSON value that is one of `names` or a number below `count`; -1 if neither. */
-static int32_t json_choice(const char *json, int32_t length, const char *path,
-                           const char *const *names, int32_t count)
+static void put_string(Text *t, const int8_t *text, int32_t size)
 {
-    char text[24];
-    double number;
+    int32_t i;
+    put(t, "\"");
+    for (i = 0; i < size && text[i]; i++) {
+        unsigned char c = (unsigned char)text[i];
+        if (c == '"' || c == '\\')  put(t, "\\%c", c);
+        else if (c < 0x20 || c >= 0x7F) put(t, "\\u%04x", c);
+        else put(t, "%c", c);
+    }
+    put(t, "\"");
+}
 
-    if (mjson_get_string(json, length, path, text, (int)sizeof text) > 0)
-        return name_index(text, names, count);
-    if (mjson_get_number(json, length, path, &number) && number >= 0 && number < count)
-        return (int32_t)number;
-    return -1;
+static void put_kit(Text *t, const char *which, const KitLook *kit)
+{
+    put(t, "    \"%s_shirt_type\": %d, \"%s_stripes_color\": %d, \"%s_basic_color\": %d, "
+           "\"%s_shorts_color\": %d, \"%s_socks_color\": %d,\n",
+        which, kit->type, which, kit->stripes, which, kit->basic, which, kit->shorts, which, kit->socks);
+}
+
+static int32_t write_json(const CustomTeam *custom, char *json, size_t size)
+{
+    const TeamDbEntry *base = TeamDb_ByUuid(custom->madeFrom);
+    Text t = { json, size, 0 };
+    int32_t i, j;
+
+    put(&t, "{\n  \"format\": \"openswos-team\",\n  \"version\": %d,\n", kFormatVersion);
+    put(&t, "  \"made_from\": { \"uuid\": \"%s\", \"checksum\": \"%s\", \"name\": ", custom->madeFrom,
+        custom->checksum);
+    if (base) put_string(&t, base->team.team.teamName, sizeof base->team.team.teamName);
+    else      put(&t, "\"\"");
+    put(&t, " },\n  \"team\": {\n    \"team_name\": ");
+    put_string(&t, custom->name, sizeof custom->name);
+    put(&t, ",\n    \"coach_name\": ");
+    put_string(&t, custom->coach, sizeof custom->coach);
+    put(&t, ",\n    \"tactics\": %d,\n", custom->tactics);
+    put_kit(&t, "primary", &custom->kit[0]);
+    put_kit(&t, "secondary", &custom->kit[1]);
+    put(&t, "    \"player_numbers\": [");
+    for (i = 0; i < kPlayers; i++)
+        put(&t, "%s%d", i ? ", " : "", custom->lineup[i]);
+    put(&t, "]\n  },\n  \"players\": [\n");
+    for (i = 0; i < kPlayers; i++) {
+        const CustomPlayer *p = &custom->players[i];
+        put(&t, "    { \"uuid\": \"%s\", \"player_name\": ", p->uuid);
+        put_string(&t, p->name, sizeof p->name);
+        put(&t, ", \"face\": %d, \"nationality\": %d, \"shirt_number\": %d", p->face, p->nationality, p->shirtNumber);
+        /* Who he is in the database, for whoever reads the file; nothing reads it back. */
+        for (j = 0; base && j < kPlayers; j++)
+            if (strcmp(p->uuid, base->ids.player[j]) == 0) {
+                put(&t, ", \"was\": ");
+                put_string(&t, base->team.players[j].playerName, sizeof base->team.players[j].playerName);
+                break;
+            }
+        put(&t, " }%s\n", i + 1 < kPlayers ? "," : "");
+    }
+    put(&t, "  ]\n}\n");
+    return !t.full;
 }
 
 /* mjson hands a \u00XX escape back as UTF-8; the game's names are one byte a letter. */
@@ -364,272 +491,108 @@ static void json_name(const char *json, int32_t length, const char *path, int8_t
     }
 }
 
-static void json_kit(const char *json, int32_t length, const char *key, int32_t second, TeamFile *team)
+static int32_t json_int(const char *json, int32_t length, const char *path, int32_t low, int32_t high,
+                        int32_t otherwise)
 {
-    static const char *const k_fields[5] = { "shirt", "colour", "second_colour", "shorts", "socks" };
-    KitLook kit;
-    uint8_t *value[5] = { &kit.type, &kit.stripes, &kit.basic, &kit.shorts, &kit.socks };
-    char path[48];
-    int32_t i, v;
+    double number;
+    return mjson_get_number(json, length, path, &number) && number >= low && number <= high
+         ? (int32_t)number : otherwise;
+}
 
-    KitArt_FromTeam(team, second, &kit);
+static void json_kit(const char *json, int32_t length, const char *which, KitLook *kit)
+{
+    static const char *const k_fields[5] = { "shirt_type", "stripes_color", "basic_color", "shorts_color",
+                                             "socks_color" };
+    uint8_t *value[5] = { &kit->type, &kit->stripes, &kit->basic, &kit->shorts, &kit->socks };
+    char path[64];
+    int32_t i;
+
     for (i = 0; i < 5; i++) {
-        snprintf(path, sizeof path, "$.%s.%s", key, k_fields[i]);
-        v = i == 0 ? json_choice(json, length, path, k_shirtNames, 4)
-                   : json_choice(json, length, path, k_colourNames, 10);
-        if (v >= 0)
-            *value[i] = (uint8_t)v;
+        snprintf(path, sizeof path, "$.team.%s_%s", which, k_fields[i]);
+        *value[i] = (uint8_t)json_int(json, length, path, 0, i == 0 ? 3 : 9, *value[i]);
     }
-    KitArt_ToTeam(&kit, second, team);
 }
 
-static int32_t load_json(const char *json, int32_t length, TeamFileEx *out)
+/* The file's text as a CustomTeam. Whatever the file leaves out is what the database
+ * team has (that is what `out` starts as), so a hand-made file can be as short as its
+ * link and one name. 0 for a file that is not one, or links to nothing here. */
+static int32_t read_json(const char *json, int32_t length, CustomTeam *out)
 {
-    TeamFileEx base, changed;
-    uint8_t is[kPlayers], taken[kPlayers] = { 0 }, order[kPlayers];
-    double country = -1, ordinal = -1, number;
-    char path[48];
-    int32_t i;
+    const TeamDbEntry *base;
+    char uuid[TEAM_UUID_TEXT] = "", path[48];
+    int32_t version = json_int(json, length, "$.version", 0, 1000, 0), i;
 
-    if (!mjson_get_number(json, length, "$.base.country", &country) ||
-        !mjson_get_number(json, length, "$.base.ordinal", &ordinal) ||
-        !game_team((int32_t)country, (int32_t)ordinal, &base)) {
-        fprintf(stderr, "[custom-team] the file names no team of the database (country %d, team %d)\n",
-                (int)country, (int)ordinal);
+    if (version != kFormatVersion || mjson_get_string(json, length, "$.made_from.uuid", uuid, (int)sizeof uuid) <= 0) {
+        if (!g_customTeamQuiet)
+            fprintf(stderr, "[custom-team] the file is not a custom team of this format (version %d, with the id of "
+                            "the team it was made from): not used\n", kFormatVersion);
         return 0;
     }
-    changed = base;
-    json_name(json, length, "$.name", changed.team.teamName, sizeof changed.team.teamName);
-    json_name(json, length, "$.coach", changed.team.coachName, sizeof changed.team.coachName);
-    if (mjson_get_number(json, length, "$.tactics", &number) && number >= 0 && number <= LOBBY_TACTIC_MAX)
-        changed.team.tactics = (uint8_t)number;
-    json_kit(json, length, "first_kit", 0, &changed.team);
-    json_kit(json, length, "second_kit", 1, &changed.team);
-
-    for (i = 0; i < kPlayers; i++) {
-        snprintf(path, sizeof path, "$.lineup[%d]", (int)i);
-        order[i] = mjson_get_number(json, length, path, &number) && number >= 0 && number < kPlayers
-                 ? (uint8_t)number : 0xFF;
+    base = TeamDb_ByUuid(uuid);
+    if (!base || !CustomTeam_FromTeam(&base->team, out)) {
+        if (!g_customTeamQuiet)
+            fprintf(stderr, "[custom-team] the file was made from team %s, which this game's database does not have: "
+                            "not used\n", uuid);
+        return 0;
     }
-    if (is_permutation(order))
-        memcpy(changed.team.playerNumbers, order, sizeof order);
-
-    /* Each player: which of the database team's he is, then his name and face. A file
-     * that names one twice, or none, leaves that place to the player the database has
-     * there -- the team stays sixteen different players of that team whatever it says. */
-    for (i = 0; i < kPlayers; i++) {
-        snprintf(path, sizeof path, "$.players[%d].base", (int)i);
-        is[i] = 0xFF;
-        if (mjson_get_number(json, length, path, &number) && number >= 0 && number < kPlayers &&
-            !taken[(int32_t)number]) {
-            is[i] = (uint8_t)number;
-            taken[is[i]] = 1;
+    /* The checksum the FILE states, to be held against the database's when it is
+     * resolved; a file without one is taken to mean the team as it is here. */
+    mjson_get_string(json, length, "$.made_from.checksum", out->checksum, (int)sizeof out->checksum);
+    json_name(json, length, "$.team.team_name", out->name, sizeof out->name);
+    json_name(json, length, "$.team.coach_name", out->coach, sizeof out->coach);
+    out->tactics = (uint8_t)json_int(json, length, "$.team.tactics", 0, LOBBY_TACTIC_MAX, out->tactics);
+    json_kit(json, length, "primary", &out->kit[0]);
+    json_kit(json, length, "secondary", &out->kit[1]);
+    {
+        uint8_t order[kPlayers];
+        for (i = 0; i < kPlayers; i++) {
+            snprintf(path, sizeof path, "$.team.player_numbers[%d]", (int)i);
+            order[i] = (uint8_t)json_int(json, length, path, 0, kPlayers - 1, 0xFF);
         }
+        if (is_permutation(order))
+            memcpy(out->lineup, order, sizeof order);
     }
     for (i = 0; i < kPlayers; i++) {
-        int32_t j;
-        if (is[i] != 0xFF)
-            continue;
-        for (j = 0; j < kPlayers && taken[(i + j) % kPlayers]; j++)
-            ;
-        is[i] = (uint8_t)((i + j) % kPlayers);
-        taken[is[i]] = 1;
-    }
-    for (i = 0; i < kPlayers; i++) {
-        changed.players[i] = base.players[is[i]];
-        snprintf(path, sizeof path, "$.players[%d].name", (int)i);
-        json_name(json, length, path, changed.players[i].playerName, sizeof changed.players[i].playerName);
-        snprintf(path, sizeof path, "$.players[%d].nationality", (int)i);
-        if (mjson_get_number(json, length, path, &number) && number >= 0 && number < kNationalities)
-            changed.players[i].nationality = (int8_t)number;
-        snprintf(path, sizeof path, "$.players[%d].number", (int)i);
-        if (mjson_get_number(json, length, path, &number) && number >= 1 && number <= kMaxShirtNumber)
-            changed.players[i].shirtNumber = (int8_t)number;
-        snprintf(path, sizeof path, "$.players[%d].face", (int)i);
-        if (mjson_get_number(json, length, path, &number) && number >= 0 && number < kFaces)
-            changed.players[i].positionAndFace = (uint8_t)(
-                (changed.players[i].positionAndFace & ~PF_FACE_MASK) | ((int32_t)number << PF_FACE_SHIFT));
-    }
-    apply_changes(&base, &changed, is, out);
-    return 1;
-}
-
-/* SWOS 2020's file: the team record itself. Only what a custom team may change is
- * taken from it; a record whose players are not the database team's is refused. */
-/* Which database team a team record was made from, judged by its PLAYERS: the number
- * in the record is no guide, since SWOS 2020 gives a custom team a number of its own
- * (PLAYAVELI.TEAM, made from BRAZIL -- country 82, team 2 -- says country 72, team 17,
- * which is GAMESMASTER here). Its own number is tried first, then every team of every
- * file. 0 if no team of the database has those sixteen players. */
-static int32_t find_base(const TeamFileEx *team, int32_t *countryOut, int32_t *ordinalOut)
-{
-    const TeamFileEx *own = db_team(team->team.countryNumber, team->team.teamOrdinal);
-    uint8_t is[kPlayers];
-    int32_t country;
-
-    if (own && match_players(team, own, is)) {
-        *countryOut = team->team.countryNumber;
-        *ordinalOut = team->team.teamOrdinal;
-        return 1;
-    }
-    for (country = 0; country < 256; country++) {
-        const TeamFileEx *rec;
-        uint16_t count, i;
-        if (country == 100 || !db_load(country))   /* 100: the player's own CUSTOMS.EDT */
-            continue;
-        rec = (const TeamFileEx *)(s_db + 2);
-        count = *(uint16_t *)s_db;
-        for (i = 0; i < count; i++)
-            if (rec[i].team.countryNumber == country && match_players(team, &rec[i], is)) {
-                *countryOut = country;
-                *ordinalOut = rec[i].team.teamOrdinal;
-                return 1;
+        CustomPlayer *p = &out->players[i];
+        snprintf(path, sizeof path, "$.players[%d].uuid", (int)i);
+        if (mjson_get_string(json, length, path, uuid, (int)sizeof uuid) > 0) {
+            /* Another of the team's players in this place: he brings his own name and
+             * the rest with him, for the file to change in turn. Resolving refuses a
+             * player who is not the team's, or is in it twice. */
+            int32_t j;
+            for (j = 0; j < kPlayers; j++)
+                if (strcmp(uuid, base->ids.player[j]) == 0)
+                    break;
+            if (j < kPlayers && j != i) {
+                CustomTeam whole;
+                CustomTeam_FromTeam(&base->team, &whole);
+                *p = whole.players[j];
+            } else if (j == kPlayers) {
+                snprintf(p->uuid, sizeof p->uuid, "%s", uuid);
             }
-    }
-    return 0;
-}
-
-/* A .TEAM record (SWOS 2020's, or an editor's): what may be changed is taken from it,
- * the rest is the database team it was made from. */
-int32_t CustomTeam_Save(int32_t slot, const TeamFileEx *team);
-
-static int32_t load_record(const uint8_t *bytes, TeamFileEx *out)
-{
-    TeamFileEx theirs, base;
-    uint8_t is[kPlayers];
-    int32_t country, ordinal;
-
-    memcpy(&theirs, bytes, sizeof theirs);
-    if (!find_base(&theirs, &country, &ordinal) || !game_team(country, ordinal, &base) ||
-        !match_players(&theirs, &base, is)) {
-        fprintf(stderr, "[custom-team] the team file %.16s is not a team of the database: no team here has its "
-                        "players with their positions, skills and values -- not used\n",
-                (const char *)theirs.team.teamName);
-        return 0;
-    }
-    apply_changes(&base, &theirs, is, out);
-    fprintf(stderr, "[custom-team] the team file %.16s was made from %.16s (country %d, team %d)\n",
-            (const char *)theirs.team.teamName, (const char *)base.team.teamName, (int)country, (int)ordinal);
-    return 1;
-}
-
-int32_t CustomTeam_Load(int32_t slot, TeamFileEx *out)
-{
-    char name[24];
-    uint8_t *data = NULL;
-    uint32_t size = 0;
-    int32_t ok;
-
-    if (slot < 0 || slot >= CUSTOM_TEAM_SLOTS)
-        return 0;
-    slot_file(slot, name, sizeof name);
-    if (swos_io_load_alloc((const uint8_t *)name, &data, &size) != 0)
-        return 0;
-    if (size == kTeamRecord && data[0] != '{') {
-        /* Converted once: the slot becomes JSON, the record is kept beside it. */
-        ok = load_record(data, out);
-        if (ok) {
-            char kept[32];
-            snprintf(kept, sizeof kept, "%s.684", name);
-            if (swos_io_save((const uint8_t *)kept, data, size) == 0 && CustomTeam_Save(slot, out))
-                fprintf(stderr, "[custom-team] %s converted to this game's format; the original is %s\n", name, kept);
         }
-    } else {
-        ok = load_json((const char *)data, (int32_t)size, out);
+        snprintf(path, sizeof path, "$.players[%d].player_name", (int)i);
+        json_name(json, length, path, p->name, sizeof p->name);
+        snprintf(path, sizeof path, "$.players[%d].face", (int)i);
+        p->face = (uint8_t)json_int(json, length, path, 0, kFaces - 1, p->face);
+        snprintf(path, sizeof path, "$.players[%d].nationality", (int)i);
+        p->nationality = (uint8_t)json_int(json, length, path, 0, kNationalities - 1, p->nationality);
+        snprintf(path, sizeof path, "$.players[%d].shirt_number", (int)i);
+        p->shirtNumber = (int8_t)json_int(json, length, path, 1, kMaxShirtNumber, p->shirtNumber);
     }
-    swos_io_free(data);
-    return ok;
-}
-
-/* ---- writing ---- */
-
-typedef struct Text { char *at; size_t left; } Text;
-
-static void put(Text *t, const char *format, ...)
-{
-    va_list args;
-    int n;
-    va_start(args, format);
-    n = vsnprintf(t->at, t->left, format, args);
-    va_end(args);
-    if (n > 0 && (size_t)n < t->left) {
-        t->at += n;
-        t->left -= (size_t)n;
-    }
-}
-
-static void put_string(Text *t, const int8_t *text, int32_t size)
-{
-    int32_t i;
-    put(t, "\"");
-    for (i = 0; i < size && text[i]; i++) {
-        unsigned char c = (unsigned char)text[i];
-        if (c == '"' || c == '\\')  put(t, "\\%c", c);
-        else if (c < 0x20 || c >= 0x7F) put(t, "\\u%04x", c);
-        else put(t, "%c", c);
-    }
-    put(t, "\"");
-}
-
-static void put_kit(Text *t, const char *key, const TeamFile *team, int32_t second)
-{
-    KitLook kit;
-    KitArt_FromTeam(team, second, &kit);
-    put(t, "  \"%s\": { \"shirt\": \"%s\", \"colour\": \"%s\", \"second_colour\": \"%s\", "
-           "\"shorts\": \"%s\", \"socks\": \"%s\" },\n", key, k_shirtNames[kit.type],
-        k_colourNames[kit.stripes], k_colourNames[kit.basic], k_colourNames[kit.shorts], k_colourNames[kit.socks]);
-}
-
-/* The file's text for a team; 0 if it is not a database team with only what a custom
- * team may change changed. */
-static int32_t write_json(const TeamFileEx *team, char *json, size_t size, const TeamFileEx **baseOut)
-{
-    Text t = { json, size };
-    const TeamFileEx *base;
-    uint8_t is[kPlayers];
-    int32_t i;
-
-    base = db_team(team->team.countryNumber, team->team.teamOrdinal);
-    if (!base || !match_players(team, base, is))
-        return 0;
-    if (baseOut)
-        *baseOut = base;
-    put(&t, "{\n  \"format\": \"openswos-team\",\n  \"version\": 1,\n");
-    put(&t, "  \"base\": { \"country\": %d, \"ordinal\": %d, \"name\": ", team->team.countryNumber,
-        team->team.teamOrdinal);
-    put_string(&t, base->team.teamName, sizeof base->team.teamName);
-    put(&t, " },\n  \"name\": ");
-    put_string(&t, team->team.teamName, sizeof team->team.teamName);
-    put(&t, ",\n  \"coach\": ");
-    put_string(&t, team->team.coachName, sizeof team->team.coachName);
-    put(&t, ",\n  \"tactics\": %d,\n", team->team.tactics);
-    put_kit(&t, "first_kit", &team->team, 0);
-    put_kit(&t, "second_kit", &team->team, 1);
-    put(&t, "  \"lineup\": [");
-    for (i = 0; i < kPlayers; i++)
-        put(&t, "%s%d", i ? ", " : "", team->team.playerNumbers[i]);
-    put(&t, "],\n  \"players\": [\n");
-    for (i = 0; i < kPlayers; i++) {
-        put(&t, "    { \"base\": %d, \"name\": ", is[i]);
-        put_string(&t, team->players[i].playerName, sizeof team->players[i].playerName);
-        put(&t, ", \"face\": %d, \"nationality\": %d, \"number\": %d }%s\n",
-            (team->players[i].positionAndFace & PF_FACE_MASK) >> PF_FACE_SHIFT,
-            (uint8_t)team->players[i].nationality, team->players[i].shirtNumber,
-            i + 1 < kPlayers ? "," : "");
-    }
-    put(&t, "  ]\n}\n");
     return 1;
 }
 
 int32_t CustomTeam_Save(int32_t slot, const TeamFileEx *team)
 {
-    static char json[8192];
-    const TeamFileEx *base = NULL;
+    static char json[kJsonMax];
+    CustomTeam custom;
+    const TeamDbEntry *base;
     char name[24];
 
     if (slot < 0 || slot >= CUSTOM_TEAM_SLOTS)
         return 0;
-    if (!write_json(team, json, sizeof json, &base)) {
+    if (!CustomTeam_FromTeam(team, &custom) || !write_json(&custom, json, sizeof json)) {
         fprintf(stderr, "[custom-team] %.16s is not a team of the database with only its names, faces, kits and "
                         "line-up changed: not saved\n", (const char *)team->team.teamName);
         return 0;
@@ -639,9 +602,46 @@ int32_t CustomTeam_Save(int32_t slot, const TeamFileEx *team)
         fprintf(stderr, "[custom-team] %s could not be written\n", name);
         return 0;
     }
-    fprintf(stderr, "[custom-team] slot %d saved: %.16s, made from %.16s\n", (int)slot + 1,
-            (const char *)team->team.teamName, (const char *)base->team.teamName);
+    base = TeamDb_ByUuid(custom.madeFrom);
+    fprintf(stderr, "[custom-team] slot %d saved: %.16s, made from %.16s (%s)\n", (int)slot + 1,
+            (const char *)custom.name, base ? (const char *)base->team.team.teamName : "?", custom.madeFrom);
     return 1;
+}
+
+int32_t CustomTeam_Load(int32_t slot, TeamFileEx *out)
+{
+    char name[24];
+    uint8_t *data = NULL;
+    uint32_t size = 0;
+    CustomTeam custom;
+    int32_t ok;
+
+    if (slot < 0 || slot >= CUSTOM_TEAM_SLOTS)
+        return 0;
+    slot_file(slot, name, sizeof name);
+    if (swos_io_load_alloc((const uint8_t *)name, &data, &size) != 0)
+        return 0;
+    if (size == kTeamRecord && data[0] != '{') {
+        /* A .TEAM record (SWOS 2020's, an editor's), converted once: the slot becomes
+         * JSON, the record is kept beside it. */
+        TeamFileEx record;
+        memcpy(&record, data, sizeof record);
+        ok = CustomTeam_FromTeam(&record, &custom) && CustomTeam_Resolve(&custom, out);
+        if (ok) {
+            char kept[32];
+            snprintf(kept, sizeof kept, "%s.684", name);
+            if (swos_io_save((const uint8_t *)kept, data, size) == 0 && CustomTeam_Save(slot, out))
+                fprintf(stderr, "[custom-team] %s converted to this game's format; the original is %s\n", name, kept);
+        } else {
+            fprintf(stderr, "[custom-team] the team file %.16s is not a team of the database: no team here has its "
+                            "sixteen players with their positions, skills and values -- not used\n",
+                    (const char *)record.team.teamName);
+        }
+    } else {
+        ok = read_json((const char *)data, (int32_t)size, &custom) && CustomTeam_Resolve(&custom, out);
+    }
+    swos_io_free(data);
+    return ok;
 }
 
 /* ======================================================================
@@ -831,27 +831,24 @@ int32_t CustomTeam_Pick(TeamFileEx *out)
 /* ======================================================================
  * --custom-team-selftest
  *
- * Every team of the database: allowed as it is; refused with one skill raised; and,
- * renamed, redressed and rearranged, the same team after a trip through the file's
- * text -- which also may not carry a skill, so a file edited to raise one loads as the
- * database's player.
+ * The ids first (TeamDb_SelfTest). Then every team of the database: allowed as it is;
+ * refused with one skill raised; and, renamed, redressed and rearranged, the same team
+ * after a trip through the file's text -- which has no skill in it, refuses a wrong
+ * checksum and an unknown id, and ignores a skill someone writes into it.
  * ====================================================================== */
 int32_t CustomTeam_SelfTest(void)
 {
-    static char json[8192];
-    static TeamFileEx teams[kMaxTeamsInFile];
-    int32_t country, teamsSeen = 0, failed = 0;
+    static char json[kJsonMax], edited[kJsonMax + 64];
+    int32_t country, i, teamsSeen = 0, failed = 0, idsOk = TeamDb_SelfTest();
+    const TeamDbEntry *e;
 
-    for (country = 0; country < 256; country++) {
-        uint16_t count, i;
-        if (country == 100 || !db_load(country))    /* 100 is the player's own CUSTOMS.EDT */
-            continue;
-        count = *(uint16_t *)s_db;
-        memcpy(teams, s_db + 2, (size_t)count * sizeof teams[0]);
-        for (i = 0; i < count; i++) {
-            TeamFileEx team = teams[i], back, cheat;
+    for (country = 0; country < kCountries; country++) {
+        for (i = 0; (e = TeamDb_Entry(country, i)) != NULL; i++) {
+            TeamFileEx team = e->team, back, cheat, want, base;
+            CustomTeam custom, read;
             uint8_t swap;
             int32_t bad = 0;
+            char *at;
 
             if (team.team.countryNumber != country)
                 continue;                           /* a record filed under another country's number */
@@ -885,91 +882,111 @@ int32_t CustomTeam_SelfTest(void)
             team.players[4].shirtNumber = 77;
             if (!CustomTeam_Allowed(&team))
                 bad |= 4;
-            if (!write_json(&team, json, sizeof json, NULL) ||
-                !load_json(json, (int32_t)strlen(json), &back))
+
+            if (!CustomTeam_FromTeam(&team, &custom) || !write_json(&custom, json, sizeof json) ||
+                !read_json(json, (int32_t)strlen(json), &read) || !CustomTeam_Resolve(&read, &back) ||
+                !CustomTeam_Resolve(&custom, &want)) {
                 bad |= 8;
-            else {
-                /* The team the rule makes of it: the database's players, in the places
-                 * and under the names this one has them. (Two players the database gives
-                 * the same skills cannot be told apart, and need not be.) */
-                TeamFileEx want, base;
-                uint8_t is[kPlayers];
-                if (!game_team(country, team.team.teamOrdinal, &base) || !match_players(&team, &base, is))
+            } else {
+                if (memcmp(&read, &custom, sizeof custom) != 0)
+                    bad |= 16;                      /* the text did not keep the CustomTeam */
+                if (memcmp(&back, &want, sizeof want) != 0 || !CustomTeam_Allowed(&back))
                     bad |= 32;
-                else {
-                    apply_changes(&base, &team, is, &want);
-                    if (memcmp(&back, &want, sizeof want) != 0)
-                        bad |= 16;
-                    if (memcmp(want.team.teamName, "SELF TEST UNITED", 16) != 0 || want.team.tactics != 5 ||
-                        want.team.prShirtType != 3 || want.team.secSocksColor != 4 ||
-                        want.team.playerNumbers[1] != team.team.playerNumbers[1] ||
-                        want.players[4].nationality != 13 || want.players[4].shirtNumber != 77 ||
-                        memcmp(want.players[5].playerName, "A \"QUOTED\" NAME", 15) != 0)
-                        bad |= 64;
+                /* It is the database's players under the owner's changes. */
+                if (!game_team(country, team.team.teamOrdinal, &base) ||
+                    memcmp(want.team.teamName, "SELF TEST UNITED", 16) != 0 || want.team.tactics != 5 ||
+                    want.team.prShirtType != 3 || want.team.secSocksColor != 4 ||
+                    want.team.playerNumbers[1] != team.team.playerNumbers[1] ||
+                    want.players[4].nationality != 13 || want.players[4].shirtNumber != 77 ||
+                    memcmp(want.players[5].playerName, "A \"QUOTED\" NAME", 15) != 0 ||
+                    !same_player(&want.players[7], &team.players[7]) ||
+                    !same_player(&want.players[9], &team.players[9]))
+                    bad |= 64;
+                if (strstr(json, "passing") || strstr(json, "price") || strstr(json, "position"))
+                    bad |= 128;                     /* the file has player data in it */
+
+                g_customTeamQuiet = 1;
+                /* A checksum that is not the database's: the team with that id here is
+                 * not the data the file was made from. */
+                read = custom;
+                read.checksum[0] = read.checksum[0] == '0' ? '1' : '0';
+                if (CustomTeam_Resolve(&read, &back))
+                    bad |= 256;
+                /* An id the database does not have. */
+                read = custom;
+                read.madeFrom[0] = read.madeFrom[0] == '0' ? '1' : '0';
+                if (CustomTeam_Resolve(&read, &back))
+                    bad |= 512;
+                /* A player of another team. */
+                read = custom;
+                read.players[6].uuid[0] = read.players[6].uuid[0] == '0' ? '1' : '0';
+                if (CustomTeam_Resolve(&read, &back))
+                    bad |= 1024;
+                g_customTeamQuiet = 0;
+                /* A skill written into the file by hand is not read: the player is the
+                 * database's all the same. */
+                at = strstr(json, "\"player_name\"");
+                if (at) {
+                    snprintf(edited, sizeof edited, "%.*s\"passing\": 15, \"speed\": 15, \"price\": 49, %s",
+                             (int)(at - json), json, at);
+                    if (!read_json(edited, (int32_t)strlen(edited), &read) || !CustomTeam_Resolve(&read, &back) ||
+                        memcmp(&back, &want, sizeof want) != 0)
+                        bad |= 2048;
                 }
             }
-            /* The file cannot raise a skill: there is no such field to edit, and "base"
-             * names a player of the database, so the text of a cheat is the text of the team. */
             if (bad) {
                 failed++;
                 fprintf(stderr, "[custom-team] self-test: country %d team %d (%.16s) failed, code %d\n",
-                        (int)country, team.team.teamOrdinal, (const char *)teams[i].team.teamName, (int)bad);
+                        (int)country, e->team.team.teamOrdinal, (const char *)e->team.team.teamName, (int)bad);
             }
         }
     }
     fprintf(stderr, "[custom-team] self-test: %d teams of the database, %d failed\n", (int)teamsSeen, (int)failed);
-    return teamsSeen > 0 && failed == 0;
+    return idsOk && teamsSeen > 0 && failed == 0;
 }
 
 /* ======================================================================
  * --convert-teams=<in>,<out>
  *
- * Every *.TEAM record in <in> through the same conversion a slot gets, written to
- * <out> under the same name -- like a career, a custom team keeps its extension and
- * holds JSON. For a record that cannot be converted, the database team whose
- * players it comes closest to, and how many of the sixteen match -- so a file whose
- * players had their skills edited can be told from one made from a database this game
- * does not have.
+ * Every *.TEAM record in <in> through the conversion a slot gets, written to <out>
+ * under the same name -- like a career, a custom team keeps its extension and holds
+ * JSON -- and read back to prove it. A record that is not a database team (its players
+ * are no team's) cannot be linked to one, so there is nothing to write: the log names
+ * the database team it comes closest to and how many of its sixteen players match.
  * ====================================================================== */
-static int32_t closest_team(const TeamFileEx *team, int32_t *countryOut, int32_t *ordinalOut)
+static int32_t closest_team(const TeamFileEx *team, const TeamDbEntry **nearest)
 {
-    int32_t country, best = -1;
+    const TeamDbEntry *e;
+    int32_t country, i, best = -1;
 
-    for (country = 0; country < 256; country++) {
-        const TeamFileEx *rec;
-        uint16_t count, i;
-        if (country == 100 || !db_load(country))
-            continue;
-        rec = (const TeamFileEx *)(s_db + 2);
-        count = *(uint16_t *)s_db;
-        for (i = 0; i < count; i++) {
+    *nearest = NULL;
+    for (country = 0; country < kCountries; country++)
+        for (i = 0; (e = TeamDb_Entry(country, i)) != NULL; i++) {
             uint8_t taken[kPlayers] = { 0 };
             int32_t p, q, same = 0;
-            if (rec[i].team.countryNumber != country)
+            if (e->team.team.countryNumber != country)
                 continue;
             for (p = 0; p < kPlayers; p++)
                 for (q = 0; q < kPlayers; q++)
-                    if (!taken[q] && same_player(&team->players[p], &rec[i].players[q])) {
+                    if (!taken[q] && same_player(&team->players[p], &e->team.players[q])) {
                         taken[q] = 1;
                         same++;
                         break;
                     }
             if (same > best) {
                 best = same;
-                *countryOut = country;
-                *ordinalOut = rec[i].team.teamOrdinal;
+                *nearest = e;
             }
         }
-    }
     return best;
 }
 
 int32_t CustomTeam_ConvertDir(const char *in, const char *out)
 {
-    static char json[8192];
+    static char json[kJsonMax];
     struct dirent *de;
     DIR *dir = opendir(in);
-    int32_t files = 0, converted = 0, refused = 0, unreadable = 0, mismatched = 0;
+    int32_t files = 0, converted = 0, foreign = 0, unreadable = 0, mismatched = 0;
     int32_t byMatched[kPlayers + 1] = { 0 };
 
     if (!dir) {
@@ -979,7 +996,8 @@ int32_t CustomTeam_ConvertDir(const char *in, const char *out)
     while ((de = readdir(dir)) != NULL) {
         char path[1024], target[1024], stem[256];
         uint8_t bytes[kTeamRecord + 1];
-        TeamFileEx team, theirs;
+        TeamFileEx record, team, back;
+        CustomTeam custom, read;
         size_t len = strlen(de->d_name), got;
         FILE *f;
 
@@ -997,21 +1015,18 @@ int32_t CustomTeam_ConvertDir(const char *in, const char *out)
             unreadable++;
             continue;
         }
-        memcpy(&theirs, bytes, sizeof theirs);
-        g_customTeamQuiet = 1;
-        if (!load_record(bytes, &team) || !write_json(&team, json, sizeof json, NULL)) {
-            int32_t country = -1, ordinal = -1, same = closest_team(&theirs, &country, &ordinal);
-            const TeamFileEx *near = country >= 0 ? db_team(country, ordinal) : NULL;
-            g_customTeamQuiet = 0;
-            refused++;
+        memcpy(&record, bytes, sizeof record);
+        if (!CustomTeam_FromTeam(&record, &custom) || !CustomTeam_Resolve(&custom, &team) ||
+            !write_json(&custom, json, sizeof json)) {
+            const TeamDbEntry *nearest;
+            int32_t same = closest_team(&record, &nearest);
+            foreign++;
             byMatched[same < 0 ? 0 : same]++;
-            fprintf(stderr, "[convert-teams] %s (%.16s): REFUSED -- closest database team %.16s "
-                            "(country %d, team %d), %d of 16 players match\n",
-                    de->d_name, (const char *)theirs.team.teamName,
-                    near ? (const char *)near->team.teamName : "-", (int)country, (int)ordinal, (int)same);
+            fprintf(stderr, "[convert-teams] %s (%.16s): NOT A DATABASE TEAM, not written -- closest is %.16s, "
+                            "%d of 16 players match\n", de->d_name, (const char *)record.team.teamName,
+                    nearest ? (const char *)nearest->team.team.teamName : "-", (int)same);
             continue;
         }
-        g_customTeamQuiet = 0;
         snprintf(stem, sizeof stem, "%.*s", (int)(len - 5), de->d_name);
         snprintf(target, sizeof target, "%s/%s.TEAM", out, stem);   /* the same name, our format inside */
         f = fopen(target, "wb");
@@ -1023,25 +1038,21 @@ int32_t CustomTeam_ConvertDir(const char *in, const char *out)
             continue;
         }
         fclose(f);
-        /* What was written has to load back as the team it was written from. */
-        {
-            TeamFileEx back;
-            if (!load_json(json, (int32_t)strlen(json), &back) ||
-                (back.team.globalTeamNumber = team.team.globalTeamNumber,
-                 memcmp(&back, &team, sizeof team) != 0)) {
-                fprintf(stderr, "[convert-teams] %s: written, but does not load back as the same team\n", de->d_name);
-                mismatched++;
-            }
+        /* What was written has to load as the team it was written from. */
+        if (!read_json(json, (int32_t)strlen(json), &read) || !CustomTeam_Resolve(&read, &back) ||
+            memcmp(&back, &team, sizeof team) != 0) {
+            fprintf(stderr, "[convert-teams] %s: written, but does not load back as the same team\n", de->d_name);
+            mismatched++;
         }
         converted++;
     }
     closedir(dir);
-    fprintf(stderr, "[convert-teams] %d files: %d converted (%d of them not loading back the same), "
-                    "%d refused, %d unreadable\n",
-            (int)files, (int)converted, (int)mismatched, (int)refused, (int)unreadable);
-    if (refused) {
+    fprintf(stderr, "[convert-teams] %d files: %d converted, %d not database teams (not written), "
+                    "%d not loading back the same, %d unreadable\n",
+            (int)files, (int)converted, (int)foreign, (int)mismatched, (int)unreadable);
+    if (foreign) {
         int32_t n;
-        fprintf(stderr, "[convert-teams] refused, by how many of 16 players match the closest database team:");
+        fprintf(stderr, "[convert-teams] not database teams, by how many of 16 players match the closest one:");
         for (n = kPlayers; n >= 0; n--)
             if (byMatched[n])
                 fprintf(stderr, " %d->%d", (int)n, (int)byMatched[n]);
