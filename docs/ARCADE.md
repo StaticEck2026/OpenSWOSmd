@@ -32,6 +32,13 @@ normal build is unchanged.
 
 ## 2. Attract mode
 
+**At switch-on**, once, before the attract loop: `grafs_arcade/WINNERS.bmp` (320x200, its
+own palette), the "Winners Don't Use Drugs" screen of arcade boards of the time
+(`arc_winners_screen` in `src/arcade.c`). Shown at its own size in the middle of the
+screen with the rest filled in its border colour; faded in, held four seconds, faded
+out. Coins are taken while it shows, and nothing skips it. Without the file the cabinet
+goes straight to the attract loop.
+
 When idle (no credits, no game in progress) the cabinet runs an **attract loop**:
 
 - Plays back **special highlight files** — `.HIL` reels recorded for this purpose.

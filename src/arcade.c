@@ -623,6 +623,50 @@ static void arc_fade_ramp(int target, int frames)
     s_arcadeFade = target;
 }
 
+/* The screen an arcade board showed when it was switched on: WINNERS.bmp (320x200,
+ * its own palette), once, before the attract loop. At its own size in the middle of
+ * the screen -- it is pixel art -- with the rest filled in its border colour. Faded
+ * in, held four seconds, faded out. Coins are taken while it shows; nothing skips it. */
+static void arc_winners_screen(void)
+{
+    static uint8_t  pix[ARC_LOGO_MAXW * SCREEN_HEIGHT];
+    static uint32_t pal[256];
+    extern int DosGameplay_TargetFps(void);
+    int w = 0, h = 0, left, top, hold;
+
+    if (Platform_LoadIndexedBMP("grafs_arcade/WINNERS.bmp", pix, (int)sizeof pix, pal, &w, &h) != 0 ||
+        w <= 0 || h <= 0) {
+        fprintf(stderr, "[arcade] WINNERS.bmp not loaded: no start-up screen\n");
+        return;
+    }
+    left = (_screen_width - w) / 2;
+    top = (SCREEN_HEIGHT - h) / 2;
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        uint32_t *out = s_flagScreenRGBA + (size_t)y * (size_t)_screen_width;
+        int sy = y - top;
+        for (int x = 0; x < _screen_width; x++) {
+            int sx = x - left;
+            out[x] = (sx >= 0 && sx < w && sy >= 0 && sy < h) ? pal[pix[(size_t)sy * (size_t)w + sx]]
+                                                              : pal[pix[0]];
+        }
+    }
+    s_overlayActive = 0;
+    s_arcadeFade = 0;
+    s_flagScreenActive = 1;
+    arc_fade_ramp(256, 25);
+    hold = 4 * DosGameplay_TargetFps();
+    for (int f = 0; f < hold && _quitToDos == 0; f++) {
+        arc_drain_input();
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    s_startGame = 0;            /* a start pressed under it starts nothing: the attract loop is next */
+    s_serviceReq = 0;
+    arc_fade_ramp(0, 25);
+    s_flagScreenActive = 0;
+    s_arcadeFade = 256;
+}
+
 static void arc_flag_blit(int f, int px, int py)
 {
     if (!s_flagsLoaded) return;
@@ -2304,6 +2348,8 @@ void ArcadeMainLoop(void)
     /* Coin-insert jingle (mixed over the attract audio). */
     { extern int AudioSDL_LoadOverlaySample(const char *); AudioSDL_LoadOverlaySample("sound/1UP.WAV"); }
     ReadTimerDelta();
+
+    arc_winners_screen();  /* once, at switch-on */
 
     arc_music_attract();   /* HERO (title) song plays over the attract loop */
 
