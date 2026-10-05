@@ -58,6 +58,15 @@
 <body>
 
 <article>
+  <header><code>3c01239</code><time datetime="2026-10-05T17:38Z">2026-10-05 17:38 UTC</time></header>
+  <ul>
+    <li>Fixed: the game crashed on macOS as soon as an option was changed (for example the gameplay style). The same fault could quietly damage settings on other systems. If you have the previous build, update before changing options.</li>
+    <li>New: your own commentary. Put <code>.wav</code>, <code>.mp3</code> or <code>.raw</code> files, of any length, into a folder per category under <code>sound_dos/commentary</code> (goal, corner, throw_in and so on; the <code>README.txt</code> there lists them). Commentary packs made for SWOS 2020 can be copied in. A category you leave empty keeps the PC game's own lines.</li>
+    <li>Online: the two players now share the frames each plays on a guess of the other's input, instead of one player carrying most of it. It changes timing only, not the match. <code>balance = false</code> under <code>[netplay]</code> in <code>SWOS.ini</code> turns it off.</li>
+  </ul>
+</article>
+
+<article>
   <header><code>113c9bf</code><time datetime="2026-10-05T05:40Z">2026-10-05 05:40 UTC</time></header>
   <ul>
     <li>New: the PC game's sounds as an option. In <code>SWOS.ini</code> under <code>[audio]</code>, <code>style = pc</code> plays matches with the PC version's sampled effects, crowd, chants and commentary. The default is still the Amiga's sounds.</li>
