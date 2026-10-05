@@ -9,6 +9,7 @@
  */
 
 #include "game_timers.h"
+#include "dos_sound.h"
 #include "game_types.h"
 #include "netplay_match.h"    /* NetplayMatch_IsLive: no goal replay online (SDL) */
 
@@ -91,6 +92,7 @@ extern Sprite  *_lastPlayerPlayed;
 extern Sprite *_lastKeeperPlayed;
 extern uint16_t _statsTeam1Goals;
 extern uint16_t _statsTeam2Goals;
+extern uint16_t _penaltiesState[1];
 extern uint16_t _statsTeam1GoalsCopy2;
 extern uint16_t _statsTeam2GoalsCopy2;
 extern uint16_t _teamNumThatScored;
@@ -579,6 +581,11 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
             turnFlags = 199;
         }
 
+        /* The PC game: PlayGoalComment or PlayOwnGoalComment, the crowd, and the
+         * chant about the new score (LoadCrowdChantSample, at the replay). */
+        DOS_SOUND(a0->teamNumber != goalType ? DOS_EV_OWN_GOAL : DOS_EV_GOAL, (int16_t)_penaltiesState[0] == -1);
+        DOS_SOUND(DOS_EV_GOAL_CROWD, 0);
+        DOS_SOUND(DOS_EV_SCORE, (_statsTeam1Goals & 0xFF) << 8 | (_statsTeam2Goals & 0xFF));
         PlayGoalReplayBottomSample();
         _playRefereeWhistle = 0;
 
@@ -708,6 +715,7 @@ void CheckIfBallOutOfPlay(void)
             _breakCameraMode = 0xFFFF;
             a0 = a6->teamStatsPtr;
             a0->cornersWon += 1;
+            DOS_SOUND(DOS_EV_CORNER, 0);
         } else {
             /* Opposite team — goal kick */
             if (d1 < 336) {
@@ -761,6 +769,7 @@ void CheckIfBallOutOfPlay(void)
             _breakCameraMode = 0xFFFF;
             a0 = a6->teamStatsPtr;
             a0->cornersWon += 1;
+            DOS_SOUND(DOS_EV_CORNER, 0);
         } else {
             /* Opposite team — goal kick */
             if (d1 < 336) {
@@ -837,6 +846,7 @@ void CheckIfBallOutOfPlay(void)
         }
 
         _breakCameraMode = 0xFFFF;
+        DOS_SOUND(DOS_EV_THROW_IN, 0);
         a6 = opTeam;  /* ASM: movea.l (a6),a6 — use the team GETTING the throw-in */
     }
 

@@ -522,6 +522,19 @@ Nothing is duplicated under `uae/` any more.
   only those follow the team; the art's own colours are installed in free palette entries
   (82-175), the ramps in 176-239, so the pitch, HUD and menus are untouched.
 - bin/sound - Amiga music modules and sound effects in RJP1 format
+- bin/sound_dos - the PC game's sampled effects, crowd, chants and commentary: 156 raw files,
+  unsigned 8-bit mono at 22,050 Hz (SDL only, `[audio] style = pc`, docs/DOS_SOUND.md). Copied and
+  indexed by `scripts/gen_dos_sound_tables.py` from the PC game's own tables. The match code sends
+  EVENTS (`DOS_SOUND(event, arg)`, `include/dos_sound.h`) through the sound gate -- recorded, and
+  held back on a re-simulated frame, whatever the style -- and `src/dos_sound.c` owns everything
+  after that; none of it is match state. `--dos-sound-selftest` checks the files and tables.
+  `[audio] music = pc` plays the PC menu music, `menu.xmi` with `sample.ad`, through our own
+  player (`src/dos_music.c`: XMI reader, Miles timbre reader, 18-voice driver) on the
+  public-domain Opal chip (`third_party/opal`) with the MIT Miles arithmetic
+  (`third_party/opl_models`). **Never add libADLMIDI: its player is GPL v3.**
+  `--dos-music-selftest` plays the song through. The same setting plays the PC CD's title song
+  in the intro: `sound_dos/title.mp3`, streamed by `src/music_stream.c` with dr_mp3
+  (`third_party/dr_mp3`, public domain).
 - bin/save - save games, shared by both targets
 - bin/data_json - editable JSON that bakes into competition/menu/tactics C (SDL only)
 - If a file starts with `RNC` then it's RNC compressed; `src/rnc.c` decompresses it on both targets.

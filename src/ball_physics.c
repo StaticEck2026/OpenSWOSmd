@@ -5,6 +5,7 @@
  */
 #include "dos_mode.h"       /* _gDosGameplay: the diving-keeper ball straddle */
 #include "ball_physics.h"
+#include "dos_sound.h"
 #include "math68k.h"       /* CalculateDeltaXAndY: uint16_t, 0xFFFF = no movement */
 
 /* Sprite image constants */
@@ -869,6 +870,7 @@ skip_goal_collision:
         int16_t by = ball->y.s.i;
         int16_t bz = ball->z.s.i;
         int16_t d4;
+        int16_t dosPostSide = 0;    /* the PC game's commentary: the side of a post, not the bar */
         int32_t deltaY;
 
         /* Near a goal line: Y 129..132 or 766..769 (SWOS2.s:14807). */
@@ -907,6 +909,7 @@ skip_goal_collision:
             goto after_goalpost;   /* inside the goal mouth: no post to hit */
 
         /* loc_109810 — the side of a post */
+        dosPostSide = 1;
         d4 = (int16_t)(_currentGameTick & 0x1F);
         d4 = (int16_t)((d4 << 4) - 0x100);
         deltaY = ball->deltaY.raw;
@@ -919,6 +922,7 @@ skip_goal_collision:
 
     above_post_level:
         /* loc_1097E6 — level with the crossbar */
+        dosPostSide = 0;
         d4 = (int16_t)(_currentGameTick & 0x1F);
         d4 = (int16_t)((d4 << 4) - 0x100);
         deltaY = ball->deltaY.raw;
@@ -949,6 +953,10 @@ skip_goal_collision:
 
     goalpost_speed_reduce:
         /* loc_109886 */
+        /* The PC game: a line about the post or the bar (it keeps which in
+         * goalTypeScored), then PlayMissGoalSample. */
+        DOS_SOUND(DOS_EV_WOODWORK, dosPostSide);
+        DOS_SOUND(DOS_EV_MISS_CROWD, 0);
         PlaySample3IfNotTraining();
         {
             uint16_t spd = (uint16_t)ball->speed;

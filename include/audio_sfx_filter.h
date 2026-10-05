@@ -15,8 +15,10 @@
 enum {
     AUDIO_SFX_PRESET = 1,       /* AudioApplyPresetToChannels: `id` is the preset, channel 0xFF */
     AUDIO_SFX_WAVE   = 2,       /* AudioChannelQueueNextWaveIfEnabled: `id` is the wave */
-    AUDIO_SFX_VOLUME = 3        /* AudioSetChannelVolume: `id` is the volume, channel 0xFF = all
+    AUDIO_SFX_VOLUME = 3,       /* AudioSetChannelVolume: `id` is the volume, channel 0xFF = all
                                  * (observer only -- volume changes are never filtered) */
+    AUDIO_SFX_DOS    = 4        /* Audio_DosEvent (dos_sound.h): `channel` is the event, `id` its
+                                 * argument. DOS_EV_TICK is filtered but never observed. */
 };
 
 /* Nonzero plays the effect. */

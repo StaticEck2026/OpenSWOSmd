@@ -131,6 +131,23 @@ static int handler(void *user, const char *section,
             if      (eqi(value, "mono"))   opts->audio_mono = 1;
             else if (eqi(value, "stereo")) opts->audio_mono = 0;
         }
+        else if (eqi(name, "style")) {
+            if      (eqi(value, "amiga")) opts->sound_style = 0;
+            else if (eqi(value, "pc") || eqi(value, "dos")) opts->sound_style = 1;
+        }
+        else if (eqi(name, "menu_music")) {
+            if      (eqi(value, "midi")) opts->menu_recording = 0;
+            else if (eqi(value, "mp3"))  opts->menu_recording = 1;
+        }
+        else if (eqi(name, "music")) {
+            if      (eqi(value, "amiga")) opts->music_style = 0;
+            else if (eqi(value, "pc") || eqi(value, "dos")) opts->music_style = 1;
+        }
+        else if (eqi(name, "commentary")) {
+            int b;
+            if (eqi(value, "auto")) opts->commentary = 2;
+            else if (parse_bool(value, &b)) opts->commentary = b;
+        }
     } else if (eqi(section, "gameplay")) {
         int b;
         if (eqi(name, "fire_hold_lockout") && parse_bool(value, &b))
@@ -348,6 +365,25 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render ASPECT, or 'auto' for the desktop.\n; It is not the render SIZE: the picture is always 272 lines tall and 336..672 wide,\n; so a wider shape shows more pitch and a small one (320x200) just clamps to 336x272", vbuf[0] };
     items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
     items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
+    items[n++] = (IniEntry){ "audio",  "style",
+        "; style: amiga | pc. A match's sounds: the Amiga's, or the PC game's sampled\n"
+        "; effects, crowd and chants (sound_dos/). The menus' music is the Amiga's either\n"
+        "; way. It changes nothing in a match: online, each player hears their own.\n",
+        opts->sound_style ? "pc" : "amiga" };
+    items[n++] = (IniEntry){ "audio",  "music",
+        "; music: amiga | pc. The music: the Amiga's, or the PC game's -- the CD\n"
+        "; release's title song in the intro, and menu.xmi on an emulated AdLib card with\n"
+        "; the game's own instruments in the menus.\n",
+        opts->music_style ? "pc" : "amiga" };
+    items[n++] = (IniEntry){ "audio",  "menu_music",
+        "; menu_music: midi | mp3. With music = pc, the menus' music is the game's\n"
+        "; menu.xmi played live on the emulated card (midi), or a recording of it,\n"
+        "; sound_dos/menu.mp3 (mp3).\n",
+        opts->menu_recording ? "mp3" : "midi" };
+    items[n++] = (IniEntry){ "audio",  "commentary",
+        "; commentary: auto | true | false. The PC game's commentary. auto (the\n"
+        "; default): with style = pc only. true: always, over the Amiga's sounds too.\n",
+        opts->commentary == 2 ? "auto" : opts->commentary ? "true" : "false" };
     items[n++] = (IniEntry){ "gameplay", "fire_hold_lockout",
         "; fire_hold_lockout: true | false — true restores a BUG IN THE ORIGINAL\n"
         "; AMIGA GAME: an OPPONENT's tackle wipes your held fire button's shot charge,\n"

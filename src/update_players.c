@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "update_players.h"
+#include "dos_sound.h"
 #include "dos_mode.h"       /* _gDosGameplay: the DOS-only clear on the keeper handoff */
 #include "ball_physics.h"
 #include "ball_possession.h"
@@ -989,9 +990,11 @@ not_in_penalty:
                 ball->speed = 0;
                 team->goalkeeperDivingLeft = 1;
                 GoalkeeperClaimedTheBall(player, ball, team);
+                DOS_SOUND(DOS_EV_KEEPER_CLAIMED, 0);
                 goto finalize;
             }
             GoalkeeperDeflectedBall(ball, team);
+            DOS_SOUND(DOS_EV_KEEPER_CLAIMED, 0);
         }
         goto finalize;
 
@@ -1000,6 +1003,7 @@ not_in_penalty:
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
             SetPlayerAnimationTable(&_playerNormalStandingAnimTable, player);
+            DOS_SOUND(DOS_EV_KEEPER_CLAIMED, 0);
         }
         goto finalize;
 

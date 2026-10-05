@@ -9,6 +9,7 @@
  */
 
 #include "game_loop.h"
+#include "dos_sound.h"
 #include "game_types.h"
 #include "display.h"
 #include "deterministic.h"
@@ -829,6 +830,9 @@ GameLoop(void)
     /* Record the whole match (src/replay_v2.c): written to LATEST.SRP when it ends. */
     { extern void ReplayRec_MatchStart(void); ReplayRec_MatchStart(); }
 #endif
+    /* The PC game's LoadSoundEffects, LoadIntroChant and PlayCrowdNoiseSample, here in its
+     * GameLoop too -- and after the recorder is on, so that a recording has it. */
+    DOS_SOUND(DOS_EV_MATCH_START, (_topTeamInGame.prShirtCol & 0x0F) | (_trainingGame ? 0x100 : 0));
 
     /* Training starts at a fixed (168, 313) in both releases. A match starts
      * centred horizontally on one of the two goal ends, and both of those are

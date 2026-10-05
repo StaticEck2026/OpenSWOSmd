@@ -52,6 +52,8 @@
 #include "jag_graphics.h"       /* --jag-graphics */
 #include "kit_art.h"            /* --kit-art */
 #include "custom_team.h"        /* --custom-team-selftest */
+#include "dos_sound.h"          /* --sound-style, --dos-sound-selftest */
+#include "dos_music.h"          /* --music, --dos-music-selftest */
 #include "pitch_map.h"          /* --pitch-maps */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
@@ -259,6 +261,21 @@ static void print_usage(const char *argv0)
         "  --convert-teams=<in>,<out> Convert every .TEAM team record in <in> (SWOS\n"
         "                            2020, editors) to a custom team under the same name in <out>,\n"
         "                            and say why any could not be. Exits.\n"
+        "  --sound-style=amiga|pc    A match's sounds: the Amiga's (default) or the PC\n"
+        "                            game's samples, crowd and chants ([audio] style).\n"
+        "  --commentary=auto|on|off  The PC game's commentary: auto (default) with\n"
+        "                            --sound-style=pc only; on also over the Amiga's\n"
+        "                            sounds ([audio] commentary).\n"
+        "  --music=amiga|pc          The music: the Amiga's (default) or the PC game's --\n"
+        "                            the CD's title song in the intro, menu.xmi on an\n"
+        "                            emulated AdLib card in the menus ([audio] music).\n"
+        "  --menu-music=midi|mp3     With --music=pc: the menus play menu.xmi live on the\n"
+        "                            emulated card (default) or a recording of it,\n"
+        "                            sound_dos/menu.mp3 ([audio] menu_music).\n"
+        "  --dos-music-selftest      Play the PC menu music through once without sound\n"
+        "                            and report what it found. Exits.\n"
+        "  --dos-sound-selftest      Check that every PC sound file is in sound_dos/\n"
+        "                            and every table names one. Exits.\n"
         "  --custom-team-selftest    Check every database team against the custom team\n"
         "                            rule (names, faces, kits and line-up only) and\n"
         "                            through the team file's text. Exits.\n"
@@ -395,6 +412,10 @@ int main(int argc, char **argv)
     opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
     opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;
+    opts.sound_style = 0;         /* the Amiga's sounds */
+    opts.music_style = 0;         /* the Amiga's menu music */
+    opts.menu_recording = 0;      /* with the PC's music: menu.xmi on the emulated chip */
+    opts.commentary = 2;          /* auto: with the PC's sounds */
     opts.dos_graphics = 0;        /* default Amiga graphics */
     /* ... and not the Jaguar's either, on any build. The browser one played with
      * it by default until 2026-10-01; it still ships the banks, so `[graphics]
@@ -660,6 +681,25 @@ int main(int argc, char **argv)
             }
             *comma = '\0';
             return CustomTeam_ConvertDir(dirs, comma + 1) ? 0 : 1;
+        } else if ((v = match_kv(a, "sound-style")) != NULL) {
+            if      (strcmp(v, "amiga") == 0) opts.sound_style = 0;
+            else if (strcmp(v, "pc") == 0 || strcmp(v, "dos") == 0) opts.sound_style = 1;
+            else { fprintf(stderr, "--sound-style must be amiga or pc (got %s)\n", v); return 1; }
+        } else if ((v = match_kv(a, "menu-music")) != NULL) {
+            if      (strcmp(v, "midi") == 0) opts.menu_recording = 0;
+            else if (strcmp(v, "mp3") == 0)  opts.menu_recording = 1;
+            else { fprintf(stderr, "--menu-music must be midi or mp3 (got %s)\n", v); return 1; }
+        } else if ((v = match_kv(a, "music")) != NULL) {
+            if      (strcmp(v, "amiga") == 0) opts.music_style = 0;
+            else if (strcmp(v, "pc") == 0 || strcmp(v, "dos") == 0) opts.music_style = 1;
+            else { fprintf(stderr, "--music must be amiga or pc (got %s)\n", v); return 1; }
+        } else if ((v = match_kv(a, "commentary")) != NULL) {
+            opts.commentary = strcmp(v, "auto") == 0 ? 2
+                            : strcmp(v, "off") != 0 && strcmp(v, "0") != 0 && strcmp(v, "false") != 0;
+        } else if (strcmp(a, "--dos-music-selftest") == 0) {
+            return DosMusic_SelfTest() ? 1 : 0;
+        } else if (strcmp(a, "--dos-sound-selftest") == 0) {
+            return DosSound_SelfTest() ? 1 : 0;
         } else if (strcmp(a, "--custom-team-selftest") == 0) {
             return CustomTeam_SelfTest() ? 0 : 1;
         } else if (strncmp(a, "--matchmaker-selftest", 21) == 0) {
@@ -965,6 +1005,17 @@ int main(int argc, char **argv)
     PitchMap_SetEnabled(opts.pitch_maps);
     JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.hair_shading, opts.shade_step);
     KitArt_SetJaguar(opts.kit_art);
+    /* SWOS_SOUND_STYLE=pc, SWOS_COMMENTARY=on: for the test scripts, which pass no options. */
+    { const char *e = getenv("SWOS_SOUND_STYLE");
+      if (e) opts.sound_style = strcmp(e, "pc") == 0;
+      e = getenv("SWOS_MUSIC");
+      if (e) opts.music_style = strcmp(e, "pc") == 0;
+      e = getenv("SWOS_COMMENTARY");
+      if (e) opts.commentary = strcmp(e, "auto") == 0 ? 2 : strcmp(e, "off") != 0; }
+    DosSound_SetStyle(opts.sound_style);
+    DosMusic_SetStyle(opts.music_style);
+    DosMusic_SetMenuRecording(opts.menu_recording);
+    DosSound_SetCommentary(opts.commentary);
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;

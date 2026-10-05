@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "tackle_foul.h"
+#include "dos_sound.h"
 #include "contest_log.h"    /* how long a slide leaves a player down (ContestLog_Down) */
 
 extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
@@ -544,8 +545,10 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
 
     /* Check tackle quality -- clean tackle if tackleState==0 or good tackle */
     if ((uint16_t)player->tackleState != 0) {
-        if ((uint16_t)player->tackleState == TS_GOOD_TACKLE)
+        if ((uint16_t)player->tackleState == TS_GOOD_TACKLE) {
+            DOS_SOUND(DOS_EV_DANGEROUS_PLAY, 0);
             return;
+        }
 
         /* Check direction difference: within +/-1 means from the side = no foul */
         dirDiff = player->direction - victim->direction;
@@ -755,6 +758,7 @@ PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
             int16_t dyp = player->y.s.i - oppControlled->y.s.i;
             int32_t distSq = (int32_t)dxp * dxp + (int32_t)dyp * dyp;
             if (distSq > 32) {
+                DOS_SOUND(DOS_EV_GOOD_TACKLE, 0);
                 player->tackleState = (int16_t)TS_GOOD_TACKLE;
             }
         }
@@ -798,6 +802,7 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
             goto apply_break;
         }
 
+        DOS_SOUND(DOS_EV_FOUL, 0);
         /* Free kick band: 216 < y < 331 */
         if (vy < 216 || vy >= 331)
             goto set_foul;
@@ -817,6 +822,7 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
             goto apply_break;
         }
 
+        DOS_SOUND(DOS_EV_FOUL, 0);
         /* Free kick band: 567 <= y <= 682 */
         if (vy < 567 || vy > 682)
             goto set_foul;

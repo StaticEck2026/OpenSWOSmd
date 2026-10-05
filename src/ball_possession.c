@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "ball_possession.h"
+#include "dos_sound.h"
 #include "math68k.h"  /* M68kShiftLeft16: a signed left shift is UB, and the two platforms differ */
 #include "game_types.h"
 #include "contest_log.h"    /* --contest-log: reads only, changes nothing */
@@ -174,6 +175,7 @@ DoPass(Sprite *player, TeamGeneralInfo *team)
     Sprite  *targetPlayer;
     Sprite  *ball;
     int16_t  d1;
+    int16_t  toTeamMate = 0;    /* the PC game's goodPassSampleCommand == -1 */
 
     team->controlledPlDirection = dir;
 
@@ -286,6 +288,7 @@ set_pass_speed:
         }
         ball->speed = speed;
     }
+    toTeamMate = 1;
     goto finalize_pass;
 
 pass_to_preset_direction:
@@ -317,6 +320,11 @@ finalize_pass:
         return;
 
 trigger_pass:
+    /* The PC game: PlayKickSample, then PlayStopGoodPassSampleIfNeeded -- a pass to
+     * a team mate counts towards the "good pass" line. */
+    DOS_SOUND(DOS_EV_KICK, 0);
+    if (toTeamMate)
+        DOS_SOUND(DOS_EV_PASS, 0);
     PlayGoodPassSample();
 }
 

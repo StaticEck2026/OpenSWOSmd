@@ -11,6 +11,7 @@
  */
 
 #include "referee.h"
+#include "dos_sound.h"
 #include "dos_mode.h"      /* _gDosGameplay: the DOS second-yellow table runs off its end */
 #include "display.h"      /* SIM_REFEREE_ENTRY_BELOW: f(view) */
 #include "game_types.h"
@@ -252,10 +253,13 @@ state_dispatch:
         _refState = REF_BOOKING;
         if (_whichCard == CARD_RED) {
             InitRefereeAnimationTable(_refRedCardAnimTable);
+            DOS_SOUND(DOS_EV_RED_CARD, 0);
         } else if (_whichCard == CARD_SECOND_YELLOW) {
             InitRefereeAnimationTable(_refSecondYellowAnimTable);
+            DOS_SOUND(DOS_EV_RED_CARD, 0);
         } else {
             InitRefereeAnimationTable(_refYellowCardAnimTable);
+            DOS_SOUND(DOS_EV_YELLOW_CARD, 0);
         }
         return;
     }

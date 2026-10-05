@@ -182,7 +182,10 @@ the display it was drawn for, and the viewer draws its own.
 
 8 bytes per event: frame, kind, channel, id. Kind 1 is a preset
 (`AudioApplyPresetToChannels`), 2 a wave (`AudioChannelQueueNextWaveIfEnabled`),
-3 a channel volume (channel 0xFF = all). The recorder is an **observer** on
+3 a channel volume (channel 0xFF = all), 4 something the PC game has a sound for
+(`Audio_DosEvent`: `channel` is the `DOS_EV_*` event of `include/dos_sound.h`, `id` its
+argument; written whatever sound style the match was played with, docs/DOS_SOUND.md --
+a reader that does not know kind 4 skips it). The recorder is an **observer** on
 `audio_sfx_filter.h`, called before the netplay filter decides what is heard, so
 a match recorded under rollback keeps the sound the match made rather than the
 sound this peer happened to play.

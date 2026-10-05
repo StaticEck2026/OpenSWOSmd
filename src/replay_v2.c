@@ -18,6 +18,7 @@
 #ifdef SWOS_SDL_BUILD
 
 #include "replay_v2.h"
+#include "dos_sound.h"
 #include "audio_sfx_filter.h"
 #include "build_info.h"
 #include "display.h"
@@ -224,6 +225,8 @@ static struct {
 
     AudioEvent *audio;
     uint32_t    audioCount, audioCap;
+    uint32_t    audioKeep;      /* sounds from before the first frame: a rewind to frame 0 keeps them */
+    int32_t     audioKeepSet;
     Chapter    *chapters;
     uint32_t    chapterCount, chapterCap;
 
@@ -279,6 +282,8 @@ static void rec_free(void)
     s_rec.frmsLen = s_rec.frmsCap = 0;
     s_rec.frameCount = s_rec.offsetsCap = 0;
     s_rec.audioCount = s_rec.audioCap = 0;
+    s_rec.audioKeep = 0;
+    s_rec.audioKeepSet = 0;
     s_rec.chapterCount = s_rec.chapterCap = 0;
 }
 
@@ -421,11 +426,17 @@ void ReplayRec_SetFrame(uint32_t frame)
     if (!s_rec.on)
         return;
     s_rec.open = 0;
+    /* What the match started before its first frame (the PC sounds' MATCH_START,
+     * dos_sound.h) is not started again when frame 0 is played again. */
+    if (!s_rec.audioKeepSet) {
+        s_rec.audioKeepSet = 1;
+        s_rec.audioKeep = s_rec.audioCount;
+    }
     if (frame < s_rec.frameCount) {
         /* Played again: this frame and everything after it are re-recorded. */
         s_rec.frmsLen = s_rec.offsets[frame];
         s_rec.frameCount = frame;
-        while (s_rec.audioCount && s_rec.audio[s_rec.audioCount - 1].frame >= frame)
+        while (s_rec.audioCount > s_rec.audioKeep && s_rec.audio[s_rec.audioCount - 1].frame >= frame)
             s_rec.audioCount--;
         for (i = s_rec.chapterCount; i > 0 && s_rec.chapters[i - 1].frame >= frame; i--)
             ;
@@ -1349,6 +1360,9 @@ static void fire_sound(const AudioEvent *e)
         break;
     case AUDIO_SFX_VOLUME:
         AudioSetChannelVolume(e->channel == 0xFF ? 0xFFFF : e->channel, e->id);
+        break;
+    case AUDIO_SFX_DOS:
+        Audio_DosEvent(e->channel, e->id);
         break;
     default:
         break;

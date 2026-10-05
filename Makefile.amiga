@@ -53,6 +53,10 @@ SDL_ONLY_SRCS := \
     ini.c                 \
     input_sdl.c           \
     custom_team.c         \
+    dos_sound.c           \
+    dos_music.c           \
+    dos_music_impl.c      \
+    music_stream.c        \
     team_db.c             \
     kit_art.c             \
     uniform_menu.c        \

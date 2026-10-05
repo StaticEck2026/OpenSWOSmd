@@ -22,6 +22,7 @@
  */
 
 #include "bench_subs.h"
+#include "dos_sound.h"
 #include "game_types.h"
 #include "game_state.h"
 #include "goalkeeper.h"
@@ -1043,6 +1044,7 @@ substitutePlayer(void)
 
     _waitForPlayerToGoInTimer = 100;
     _subsBlockFire = 1;
+    DOS_SOUND(DOS_EV_SUBSTITUTION, 0);
 
     leaveSubsMenu();
 }
@@ -1200,6 +1202,7 @@ markPlayersMenuHandler(void)
 
                 _selectedPlayerInSubs = 0xFFFF;
                 _overlayActiveFlag = 0;
+                DOS_SOUND(DOS_EV_TACTICS, 0);
                 subsBenchOff();
                 return;
             }
@@ -1227,6 +1230,7 @@ static void handleFormationMenuControls(void)
         }
 
         ApplyTeamTactics((TeamGame *)_benchTeamGame);
+        DOS_SOUND(DOS_EV_TACTICS, 0);
         subsBenchOff();
         return;
     }
@@ -2789,6 +2793,7 @@ void HandleFormationMenuControls(void)
         _pl2Tactics = _selectedFormationEntry;
 
     ApplyTeamTactics((TeamGame *)_benchTeamGame);
+    DOS_SOUND(DOS_EV_TACTICS, 0);
     SubsBenchOff();
 }
 
@@ -3005,6 +3010,7 @@ void SubstitutePlayer(void)
     ApplyTeamTactics((TeamGame *)_benchTeamGame);
     _waitForPlayerToGoInTimer = 100;
     _subsBlockFire = 1;
+    DOS_SOUND(DOS_EV_SUBSTITUTION, 0);
     LeaveSubsMenu();
 }
 

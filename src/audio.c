@@ -5,10 +5,15 @@
  */
 #include "audio.h"
 #include "audio_sfx_filter.h"
+#include "dos_sound.h"
+#include "dos_music.h"
+#include "sfx_ids.h"
 #include "endian_helpers.h"
 #include "display.h"
 
 #ifdef SWOS_SDL_BUILD
+#include <stdio.h>
+#include <stdlib.h>
 /* RJP1 SDL backend (defined in audio_sdl.c). */
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
@@ -74,6 +79,17 @@ void Audio_SetSfxObserver(AudioSfxObserver observer)
 {
     s_sfxObserver = observer;
 }
+
+/* dos_sound.h: something the PC game has a sound for. Kept by a recording and held
+ * back on a frame played again, like the Amiga's effects, whatever the sound style. */
+void Audio_DosEvent(uint8_t event, uint16_t arg)
+{
+    if (s_sfxObserver && event != DOS_EV_TICK)
+        s_sfxObserver(AUDIO_SFX_DOS, event, arg);
+    if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_DOS, event, arg))
+        return;
+    DosSound_Event(event, arg);
+}
 #endif
 
 static void ensureChannelPtrs(void)
@@ -136,6 +152,9 @@ void AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
 #ifdef SWOS_SDL_BUILD
     if (s_sfxObserver)
         s_sfxObserver(AUDIO_SFX_VOLUME, (channelOrAll & 0x80) ? 0xFF : (uint8_t)(channelOrAll & 3), vol);
+    /* The PC chants follow the Amiga's chant channel (dos_sound.c). */
+    if (!(channelOrAll & 0x80) && (channelOrAll & 3) == 2)
+        DosSound_ChantVolume(vol);
 #endif
 
     /* tst.b d0 / bmi — tests bit 7 of low byte */
@@ -483,6 +502,8 @@ void AudioApplyPresetToChannels(uint16_t presetId)
         s_sfxObserver(AUDIO_SFX_PRESET, 0xFF, (uint16_t)(presetId & 0x3F));
     if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_PRESET, 0xFF, (uint16_t)(presetId & 0x3F)))
         return;
+    if (DosSound_Live())
+        return;                 /* the PC sounds have this match */
     AudioSDL_TriggerSfxPreset((int)(presetId & 0x3F));   /* 6-bit preset id, see Amiga &= 0x3F */
     return;
 #else
@@ -538,6 +559,44 @@ void AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
         s_sfxObserver(AUDIO_SFX_WAVE, (uint8_t)(channel & 3), waveId);
     if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_WAVE, (uint8_t)(channel & 3), waveId))
         return;
+    if (DosSound_Live()) {
+        /* The PC sounds have this match. The one thing taken from the Amiga's is
+         * WHEN a crowd chant starts: PlayCrowdChants queues it on channel 2. */
+        extern uint16_t _crowdSamples[4];
+        int32_t slot;
+        for (slot = 0; (channel & 3) == 2 && slot < 4; slot++)
+            if (_crowdSamples[slot] == waveId)
+                DosSound_ChantStart(slot);
+        return;
+    }
+    /* GateKickSampleAndCrowd (SWOS2.s 12019): a kick, pass or bounce does not replace a
+     * sound still playing on its channel, unless that sound is one of the two crowd
+     * reactions. On the Amiga the test is bit 7 of the audio interrupt's result -- "the
+     * wave queued on channel 3 has not reached its end" -- which is never set here, so
+     * every bounce after full time cut the final whistle short, and every kick cut the
+     * one before it. Decided HERE, on what is heard, and by the wave: the four the gate
+     * is called with are started nowhere else, a recording replays them through this
+     * routine, and the match must not read the mixer (docs/NETPLAY.md, "Sound during a
+     * rollback"). */
+    {
+        extern int AudioSDL_SfxChannelBusy(int channel);
+        static uint16_t s_lastWave[4];
+        const int ch = (int)(channel & 3);
+        if ((waveId == SFX_BALL_BOUNCE_1 || waveId == SFX_BALL_PASSED_OR_TACKLED ||
+             waveId == SFX_BALL_KEEPER_SAFE_2 || waveId == SFX_BALL_SHOT_HEADER_LOW ||
+             waveId == SFX_BALL_BOUNCE_3) &&
+            s_lastWave[ch] != SFX_CROWD_KEEPERSAVES && s_lastWave[ch] != SFX_CROWD_NEARMISS &&
+            AudioSDL_SfxChannelBusy(ch)) {
+            static int trace = -1;      /* SWOS_SFX_GATE_TRACE=1: what the gate held back */
+            if (trace < 0)
+                trace = getenv("SWOS_SFX_GATE_TRACE") != NULL;
+            if (trace)
+                fprintf(stderr, "[sfx] wave %u held back: wave %u is still playing on channel %d\n",
+                        waveId, s_lastWave[ch], ch);
+            return;
+        }
+        s_lastWave[ch] = waveId;
+    }
     AudioSDL_TriggerSfxByWaveId((int)(channel & 3), (int)waveId);
     return;
 #else
@@ -631,12 +690,23 @@ void TryPlayMusic(void)
 
     if (_audioActive != 0)
         return;
+#ifdef SWOS_SDL_BUILD
+    DosSound_Stop();        /* back in the menus: no match's crowd under their music */
+#endif
 
 #ifdef SWOS_SDL_BUILD
     /* On SDL the RJP1 player produces samples directly into the SDL
      * audio callback. Load (once) and start subsong 1, then fade in via
      * the master-volume ramp. */
     if (_audioBankLoaded == 0) {
+        extern int AudioSDL_PcMusicStart(void);
+        /* [audio] music = pc: the PC game's menu.xmi (src/dos_music.c). */
+        extern int AudioSDL_StreamStart(const char *name, int loop);
+        if (DosMusic_Style() && DosMusic_MenuRecording() && AudioSDL_StreamStart("menu", 1) == 0) {
+            /* [audio] menu_music = mp3: a recording of it, sound_dos/menu.mp3 */
+        } else
+        if (DosMusic_Style() && AudioSDL_PcMusicStart() == 0) {
+        } else
         if (AudioSDL_StartSong(_menuSongData, MENU_SONG_DATA_BYTES,
                                _menuInsBank,  MENU_INS_BANK_BYTES, 1) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
@@ -691,6 +761,7 @@ void ClearAudioActiveFlag(void)
 __attribute__((used, externally_visible))
 void StopAudioAndClearFlags(void)
 {
+    DOS_SOUND(DOS_EV_MATCH_END, 0);
     StopAllAudioChannels();
     _audioActive = 0;
     _audioBankLoaded = 0;

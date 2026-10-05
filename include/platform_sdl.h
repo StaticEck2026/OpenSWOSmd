@@ -112,6 +112,10 @@ typedef struct {
     int                    hair_shading;     /* 1 = shade hair the game leaves flat (black), 0 = as the game has it */
     int                    shade_step;       /* sixteenths between kit shades: 16, 16-N, 16-2N, 16-3N; hair too */
     int                    kit_art;          /* the UNIFORM screen's kit drawings: 0 = the Amiga's, 1 = the Jaguar's (kit_art.h) */
+    int                    sound_style;      /* a match's sounds: 0 = the Amiga's, 1 = the PC game's samples (dos_sound.h) */
+    int                    menu_recording;   /* with music_style 1: 1 = play sound_dos/menu.mp3, 0 = menu.xmi on the emulated chip */
+    int                    music_style;      /* the menus' music: 0 = the Amiga's, 1 = the PC game's menu.xmi (dos_music.h) */
+    int                    commentary;       /* the PC game's commentary: 0 off, 1 on (over the Amiga's sounds too), 2 auto = with sound_style 1 */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     int                    contest_own_ratings; /* 1 = a contested ball's dice rates each side by the man at the
                                               * ball; 0 (default) = the original's squad-slot lookup

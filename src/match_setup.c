@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "match_setup.h"
+#include "dos_sound.h"
 #include "jag_graphics.h"
 #include "dos_gameplay.h"   /* ApplyGameStyle — the pitch factors below latch its tables */
 #include "game_types.h"
@@ -643,6 +644,8 @@ void GameOver(void)
     _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
+    /* The PC game's LoadAndPlayEndGameComment: the crowd, and a line about the match. */
+    DOS_SOUND(DOS_EV_GAME_OVER, (_statsTeam1Goals & 0xFF) << 8 | (_statsTeam2Goals & 0xFF));
 }
 
 /* ================================================================

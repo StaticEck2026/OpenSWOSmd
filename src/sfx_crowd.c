@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "sfx_crowd.h"
+#include "dos_sound.h"
 #include "audio.h"
 #include "sfx_ids.h"
 
@@ -17,6 +18,7 @@ extern uint16_t _crowdEventFlags;
 extern uint16_t _sfxQueueCount;
 extern uint16_t _trainingGame;
 extern uint16_t _gameState;
+extern uint16_t _penaltiesState[1];
 extern uint16_t _patternsGoalCounter;
 extern uint16_t _showFansCounter;
 extern volatile uint16_t _currentGameTick;
@@ -268,6 +270,7 @@ void AudioMuteAllWithFrameRamp(void)
 __attribute__((used, externally_visible))
 void PlayEnqueuedSamples(void)
 {
+    DOS_SOUND(DOS_EV_TICK, (int16_t)_penaltiesState[0] == -1);
     if (_endOfHalfWriteOnly != 0)
     {
         _endOfHalfWriteOnly--;
@@ -340,6 +343,7 @@ void PlaySample7IfNotTraining(void)
 __attribute__((used, externally_visible))
 void PlaySfxSample16(void)
 {
+    DOS_SOUND(DOS_EV_BOUNCE, 0);            /* the PC game's PlayBallBounceSample */
     GateKickSampleAndCrowd(3, SFX_BALL_BOUNCE_1);
 }
 
@@ -370,6 +374,7 @@ void PlayGoodPassSample(void)
 __attribute__((used, externally_visible))
 void PlayKickSample(void)
 {
+    DOS_SOUND(DOS_EV_KICK, 0);
     uint16_t sfxId = SFX_BALL_KEEPER_SAFE_2;
 
     /* btst #1,(currentGameTick+1) tests bit 1 of the low byte */
@@ -422,6 +427,7 @@ void GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 __attribute__((used, externally_visible))
 void PlayRefereeWhistleSample(void)
 {
+    DOS_SOUND(DOS_EV_WHISTLE, 0);
     HandleKickSampleAndCrowd(3, SFX_WHISTLE_KICKOFF);
 }
 
@@ -431,6 +437,7 @@ void PlayRefereeWhistleSample(void)
 __attribute__((used, externally_visible))
 void PlayFoulWhistleSample(void)
 {
+    DOS_SOUND(DOS_EV_FOUL_WHISTLE, 0);
     HandleKickSampleAndCrowd(3, SFX_WHISTLE_FOUL_1);
 }
 
@@ -440,6 +447,7 @@ void PlayFoulWhistleSample(void)
 __attribute__((used, externally_visible))
 void PlayEndGameWhistleSample(void)
 {
+    DOS_SOUND(DOS_EV_END_WHISTLE, 0);
     HandleKickSampleAndCrowd(3, SFX_WHISTLE_ENDGAME);
 }
 
@@ -519,6 +527,9 @@ void PlaySample3IfNotTraining(void)
 __attribute__((used, externally_visible))
 void PlayMissGoalSample(void)
 {
+    /* The PC game, at both callers (UpdatePlayers): PlayGoalkeeperSavedComment, PlayMissGoalSample. */
+    DOS_SOUND(DOS_EV_KEEPER_SAVED, (int16_t)_penaltiesState[0] == -1);
+    DOS_SOUND(DOS_EV_MISS_CROWD, 0);
     if (_trainingGame != 0)
         return;
     _sfxQueueCount = 0x0A;
@@ -533,6 +544,7 @@ void PlayMissGoalSample(void)
 __attribute__((used, externally_visible))
 void PlayPenalty(void)
 {
+    DOS_SOUND(DOS_EV_PENALTY, 0);           /* PlayPenaltyComment */
     if (_trainingGame != 0)
         return;
     PlayPenaltySample();
@@ -590,6 +602,9 @@ void PlayGoalReplayBottomSample(void)
 __attribute__((used, externally_visible))
 void PlayGoalKickOffSample(void)
 {
+    /* The PC game (CheckIfBallOutOfPlay): PlayNearMissComment, PlayMissGoalSample. */
+    DOS_SOUND(DOS_EV_NEAR_MISS, (int16_t)_penaltiesState[0] == -1);
+    DOS_SOUND(DOS_EV_MISS_CROWD, 0);
     if (_trainingGame != 0)
         return;
     if (HandleKickSampleAndCrowd(3, SFX_CROWD_NEARMISS) != 0)
