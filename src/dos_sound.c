@@ -26,10 +26,17 @@
 #include <string.h>
 #include <SDL.h>
 
+#ifndef SWOS_SWITCH_BUILD
+#include <dirent.h>     /* the Switch has no folder to put a pack in: custom_scan is empty there */
+#endif
+
 #include "swos_io.h"
 #include "dos_sound_tables.h"
+#define DR_MP3_NO_STDIO                     /* as src/music_stream.c, which compiles it */
+#include "../third_party/dr_mp3/dr_mp3.h"
 
 extern void AudioSDL_PcmPlay(int voice, const uint8_t *data, uint32_t len, int rate, int volume, int loops);
+extern void AudioSDL_PcmPlay16(int voice, const int16_t *data, uint32_t len, int rate, int volume, int loops);
 extern void AudioSDL_PcmVolume(int voice, int volume);
 extern void AudioSDL_PcmStop(int voice);
 extern int  AudioSDL_PcmPlaying(int voice);
@@ -82,6 +89,48 @@ static uint32_t rnd(void)
     return s.rnd >> 16;
 }
 
+/* ---- your own commentary ----
+ *
+ * SWOS 2020's arrangement: a folder per category under sound_dos/commentary/ (or
+ * [audio] commentary_dir), any number of files in each, of any length -- .raw (the PC
+ * game's own format: unsigned 8-bit mono, 22,050 Hz), .wav or .mp3. A category with
+ * files in its folder is spoken from them; one without keeps the PC game's lines.
+ * "_x3" or "-x3" at the end of a name makes that file three times as likely.
+ * The names are SWOS 2020's, so a pack made for it drops in. */
+enum { C_CORNER, C_DIRTY_TACKLE, C_END_GAME_ROUT, C_END_GAME_SENSATIONAL, C_END_GAME_SO_CLOSE,
+       C_FREE_KICK, C_GOAL, C_GOOD_PLAY, C_GOOD_TACKLE, C_HEADER, C_HIT_BAR, C_HIT_POST, C_INJURY,
+       C_KEEPER_CLAIMED, C_KEEPER_SAVED, C_NEAR_MISS, C_OWN_GOAL, C_PENALTY, C_PENALTY_MISSED,
+       C_PENALTY_SAVED, C_PENALTY_SCORED, C_RED_CARD, C_SUBSTITUTION, C_TACTIC_CHANGED, C_THROW_IN,
+       C_YELLOW_CARD, CATEGORIES };
+
+static const char *const k_category[CATEGORIES] = {
+    "corner", "dirty_tackle", "end_game_rout", "end_game_sensational", "end_game_so_close",
+    "free_kick", "goal", "good_play", "good_tackle", "header", "hit_bar", "hit_post", "injury",
+    "keeper_claimed", "keeper_saved", "near_miss", "own_goal", "penalty", "penalty_missed",
+    "penalty_saved", "penalty_scored", "red_card", "substitution", "tactic_changed", "throw_in",
+    "yellow_card",
+};
+
+#define CUSTOM_PER_CATEGORY 64
+#define CUSTOM_MAX_BYTES    (96u * 1024u * 1024u)   /* of decoded sound, all categories together */
+
+typedef struct {
+    void    *data;              /* uint8_t (.raw) or int16_t samples, mono */
+    uint32_t frames;
+    int32_t  rate;
+    int32_t  is16;
+    int32_t  chance;
+} CustomLine;
+
+static struct {
+    CustomLine   line[CUSTOM_PER_CATEGORY];
+    volatile int count;         /* set last: the game reads it while the loader works */
+    int32_t      total;         /* of the chances */
+    int32_t      last;
+} s_custom[CATEGORIES];
+static char     s_customDir[512];
+static uint32_t s_customBytes;
+
 /* ---- files ---- */
 
 static int32_t file_load(int32_t id)
@@ -115,11 +164,188 @@ static int32_t file_load(int32_t id)
     return s_file[id].data != NULL;
 }
 
+static uint8_t *slurp(const char *path, uint32_t *len)
+{
+    FILE *f = fopen(path, "rb");
+    uint8_t *data = NULL;
+    int32_t size;
+
+    if (!f)
+        return NULL;
+    fseek(f, 0, SEEK_END);
+    size = (int32_t)ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (size > 0 && size < 32 * 1024 * 1024) {
+        data = (uint8_t *)malloc((size_t)size);
+        if (data && fread(data, 1, (size_t)size, f) != (size_t)size) {
+            free(data);
+            data = NULL;
+        }
+    }
+    fclose(f);
+    if (data)
+        *len = (uint32_t)size;
+    return data;
+}
+
+static int32_t ends_with(const char *name, const char *ext)
+{
+    size_t n = strlen(name), e = strlen(ext);
+    return n > e && SDL_strcasecmp(name + n - e, ext) == 0;
+}
+
+/* SWOS 2020's rule: "..._x3.wav" or "...-x3.wav" is three times as likely as a plain name. */
+static int32_t chance_of(const char *name)
+{
+    const char *dot = strrchr(name, '.'), *p;
+    int32_t value = 0, power = 1;
+
+    if (!dot || dot - name < 4)
+        return 1;
+    for (p = dot - 1; p > name && *p >= '0' && *p <= '9'; p--) {
+        value += (*p - '0') * power;
+        power *= 10;
+    }
+    if (p == dot - 1 || p - name < 2 || *p != 'x' || (p[-1] != '_' && p[-1] != '-'))
+        return 1;
+    return value < 1 ? 1 : value > 100 ? 100 : value;
+}
+
+/* One file of a category's folder, decoded to mono. 0 when it is not sound we can play. */
+static int32_t custom_load(const char *path, CustomLine *out)
+{
+    uint32_t len = 0;
+
+    memset(out, 0, sizeof *out);
+    if (ends_with(path, ".raw")) {
+        out->data = slurp(path, &len);
+        out->frames = len;
+        out->rate = RATE;
+    } else if (ends_with(path, ".wav")) {
+        SDL_AudioSpec spec;
+        Uint8 *wav = NULL;
+        Uint32 wavLen = 0;
+        SDL_AudioCVT cvt;
+        if (!SDL_LoadWAV(path, &spec, &wav, &wavLen))
+            return 0;
+        if (SDL_BuildAudioCVT(&cvt, spec.format, spec.channels, spec.freq, AUDIO_S16SYS, 1, spec.freq) >= 0) {
+            cvt.len = (int)wavLen;
+            cvt.buf = (Uint8 *)malloc((size_t)wavLen * (size_t)(cvt.len_mult > 0 ? cvt.len_mult : 1));
+            if (cvt.buf) {
+                memcpy(cvt.buf, wav, wavLen);
+                if (!cvt.needed || SDL_ConvertAudio(&cvt) == 0) {
+                    out->data = cvt.buf;
+                    out->frames = (uint32_t)(cvt.needed ? cvt.len_cvt : cvt.len) / 2;
+                    out->rate = spec.freq;
+                    out->is16 = 1;
+                } else {
+                    free(cvt.buf);
+                }
+            }
+        }
+        SDL_FreeWAV(wav);
+    } else if (ends_with(path, ".mp3")) {
+        uint8_t *file = slurp(path, &len);
+        drmp3_config cfg;
+        drmp3_uint64 frames = 0;
+        drmp3_int16 *pcm;
+        if (!file)
+            return 0;
+        pcm = drmp3_open_memory_and_read_pcm_frames_s16(file, len, &cfg, &frames, NULL);
+        free(file);
+        if (pcm && frames && cfg.channels >= 1 && cfg.channels <= 2) {
+            int16_t *mono = (int16_t *)malloc((size_t)frames * 2);
+            if (mono) {
+                drmp3_uint64 i;
+                for (i = 0; i < frames; i++)
+                    mono[i] = cfg.channels == 2 ? (int16_t)((pcm[i * 2] + pcm[i * 2 + 1]) / 2) : pcm[i];
+                out->data = mono;
+                out->frames = (uint32_t)frames;
+                out->rate = (int32_t)cfg.sampleRate;
+                out->is16 = 1;
+            }
+        }
+        if (pcm)
+            drmp3_free(pcm, NULL);
+    }
+    if (!out->data || !out->frames || out->rate < 4000) {
+        free(out->data);
+        out->data = NULL;
+        return 0;
+    }
+    out->chance = chance_of(path);
+    return 1;
+}
+
+/* Every category's folder, once, after the PC game's own files. */
+static void custom_scan(void)
+{
+#ifndef SWOS_SWITCH_BUILD
+    char base[1024], dir[1280], path[1600];
+    int32_t c, lines = 0, cats = 0;
+
+    if (s_customDir[0] == '/' || s_customDir[0] == '\\' || (s_customDir[0] && s_customDir[1] == ':'))
+        snprintf(base, sizeof base, "%s", s_customDir);                 /* absolute */
+    else
+        swos_data_path(s_customDir[0] ? s_customDir : "sound_dos/commentary", base, (uint32_t)sizeof base);
+    for (c = 0; c < CATEGORIES; c++) {
+        DIR *d;
+        struct dirent *e;
+        int32_t n = 0, total = 0;
+
+        snprintf(dir, sizeof dir, "%s/%s", base, k_category[c]);
+        d = opendir(dir);
+        if (!d)
+            continue;
+        while ((e = readdir(d)) != NULL && n < CUSTOM_PER_CATEGORY) {
+            CustomLine line;
+            if (e->d_name[0] == '.')
+                continue;
+            snprintf(path, sizeof path, "%s/%s", dir, e->d_name);
+            if (!ends_with(path, ".raw") && !ends_with(path, ".wav") && !ends_with(path, ".mp3")) {
+                if (!ends_with(path, ".txt"))
+                    fprintf(stderr, "[sound] commentary/%s/%s: not .raw, .wav or .mp3 -- left out\n",
+                            k_category[c], e->d_name);
+                continue;
+            }
+            if (!custom_load(path, &line)) {
+                fprintf(stderr, "[sound] commentary/%s/%s could not be read\n", k_category[c], e->d_name);
+                continue;
+            }
+            s_customBytes += line.frames * (line.is16 ? 2u : 1u);
+            if (s_customBytes > CUSTOM_MAX_BYTES) {
+                fprintf(stderr, "[sound] commentary: more than %u MB of sound; the rest is left out\n",
+                        CUSTOM_MAX_BYTES >> 20);
+                free(line.data);
+                closedir(d);
+                goto done;
+            }
+            s_custom[c].line[n++] = line;
+            total += line.chance;
+        }
+        closedir(d);
+        s_custom[c].total = total;
+        s_custom[c].last = -1;
+        s_custom[c].count = n;
+        if (n) {
+            lines += n;
+            cats++;
+        }
+    }
+done:
+    if (lines)
+        fprintf(stderr, "[sound] your commentary: %d files in %d of %d categories (%s)\n", lines, cats,
+                CATEGORIES, base);
+#endif
+}
+
 /* All 156 files, 9 MB, read on a thread of their own from the moment the PC sounds are
  * asked for -- never at kick-off. Read there, they held the first frame of a match back
  * by as long as the disk took: an online match timed out before it began, and the
  * replay rig's first frame came out different (its clock runs in real time). A sound
  * whose file has not arrived yet is not played. */
+static void custom_scan(void);
+
 static int load_all(void *unused)
 {
     int32_t i, got = 0;
@@ -128,6 +354,7 @@ static int load_all(void *unused)
         got += file_load(i);
     s_loadGot = got;
     s_loadDone = 1;
+    custom_scan();
     return 0;
 }
 
@@ -183,10 +410,46 @@ static int32_t commentary_on(void)
 
 /* PlayCommentarySample: a line of an (offset, size) table, never the last one played
  * from it. It replaces the line being spoken. */
-static void comment(const uint8_t *table, int32_t mask, int32_t slot)
+/* A line of the category's folder, by its files' chances, never the one just played
+ * from it. 0 when the folder has none: the PC game's lines are used. */
+static int32_t custom(int32_t cat)
+{
+    int32_t n = s_custom[cat].count, roll, i;
+    const CustomLine *line;
+
+    if (n <= 0)
+        return 0;
+    roll = (int32_t)(rnd() % (uint32_t)s_custom[cat].total);
+    for (i = 0; i < n - 1; i++) {
+        roll -= s_custom[cat].line[i].chance;
+        if (roll < 0)
+            break;
+    }
+    if (i == s_custom[cat].last && n > 1)
+        i = (i + 1) % n;
+    s_custom[cat].last = i;
+    line = &s_custom[cat].line[i];
+    if (trace_on())
+        fprintf(stderr, "[dos-sound] voice %d: commentary/%s, file %d of %d\n", VOICE_COMMENT, k_category[cat], i + 1, n);
+    if (line->is16)
+        AudioSDL_PcmPlay16(VOICE_COMMENT, (const int16_t *)line->data, line->frames, line->rate, 127, 0);
+    else
+        AudioSDL_PcmPlay(VOICE_COMMENT, (const uint8_t *)line->data, line->frames, line->rate, 127, 0);
+    return 1;
+}
+
+/* A category that has only a folder: SWOS 2020's header and injury lines, and the
+ * "so close" line the PC game never reaches. */
+static void comment_custom(int32_t cat)
+{
+    if (commentary_on())
+        custom(cat);
+}
+
+static void comment(int32_t cat, const uint8_t *table, int32_t mask, int32_t slot)
 {
     int32_t pick;
-    if (!commentary_on())
+    if (!commentary_on() || custom(cat))
         return;
     pick = (int32_t)rnd() & mask;
     if (pick == s.last[slot])
@@ -196,9 +459,9 @@ static void comment(const uint8_t *table, int32_t mask, int32_t slot)
 }
 
 /* PlaySampleFromTable and its two relatives: a file of a table of names. */
-static void comment_file(const uint8_t *table, int32_t mask)
+static void comment_file(int32_t cat, const uint8_t *table, int32_t mask)
 {
-    if (!commentary_on())
+    if (!commentary_on() || custom(cat))
         return;
     play(VOICE_COMMENT, table[(int32_t)rnd() & mask], 127, 0);
 }
@@ -209,19 +472,19 @@ enum { L_GOAL, L_SAVED, L_OWN_GOAL, L_NEAR_MISS, L_POST, L_BAR, L_CLAIMED, L_TAC
 static void penalty_goal(void)
 {
     s.performingPenalty = 0;
-    comment(k_dos_penaltyGoalSamples, 3, L_PEN_GOAL);
+    comment(C_PENALTY_SCORED, k_dos_penaltyGoalSamples, 3, L_PEN_GOAL);
 }
 
 static void penalty_missed(void)
 {
     s.performingPenalty = 0;
-    comment(k_dos_missedPenaltySamples, 3, L_PEN_MISSED);
+    comment(C_PENALTY_MISSED, k_dos_missedPenaltySamples, 3, L_PEN_MISSED);
 }
 
 static void penalty_saved(void)
 {
     s.performingPenalty = 0;
-    comment(k_dos_savedPenaltySamples, 3, L_PEN_SAVED);
+    comment(C_PENALTY_SAVED, k_dos_savedPenaltySamples, 3, L_PEN_SAVED);
 }
 
 /* ---- chants ---- */
@@ -370,23 +633,23 @@ static void tick(uint16_t arg)
 {
     chant_tick();
     if (due(&s.yellowTimer))
-        comment_file(k_dos_yellowCardSamplesTable, 15);
+        comment_file(C_YELLOW_CARD, k_dos_yellowCardSamplesTable, 15);
     else if (due(&s.redTimer))
-        comment_file(k_dos_redCardSamplesTable, 15);
+        comment_file(C_RED_CARD, k_dos_redCardSamplesTable, 15);
     else if (due(&s.goodPassTimer)) {
         if (!AudioSDL_PcmPlaying(VOICE_COMMENT))        /* never over another line */
-            comment(k_dos_goodPassSamples, 3, L_PASS);
+            comment(C_GOOD_PLAY, k_dos_goodPassSamples, 3, L_PASS);
     } else if (due(&s.deletedTimer))
         ;
     else if (due(&s.throwInTimer))
-        comment_file(k_dos_throwInSamplesTable, 7);
+        comment_file(C_THROW_IN, k_dos_throwInSamplesTable, 7);
     else if (due(&s.cornerTimer)) {
         if (!(arg & 1))                                 /* not in a shoot-out */
-            comment_file(k_dos_cornerSamplesTable, 7);
+            comment_file(C_CORNER, k_dos_cornerSamplesTable, 7);
     } else if (due(&s.substituteTimer))
-        comment_file(k_dos_playerSubstitutedSamplesTable, 7);
+        comment_file(C_SUBSTITUTION, k_dos_playerSubstitutedSamplesTable, 7);
     else if (due(&s.tacticsTimer))
-        comment_file(k_dos_tacticsChangeSamplesTable, 7);
+        comment_file(C_TACTIC_CHANGED, k_dos_tacticsChangeSamplesTable, 7);
 }
 
 /* LoadAndPlayEndGameComment. */
@@ -397,12 +660,15 @@ static void game_over(int32_t goals1, int32_t goals2)
     if (!s_training && s_full)
         play(VOICE_REACTION, k_dosEndGameCrowd[goals1 == goals2 ? 2 : goals2 < goals1 ? 0 : 1], 127, 0);
     if (diff >= 3)
-        comment_file(k_dos_completeRoutSamplesTable, 7);
+        comment_file(C_END_GAME_ROUT, k_dos_completeRoutSamplesTable, 7);
     /* The PC game means to say "so close" after a draw, and never does: its test
      * for a difference of 0 follows a jump taken for every difference of 0 or more
-     * (swos.asm, LoadAndPlayEndGameComment, "this jump is never taken"). Kept. */
+     * (swos.asm, LoadAndPlayEndGameComment, "this jump is never taken"). Kept for
+     * its own lines; a commentary folder's end_game_so_close is spoken, as SWOS 2020's is. */
+    else if (diff == 0 && s_custom[C_END_GAME_SO_CLOSE].count > 0)
+        comment_custom(C_END_GAME_SO_CLOSE);
     else if (goals1 + goals2 >= 4)
-        comment_file(k_dos_sensationalGameSamplesTable, 7);
+        comment_file(C_END_GAME_SENSATIONAL, k_dos_sensationalGameSamplesTable, 7);
 }
 
 void DosSound_Event(uint8_t event, uint16_t arg)
@@ -442,39 +708,39 @@ void DosSound_Event(uint8_t event, uint16_t arg)
         if (s.performingPenalty || (arg & 1))
             penalty_goal();
         else
-            comment(k_dos_goalSamples, 7, L_GOAL);
+            comment(C_GOAL, k_dos_goalSamples, 7, L_GOAL);
         break;
-    case DOS_EV_OWN_GOAL:       comment(k_dos_ownGoalSamples, 7, L_OWN_GOAL); break;
+    case DOS_EV_OWN_GOAL:       comment(C_OWN_GOAL, k_dos_ownGoalSamples, 7, L_OWN_GOAL); break;
     case DOS_EV_NEAR_MISS:
         if (s.performingPenalty || (arg & 1))
             penalty_missed();
         else
-            comment(k_dos_nearMissesSamples, 3, L_NEAR_MISS);
+            comment(C_NEAR_MISS, k_dos_nearMissesSamples, 3, L_NEAR_MISS);
         break;
     case DOS_EV_KEEPER_SAVED:
         if (s.performingPenalty || (arg & 1))
             penalty_saved();
         else
-            comment(k_dos_goalkeeperSavedSamples, 7, L_SAVED);
+            comment(C_KEEPER_SAVED, k_dos_goalkeeperSavedSamples, 7, L_SAVED);
         break;
-    case DOS_EV_KEEPER_CLAIMED: comment(k_dos_keeperClaimedSamples, 7, L_CLAIMED); break;
+    case DOS_EV_KEEPER_CLAIMED: comment(C_KEEPER_CLAIMED, k_dos_keeperClaimedSamples, 7, L_CLAIMED); break;
     case DOS_EV_WOODWORK:
         /* UpdateBall: half the time the post line; the other half the bar line,
          * unless the game's flag says post. */
         if (!(rnd() & 1) || arg)
-            comment(k_dos_postHitSamples, 7, L_POST);
+            comment(C_HIT_POST, k_dos_postHitSamples, 7, L_POST);
         else
-            comment(k_dos_barHitSamples, 1, L_BAR);
+            comment(C_HIT_BAR, k_dos_barHitSamples, 1, L_BAR);
         break;
     case DOS_EV_PENALTY:
         s.performingPenalty = 1;
-        comment(k_dos_itsPenaltySamples, 3, L_PENALTY);
+        comment(C_PENALTY, k_dos_itsPenaltySamples, 3, L_PENALTY);
         break;
-    case DOS_EV_FOUL:           comment(k_dos_foulSamples, 7, L_FOUL); break;
-    case DOS_EV_DANGEROUS_PLAY: comment(k_dos_dangerousPlaySamples, 3, L_DANGEROUS); break;
+    case DOS_EV_FOUL:           comment(C_FREE_KICK, k_dos_foulSamples, 7, L_FOUL); break;
+    case DOS_EV_DANGEROUS_PLAY: comment(C_DIRTY_TACKLE, k_dos_dangerousPlaySamples, 3, L_DANGEROUS); break;
     case DOS_EV_GOOD_TACKLE:
         if (!AudioSDL_PcmPlaying(VOICE_COMMENT))
-            comment(k_dos_goodTackleSamples, 3, L_TACKLE);
+            comment(C_GOOD_TACKLE, k_dos_goodTackleSamples, 3, L_TACKLE);
         break;
     case DOS_EV_PASS:
         /* EnqueuPlayingGoodPassSample: any pass drops a waiting line; the fifth asks for one. */
@@ -490,6 +756,15 @@ void DosSound_Event(uint8_t event, uint16_t arg)
     case DOS_EV_RED_CARD:       s.redTimer = 100; break;
     case DOS_EV_SUBSTITUTION:   s.substituteTimer = 70; break;
     case DOS_EV_TACTICS:        s.tacticsTimer = 70; break;
+    case DOS_EV_HEADER:
+        /* SWOS 2020: a header by a human's player, and never over another line. */
+        if (arg && !AudioSDL_PcmPlaying(VOICE_COMMENT))
+            comment_custom(C_HEADER);
+        break;
+    case DOS_EV_INJURY:
+        if (arg)
+            comment_custom(C_INJURY);
+        break;
     case DOS_EV_SCORE:          result_chant(arg >> 8, arg & 0xFF); break;
     case DOS_EV_GAME_OVER:      game_over(arg >> 8, arg & 0xFF); break;
     default: break;
@@ -521,6 +796,11 @@ void DosSound_SetStyle(int32_t pc)
 int32_t DosSound_Style(void)
 {
     return s_style;
+}
+
+void DosSound_SetCommentaryDir(const char *dir)
+{
+    snprintf(s_customDir, sizeof s_customDir, "%s", dir ? dir : "");
 }
 
 void DosSound_SetCommentary(int32_t on)

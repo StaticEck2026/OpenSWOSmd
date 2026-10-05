@@ -111,6 +111,10 @@ writes one zip of both logs and both HOW WAS THE MATCH? answers (`src/match_repo
 docs/NETPLAY_REPORT.md): kept in `save/netplay/` and sent to the server's `--reports DIR` —
 unless SEND MATCH REPORTS (`[netplay] reports`, on in tester builds) is off. Run
 `REPORTS=1 RELAY=0 scripts/relay_test.sh` after touching it, the rating screen, or the lobby's end.
+The two players SHARE the frames played on a guess (docs/NETPLAY_BALANCE.md, `balance_*` in
+`src/netplay_match.c`, `[netplay] balance`, on by default): each sends its average lag once a
+second by GGPO-X's chat and the one guessing more waits a quarter of the difference -- wall time
+only. `SWOS_LIVE_NO_BALANCE=1` for comparing; the doc has the lopsided-link test command.
 "Ghosting" (players running through each other online) has its own doc, docs/NETPLAY_GHOSTING.md:
 every match records each frame as drawn and as played (`src/netplay_ghost.c`), logs `[ghost]`
 lines, keeps windows around the worst detected events for the report zip, and
@@ -528,6 +532,9 @@ Nothing is duplicated under `uae/` any more.
   EVENTS (`DOS_SOUND(event, arg)`, `include/dos_sound.h`) through the sound gate -- recorded, and
   held back on a re-simulated frame, whatever the style -- and `src/dos_sound.c` owns everything
   after that; none of it is match state. `--dos-sound-selftest` checks the files and tables.
+  A player's own commentary is a folder per category under `sound_dos/commentary/` (SWOS 2020's
+  names; `.wav`/`.mp3`/`.raw`, any length; `[audio] commentary_dir`), per category in place of the
+  PC game's lines.
   `[audio] music = pc` plays the PC menu music, `menu.xmi` with `sample.ad`, through our own
   player (`src/dos_music.c`: XMI reader, Miles timbre reader, 18-voice driver) on the
   public-domain Opal chip (`third_party/opal`) with the MIT Miles arithmetic

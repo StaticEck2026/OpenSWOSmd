@@ -87,7 +87,8 @@ static int               s_ovl_pos = -1;
  * 12 dB under the chip's full level, and the whole song peaks near 800 of 32768. */
 #define PC_MUSIC_GAIN (24 * 256)
 typedef struct {
-    const uint8_t *data;        /* NULL: idle */
+    const uint8_t *data;        /* NULL: idle. Signed 16-bit samples when is16 */
+    int            is16;
     uint32_t       len;         /* samples */
     uint64_t       pos;         /* 48.16, in source samples */
     uint32_t       step;        /* 16.16 source samples per device frame */
@@ -352,10 +353,16 @@ void AudioSDL_Tick(void)
                     if (at >= pv->len) { pv->pos = 0; at = 0; }
                 }
                 {
-                    const int a = (int)pv->data[at] - 128;
-                    const int b = (int)pv->data[at + 1 < pv->len ? at + 1 : at] - 128;
+                    const uint32_t at1 = at + 1 < pv->len ? at + 1 : at;
                     const int frac = (int)(pv->pos & 0xFFFF);
-                    const int smp = a * 256 + (b - a) * frac / 256;         /* 16-bit */
+                    int smp;                                                /* 16-bit */
+                    if (pv->is16) {
+                        const int16_t *d16 = (const int16_t *)(const void *)pv->data;
+                        smp = d16[at] + (int)(((int64_t)(d16[at1] - d16[at]) * frac) >> 16);
+                    } else {
+                        const int a = (int)pv->data[at] - 128, b = (int)pv->data[at1] - 128;
+                        smp = a * 256 + (b - a) * frac / 256;
+                    }
                     const int add = (int)((int64_t)smp * gain / (127 * 64 * 64));
                     int l = (int)s_out_buf[i * 2] + add, r = (int)s_out_buf[i * 2 + 1] + add;
                     if (l < -32768) l = -32768; else if (l > 32767) l = 32767;
@@ -643,10 +650,23 @@ void AudioSDL_PlayOverlaySample(void)
 
 /* Start `len` unsigned 8-bit mono samples at `rate` Hz on a voice, replacing what it
  * was playing. `loops` more plays follow the first; -1 repeats until stopped. */
+static void pcm_play(int voice, const uint8_t *data, int is16, uint32_t len, int rate, int volume, int loops);
+
 void AudioSDL_PcmPlay(int voice, const uint8_t *data, uint32_t len, int rate, int volume, int loops)
 {
+    pcm_play(voice, data, 0, len, rate, volume, loops);
+}
+
+/* The same for `len` signed 16-bit mono samples (a commentary file of the player's own). */
+void AudioSDL_PcmPlay16(int voice, const int16_t *data, uint32_t len, int rate, int volume, int loops)
+{
+    pcm_play(voice, (const uint8_t *)(const void *)data, 1, len, rate, volume, loops);
+}
+
+static void pcm_play(int voice, const uint8_t *data, int is16, uint32_t len, int rate, int volume, int loops)
+{
 #if SWOS_AUDIO_DISABLED
-    (void)voice; (void)data; (void)len; (void)rate; (void)volume; (void)loops;
+    (void)voice; (void)data; (void)is16; (void)len; (void)rate; (void)volume; (void)loops;
     return;
 #endif
     if (voice < 0 || voice >= PCM_VOICES || !s_audio_dev || !s_mtx)
@@ -660,6 +680,7 @@ void AudioSDL_PcmPlay(int voice, const uint8_t *data, uint32_t len, int rate, in
         s_pcm[voice].step = (uint32_t)(((uint64_t)rate << 16) / (uint32_t)freq);
         s_pcm[voice].loops = loops;
         s_pcm[voice].volume = volume < 0 ? 0 : volume > 127 ? 127 : volume;
+        s_pcm[voice].is16 = is16;
         s_pcm[voice].data = data;
     }
     SDL_UnlockMutex(s_mtx);

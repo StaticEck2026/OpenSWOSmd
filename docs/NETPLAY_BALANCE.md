@@ -1,9 +1,63 @@
-# NETPLAY_BALANCE.md — sharing the guessing between the two players (parked)
+# NETPLAY_BALANCE.md — sharing the guessing between the two players
 
-> **Status (2026-09-30): investigated and prototyped, then rolled back — parked for later.**
-> A prototype worked on average but swung between the players every 10–20 s; it was not
-> worth delaying a tester drop for. This is everything needed to pick it up again. Nothing
-> of it is in the code.
+> **Status (2026-10-05): built, on by default.** `[netplay] balance = false` (or
+> `SWOS_LIVE_NO_BALANCE=1`) turns it off. It is `balance_*` in `src/netplay_match.c`.
+> The first prototype (2026-09-30, below) balanced on average but swung between the players
+> every 10-20 s and was rolled back; "What was built" says what is different. Not yet
+> played between two real machines.
+
+## What was built
+
+Each peer knows its own lag exactly (it is what PRED records), so the two tell each other
+and the one guessing more waits a little. Only wall time changes; the simulation, the
+rollback state and the recordings are untouched.
+
+- **Measure.** At every frame's first play this peer's lag (capped at 15) goes into a
+  512-frame history.
+- **Report.** Every 50 frames (a second) it sends the average over the last 90 frames by
+  GGPO-X's chat (`Netplay_Chat`): `SWLAG <last frame of the window> <hundredths>`. Chat is
+  keyed like every packet and not resent, which suits a figure sent again every second.
+- **Compare like with like.** On the other's report a peer compares it with its OWN average
+  over the SAME 90 frames, waiting until it has played them if it has not yet. The
+  prototype compared windows a period apart, which is what made the two peers believe in
+  turn that they were ahead.
+- **Act.** When this peer guesses more by 0.6 of a frame, it waits a quarter of the
+  difference, spread over the next 50 frames (waiting a quarter of a frame takes a quarter
+  off its lag and adds a quarter to the other's: the difference halves), and learns an
+  eighth of that as a standing slowdown. The other peer does nothing; when it is the one
+  guessing more, any standing slowdown here eases off.
+- **Then wait for a clean window.** No new correction until a report whose 90 frames were
+  all played after the last correction was complete. Lag is whole frames -- 2/0, 1/1 or
+  0/2 on a link a frame apart -- and a correction shows in the average only once the
+  window has moved past it. Without this rule the second version walked from 2/0 through
+  1/1 to 0/2 and back every eight seconds.
+- **GGPO's time sync** is not acted on while the other's reports are fresh (under 6 s old)
+  and its figure is under a frame and a half: it assumes the two directions take the same
+  time, so on a lopsided route it pulls the other way. Past a frame and a half it is one
+  machine running away from the other, and the time sync closes that as before. With no
+  reports -- an older build, or balance off at the other end -- it is the time sync alone.
+
+### Measured (2026-10-05)
+
+The lopsided link of "What the tests showed" (the host's outgoing packets 100 ms late, 4,000
+frames, both chasing the ball), each player's lag from the host's `.SRP`, from frame 1000:
+
+| | P1 lag | P2 lag | per 2 s |
+|---|---|---|---|
+| balance off | 1.58 | 1.01 | 2.0/0.1 for 32 s, then 0.6/4.4, 0.0/6.1, ... 3.6/0.0, 4.0/0.0, ... 0.0/3.0 |
+| balance on | 1.00 | 1.07 | 1.0/1.1 or 1.0/1.0 in 28 of 30 slices (0.6/1.6 and 1.5/0.6 the other two) |
+
+Three or four corrections a peer in 80 seconds, 0.1 to 0.2 s of waiting in all.
+
+Other cases, `scripts/netplay_lobby_test.sh`, 3,000 frames, re-simulated frames host / joiner:
+
+| | off | on |
+|---|---|---|
+| an even local link | 277 / 196 | 241 / 72 |
+| the joiner's clock 2% slow | 162 / 311 | 124 / 349 |
+
+Still to do: a match between two real machines, and the testers' word on whether the
+player who used to guess more notices.
 
 ## The problem
 
@@ -58,7 +112,7 @@ negative advantage wraps.)
 usually invisible. The timeline looks lopsided because the whole shortfall lands on one
 player at a time instead of being shared. Sharing it is fairness, not fewer rollbacks.
 
-## The prototype (rolled back)
+## The first prototype (2026-09-30, rolled back)
 
 Each peer knows its own lag exactly (it is what PRED records). So:
 
@@ -200,7 +254,7 @@ What that means for us:
   - Catching up by **running frames unshown** is cheap in an emulator. Ours would do it by
     shortening the frame limiter's next waits (`Platform_DelayNextFrame` with a credit), not by
     skipping presents, so the picture stays smooth.
-- **So, for the next attempt:** our lag signal, Fightcade's controller. Per frame, each peer
+- **So, for the next attempt (which is "What was built", above):** our lag signal, Fightcade's controller. Per frame, each peer
   keeps a 90-frame rolling average of its own lag; it sends the average every second (chat
   `SWLAG`, tagged with the frame it ends at); on receiving the other's, it compares it with
   its OWN average ending at the same frame; if `|mine - theirs| / 2` is over one frame, the

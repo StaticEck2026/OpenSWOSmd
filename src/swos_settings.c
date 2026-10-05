@@ -135,6 +135,8 @@ static int handler(void *user, const char *section,
             if      (eqi(value, "amiga")) opts->sound_style = 0;
             else if (eqi(value, "pc") || eqi(value, "dos")) opts->sound_style = 1;
         }
+        else if (eqi(name, "commentary_dir"))
+            snprintf(opts->commentary_dir, sizeof opts->commentary_dir, "%s", value);
         else if (eqi(name, "menu_music")) {
             if      (eqi(value, "midi")) opts->menu_recording = 0;
             else if (eqi(value, "mp3"))  opts->menu_recording = 1;
@@ -176,6 +178,10 @@ static int handler(void *user, const char *section,
             int b;
             if (parse_bool(value, &b))
                 opts->reports = b;
+        } else if (eqi(name, "balance")) {
+            int b;
+            if (parse_bool(value, &b))
+                opts->netplay_balance = b;
         } else if (eqi(name, "prediction")) {
             int b;
             if (parse_bool(value, &b))
@@ -305,10 +311,13 @@ static const char *crt_mask_str(int m)
     }
 }
 
-/* settings_build() fills a stack array of this size and nothing bounds-checks
- * n, so keep comfortable headroom over the number of entries it appends
- * (36 as of [netplay] record). */
-#define SETTINGS_MAX 49
+/* settings_build() fills a stack array of this size. 50 entries as of [audio] music;
+ * at 49 the four [audio] keys of the PC sounds wrote one entry past the array, and the
+ * next setting saved -- OPTIONS -> GAMEPLAY first of all -- crashed the macOS build,
+ * which checks its stack, and corrupted it quietly everywhere else (2026-10-05). Every
+ * append is bounded now (SETTING), and a full table says so. */
+#define SETTINGS_MAX 96
+#define SETTING(n)  if ((n) < SETTINGS_MAX) items[(n)++]
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
 static const char *section_intro(const char *sec)
@@ -343,18 +352,18 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
      * happily emits a longer line and the READER then reports "parse error at
      * line N" on our own generated file. Cost me one round-trip to notice. */
     int n = 0;
-    items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
-    items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
-    items[n++] = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
-    items[n++] = (IniEntry){ "video",  "scaling",    "; scaling: sharp | smooth. A fullscreen scale is rarely a whole number (1080/272 = 3.97), so a plain nearest copy makes some pixels bigger than others. smooth evens them", opts->scaling_smooth ? "smooth" : "sharp" };
-    items[n++] = (IniEntry){ "video",  "crt_mask",   "; crt_mask: off | aperture | slot | scanlines. Synthetic CRT shadow-mask drawn over the finished frame. Costs one full-screen draw however many effects are on", crt_mask_str(opts->crt_mask) };
-    items[n++] = (IniEntry){ "video",  "crt_mask_strength", "; crt_mask_strength: 0-100. How dark the grille's off-phase gets. 0 = invisible, 100 = black between phosphors", vbuf[4] };
-    items[n++] = (IniEntry){ "video",  "crt_vignette", "; crt_vignette: 0-100. Darkens towards the corners like a tube's edges. 0 = off", vbuf[5] };
-    items[n++] = (IniEntry){ "video",  "crt_corners", "; crt_corners: 0-100. Rounded-glass corner size. 0 = square screen", vbuf[6] };
-    items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
-    items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
-    items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
-    items[n++] = (IniEntry){ "video",  "widescreen",
+    SETTING(n) = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
+    SETTING(n) = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
+    SETTING(n) = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
+    SETTING(n) = (IniEntry){ "video",  "scaling",    "; scaling: sharp | smooth. A fullscreen scale is rarely a whole number (1080/272 = 3.97), so a plain nearest copy makes some pixels bigger than others. smooth evens them", opts->scaling_smooth ? "smooth" : "sharp" };
+    SETTING(n) = (IniEntry){ "video",  "crt_mask",   "; crt_mask: off | aperture | slot | scanlines. Synthetic CRT shadow-mask drawn over the finished frame. Costs one full-screen draw however many effects are on", crt_mask_str(opts->crt_mask) };
+    SETTING(n) = (IniEntry){ "video",  "crt_mask_strength", "; crt_mask_strength: 0-100. How dark the grille's off-phase gets. 0 = invisible, 100 = black between phosphors", vbuf[4] };
+    SETTING(n) = (IniEntry){ "video",  "crt_vignette", "; crt_vignette: 0-100. Darkens towards the corners like a tube's edges. 0 = off", vbuf[5] };
+    SETTING(n) = (IniEntry){ "video",  "crt_corners", "; crt_corners: 0-100. Rounded-glass corner size. 0 = square screen", vbuf[6] };
+    SETTING(n) = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
+    SETTING(n) = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
+    SETTING(n) = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
+    SETTING(n) = (IniEntry){ "video",  "widescreen",
         "; widescreen: true | false | stretch. true fills the display's shape, showing\n"
         "; more of the pitch at the sides; false draws the view's own width -- 336 the\n"
         "; Amiga way, 320 the DOS way -- with bars; stretch draws that same picture\n"
@@ -362,29 +371,35 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; simulation sees a fixed view, so the extra columns are margin it cannot use.\n",
         opts->widescreen == 2 ? "stretch" : opts->widescreen ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render ASPECT, or 'auto' for the desktop.\n; It is not the render SIZE: the picture is always 272 lines tall and 336..672 wide,\n; so a wider shape shows more pitch and a small one (320x200) just clamps to 336x272", vbuf[0] };
-    items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
-    items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
-    items[n++] = (IniEntry){ "audio",  "style",
+    SETTING(n) = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render ASPECT, or 'auto' for the desktop.\n; It is not the render SIZE: the picture is always 272 lines tall and 336..672 wide,\n; so a wider shape shows more pitch and a small one (320x200) just clamps to 336x272", vbuf[0] };
+    SETTING(n) = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
+    SETTING(n) = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
+    SETTING(n) = (IniEntry){ "audio",  "style",
         "; style: amiga | pc. A match's sounds: the Amiga's, or the PC game's sampled\n"
         "; effects, crowd and chants (sound_dos/). The menus' music is the Amiga's either\n"
         "; way. It changes nothing in a match: online, each player hears their own.\n",
         opts->sound_style ? "pc" : "amiga" };
-    items[n++] = (IniEntry){ "audio",  "music",
+    SETTING(n) = (IniEntry){ "audio",  "music",
         "; music: amiga | pc. The music: the Amiga's, or the PC game's -- the CD\n"
         "; release's title song in the intro, and menu.xmi on an emulated AdLib card with\n"
         "; the game's own instruments in the menus.\n",
         opts->music_style ? "pc" : "amiga" };
-    items[n++] = (IniEntry){ "audio",  "menu_music",
+    SETTING(n) = (IniEntry){ "audio",  "commentary_dir",
+        "; commentary_dir: a folder of your own commentary, one sub-folder per category\n"
+        "; (goal, own_goal, corner, ... -- docs/DOS_SOUND.md), .wav, .mp3 or .raw files of\n"
+        "; any length. Empty: sound_dos/commentary. A category without files keeps the PC\n"
+        "; game's lines.\n",
+        opts->commentary_dir };
+    SETTING(n) = (IniEntry){ "audio",  "menu_music",
         "; menu_music: midi | mp3. With music = pc, the menus' music is the game's\n"
         "; menu.xmi played live on the emulated card (midi), or a recording of it,\n"
         "; sound_dos/menu.mp3 (mp3).\n",
         opts->menu_recording ? "mp3" : "midi" };
-    items[n++] = (IniEntry){ "audio",  "commentary",
+    SETTING(n) = (IniEntry){ "audio",  "commentary",
         "; commentary: auto | true | false. The PC game's commentary. auto (the\n"
         "; default): with style = pc only. true: always, over the Amiga's sounds too.\n",
         opts->commentary == 2 ? "auto" : opts->commentary ? "true" : "false" };
-    items[n++] = (IniEntry){ "gameplay", "fire_hold_lockout",
+    SETTING(n) = (IniEntry){ "gameplay", "fire_hold_lockout",
         "; fire_hold_lockout: true | false — true restores a BUG IN THE ORIGINAL\n"
         "; AMIGA GAME: an OPPONENT's tackle wipes your held fire button's shot charge,\n"
         "; and it cannot restart while the button is down, so holding fire through a\n"
@@ -392,7 +407,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (fixed). Your OWN tackle still spends the press either way — that half is\n"
         "; deliberate in the original. See team_control.c.",
         opts->fire_hold_lockout ? "true" : "false" };
-    items[n++] = (IniEntry){ "gameplay", "contest_own_ratings",
+    SETTING(n) = (IniEntry){ "gameplay", "contest_own_ratings",
         "; contest_own_ratings: true | false. When two players contest the ball the game\n"
         "; rolls a dice weighted by tackling and ball control. The ORIGINAL rates one of the\n"
         "; two sides by a team-mate (the player with the opponent's line-up number), in both\n"
@@ -402,35 +417,40 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         opts->contest_own_ratings ? "true" : "false" };
 
 
-    items[n++] = (IniEntry){ "gameplay", "style",
+    SETTING(n) = (IniEntry){ "gameplay", "style",
         "; style: amiga | dos. The Amiga release is the definitive one and what this\n"
         "; port is reverse engineered from; dos is the PC release's 70 FPS physics,\n"
         "; timers and formations, and its 320x200 view -- the view is part of how it\n"
         "; plays (what is on screen decides which players the game picks), so the\n"
         "; style sets both. Online, the game plays the HOST's style.\n",
         opts->dos_gameplay ? "dos" : "amiga" };
-    items[n++] = (IniEntry){ "replays", "auto_save",
+    SETTING(n) = (IniEntry){ "replays", "auto_save",
         "; auto_save: true | false — every match is recorded to LATEST.SRP in the save\n"
         "; folder and can be watched from HIGHLIGHTS -> LOAD. true also keeps a dated\n"
         "; copy of each (MMDDHHMM.SRP), so a match is not overwritten by the next one.",
         opts->replay_auto_save ? "true" : "false" };
-    items[n++] = (IniEntry){ "netplay", "matchmaker",
+    SETTING(n) = (IniEntry){ "netplay", "matchmaker",
         "; matchmaker: the server MULTIPLAYER logs in to, as \"host\" or \"host:port\"\n"
         "; (default port 19602). Empty means the public server, us.swos.eu. You can type it\n"
         "; on the login screen instead -- it is saved back here.",
         opts->matchmaker };
-    items[n++] = (IniEntry){ "netplay", "record",
+    SETTING(n) = (IniEntry){ "netplay", "record",
         "; record: stream every live match to a recorder, which keeps it and compares the\n"
         "; two players' frames to catch a desync: \"server\" (the default: the matchmaker\n"
         "; above, for the matches it arranges), a recorder of your own as \"host\" or\n"
         "; \"host:port\" (every match), or \"off\". Empty means the default.",
         opts->record };
-    items[n++] = (IniEntry){ "netplay", "reports",
+    SETTING(n) = (IniEntry){ "netplay", "reports",
         "; reports: true | false -- after an online match, send both players' SWOS.log and\n"
         "; HOW WAS THE MATCH? to the other player and the server, zipped (a copy is kept in\n"
         "; save/netplay either way). false: nothing leaves this machine.",
         opts->reports ? "true" : "false" };
-    items[n++] = (IniEntry){ "netplay", "prediction",
+    SETTING(n) = (IniEntry){ "netplay", "balance",
+        "; balance: true | false -- online, the two players share the frames played on a\n"
+        "; guess of the other's input: the one guessing more waits a little. Timing only;\n"
+        "; false leaves it to the network library's own time sync (docs/NETPLAY_BALANCE.md).\n",
+        opts->netplay_balance ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "netplay", "prediction",
         "; prediction: true | false -- keep what each player SAW of an online match in its\n"
         "; replay: how many of the other player's inputs were guesses on each frame, the\n"
         "; rollbacks, and where players were drawn against where they really were. The\n"
@@ -438,39 +458,39 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         opts->prediction ? "true" : "false" };
 
 
-    items[n++] = (IniEntry){ "graphics", "style",
+    SETTING(n) = (IniEntry){ "graphics", "style",
         "; style: amiga | dos | 2020. Which artwork the pitch, HUD and menus are drawn\n"
         "; from. Gameplay is unaffected -- this is only what it looks like.\n",
         !opts->dos_graphics ? "amiga" :
         (opts->dos_dir[0] && !strcmp(opts->dos_dir, "grafs_2020")) ? "2020" : "dos" };
 
-    items[n++] = (IniEntry){ "graphics", "sprites",
+    SETTING(n) = (IniEntry){ "graphics", "sprites",
         "; sprites: auto | amiga | jaguar. The Atari Jaguar redrew the players at 256\n"
         "; colours -- same animations, more shades (docs/JAGUAR.md). auto is the\n"
         "; built-in default, amiga.\n",
         opts->jag_graphics ? "jaguar" : "amiga" };
 
 
-    items[n++] = (IniEntry){ "graphics", "pitch_maps",
+    SETTING(n) = (IniEntry){ "graphics", "pitch_maps",
         "; pitch_maps: true | false. With style = dos, draw a pitch from its Tile Agent\n"
         "; map (grafs_dos/pitch<N>.tmj) where there is one, and from the game's own files\n"
         "; where there is not (docs/PITCH_MAPS.md). Only the picture: the match itself,\n"
         "; online and in replays, is the same either way.\n",
         opts->pitch_maps ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "graphics", "outfit_shading",
+    SETTING(n) = (IniEntry){ "graphics", "outfit_shading",
         "; outfit_shading: true | false. Shade the kit into four tones per colour, the\n"
         "; way the Jaguar art does. false draws each kit colour flat, exactly as the\n"
         "; 16-colour Amiga game does.\n",
         opts->outfit_shading ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "graphics", "shadow_shading",
+    SETTING(n) = (IniEntry){ "graphics", "shadow_shading",
         "; shadow_shading: true | false. Shade the drop shadow, tinted from the grass of\n"
         "; the pitch being played on. false uses SWOS's own colour 8 -- one near-black\n"
         "; that reads on any pitch, and costs the palette nothing.\n",
         opts->shadow_shading ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "graphics", "hair_shading",
+    SETTING(n) = (IniEntry){ "graphics", "hair_shading",
         "; hair_shading: true | false. Shade hair the game draws in a single colour (a\n"
         "; black head), by shade_step like the kit. false draws it flat, exactly as the\n"
         "; 16-colour Amiga game does. Hair the game shades itself (ginger, blond) is\n"
@@ -480,36 +500,38 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     {
         static char stepBuf[8];
         snprintf(stepBuf, sizeof stepBuf, "%d", opts->shade_step);
-        items[n++] = (IniEntry){ "graphics", "shade_step",
+        SETTING(n) = (IniEntry){ "graphics", "shade_step",
             "; shade_step: 1..5. How far apart the four kit shades are, in sixteenths:\n"
             "; 16, 16-N, 16-2N, 16-3N. The Jaguar's own artwork used about 3, which takes\n"
             "; a near-white sock down to 37.5% and reads as dark grey; 2 keeps it white.\n"
             "; Hair shading uses it too: black hair's highlight is lifted by 3 x N.\n",
             stepBuf };
     }
-    items[n++] = (IniEntry){ "graphics", "kit_art",
+    SETTING(n) = (IniEntry){ "graphics", "kit_art",
         "; kit_art: amiga | jaguar. The shirts, shorts and socks drawn on the UNIFORM\n"
         "; screen: the Amiga's flat drawings, or the Atari Jaguar's shaded ones (shaded by\n"
         "; shade_step, like its sprites). That screen only: it changes nothing in a match,\n"
         "; and does not follow the sprites setting.\n",
         opts->kit_art ? "jaguar" : "amiga" };
-    items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
-    items[n++] = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
-    items[n++] = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };
-    items[n++] = (IniEntry){ "arcade", "golden_goal", NULL, opts->arcade_golden_goal ? "true" : "false" };
-    items[n++] = (IniEntry){ "arcade", "penalties_on_draw", NULL, opts->arcade_penalties ? "true" : "false" };
-    items[n++] = (IniEntry){ "arcade", "goal_replay", NULL, opts->arcade_goal_replay ? "true" : "false" };
-    items[n++] = (IniEntry){ "arcade", "attract_audio",
+    SETTING(n) = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
+    SETTING(n) = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };
+    SETTING(n) = (IniEntry){ "arcade", "golden_goal", NULL, opts->arcade_golden_goal ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "arcade", "penalties_on_draw", NULL, opts->arcade_penalties ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "arcade", "goal_replay", NULL, opts->arcade_goal_replay ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "arcade", "attract_audio",
         "; attract_audio: music (HERO only) | sfx (reel crowd only) | music+sfx (both, default)",
         opts->arcade_attract_audio == 2 ? "music+sfx" : opts->arcade_attract_audio == 1 ? "sfx" : "music" };
-    items[n++] = (IniEntry){ "arcade", "gameplay",   "; gameplay: amiga (50fps feel) | dos (70fps). Picks attract_mode/<mode> reels too", opts->arcade_gameplay ? "dos" : "amiga" };
-    items[n++] = (IniEntry){ "arcade", "key_p1_credit", "; cabinet key bindings (SDL key names; MAME layout 5/6 = coin P1/P2, 1/2 = start, F2 = service)", opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5" };
-    items[n++] = (IniEntry){ "arcade", "key_p1_start", NULL, opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1" };
-    items[n++] = (IniEntry){ "arcade", "key_p2_credit", NULL, opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6" };
-    items[n++] = (IniEntry){ "arcade", "key_p2_start", NULL, opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2" };
-    items[n++] = (IniEntry){ "arcade", "key_service", NULL, opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2" };
-    items[n++] = (IniEntry){ "general","language",   "; language: en | de | fr | es | it | nl", opts->language[0] ? opts->language : "en" };
-    items[n++] = (IniEntry){ "general","currency",   "; currency: pound | dollar | euro", opts->currency[0] ? opts->currency : "pound" };
+    SETTING(n) = (IniEntry){ "arcade", "gameplay",   "; gameplay: amiga (50fps feel) | dos (70fps). Picks attract_mode/<mode> reels too", opts->arcade_gameplay ? "dos" : "amiga" };
+    SETTING(n) = (IniEntry){ "arcade", "key_p1_credit", "; cabinet key bindings (SDL key names; MAME layout 5/6 = coin P1/P2, 1/2 = start, F2 = service)", opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5" };
+    SETTING(n) = (IniEntry){ "arcade", "key_p1_start", NULL, opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1" };
+    SETTING(n) = (IniEntry){ "arcade", "key_p2_credit", NULL, opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6" };
+    SETTING(n) = (IniEntry){ "arcade", "key_p2_start", NULL, opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2" };
+    SETTING(n) = (IniEntry){ "arcade", "key_service", NULL, opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2" };
+    SETTING(n) = (IniEntry){ "general","language",   "; language: en | de | fr | es | it | nl", opts->language[0] ? opts->language : "en" };
+    SETTING(n) = (IniEntry){ "general","currency",   "; currency: pound | dollar | euro", opts->currency[0] ? opts->currency : "pound" };
+    if (n >= SETTINGS_MAX)
+        fprintf(stderr, "[settings] the settings table is full (%d): raise SETTINGS_MAX\n", n);
     return n;
 }
 
@@ -629,7 +651,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
                 if (eqi(cur_sec, items[k].section) && eqi(key, items[k].key)) {
                     if (seen[k]) { dirty = 1; break; }  /* duplicate known key -> clean it */
                     seen[k] = 1;
-                    char fileval[64];
+                    char fileval[300];
                     copy_value(eq + 1, fileval, sizeof fileval);
                     if (strcmp(fileval, items[k].value) != 0) dirty = 1;
                     break;
@@ -687,7 +709,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         if (seen[idx]) continue;    /* duplicate of a known key already written -> drop it */
 
         seen[idx] = 1;
-        char fileval[64];
+        char fileval[300];
         copy_value(eq + 1, fileval, sizeof fileval);
         if (strcmp(fileval, items[idx].value) == 0) {
             fputs(ln, out);                                /* unchanged -> verbatim */

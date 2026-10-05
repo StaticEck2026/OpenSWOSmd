@@ -113,6 +113,7 @@ typedef struct {
     int                    shade_step;       /* sixteenths between kit shades: 16, 16-N, 16-2N, 16-3N; hair too */
     int                    kit_art;          /* the UNIFORM screen's kit drawings: 0 = the Amiga's, 1 = the Jaguar's (kit_art.h) */
     int                    sound_style;      /* a match's sounds: 0 = the Amiga's, 1 = the PC game's samples (dos_sound.h) */
+    char                   commentary_dir[260]; /* the folder of commentary categories; "" = sound_dos/commentary */
     int                    menu_recording;   /* with music_style 1: 1 = play sound_dos/menu.mp3, 0 = menu.xmi on the emulated chip */
     int                    music_style;      /* the menus' music: 0 = the Amiga's, 1 = the PC game's menu.xmi (dos_music.h) */
     int                    commentary;       /* the PC game's commentary: 0 off, 1 on (over the Amiga's sounds too), 2 auto = with sound_style 1 */
@@ -131,6 +132,7 @@ typedef struct {
                                               * recorder -- "server" (the matchmaker), "host[:port]",
                                               * or empty/"off". include/match_record.h */
     int                    prediction;       /* [netplay] prediction: PRED/SEEN in a live match's .SRP */
+    int                    netplay_balance;  /* [netplay] balance: the two players share the guessing (docs/NETPLAY_BALANCE.md) */
     int                    reports;          /* [netplay] reports: SEND MATCH REPORTS -- both players'
                                               * logs and ratings to the server after an online
                                               * match. include/match_report.h */

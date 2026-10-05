@@ -292,6 +292,13 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
     return rc;
 }
 
+int32_t Netplay_Chat(NetplaySession *s, const char *text)
+{
+    if (!s || !s->ggpo || !text)
+        return NETPLAY_ERR_UNAVAILABLE;
+    return (int32_t)ggpo_client_chat(s->ggpo, text);
+}
+
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                          int32_t *framesAheadX10)
 {
@@ -731,6 +738,8 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
     *count = 0;
     return NETPLAY_ERR_UNAVAILABLE;
 }
+
+int32_t Netplay_Chat(NetplaySession *s, const char *text) { (void)s; (void)text; return NETPLAY_ERR_UNAVAILABLE; }
 
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                          int32_t *framesAheadX10)

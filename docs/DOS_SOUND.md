@@ -50,6 +50,39 @@ sounds and `SWOS.log` says so.
 The web build does not carry the folder (9 MB more to download), so it always plays the
 Amiga's sounds. The Amiga build has none of this.
 
+## Your own commentary
+
+A folder per category under `sound_dos/commentary/`, any number of `.wav`, `.mp3` or `.raw`
+files in each, of any length (`bin/sound_dos/commentary/README.txt` is the player's guide
+and lists the 26 categories). The arrangement and the category names are SWOS 2020's
+(swos-port's before it), so a pack made for either can be copied in.
+`[audio] commentary_dir` / `--commentary-dir` names another folder, relative to the game's
+data or absolute.
+
+- **Per category.** A category with files is spoken from them; one without keeps the PC
+  game's lines. SWOS 2020 is all or nothing.
+- **Chance.** `_xN` or `-xN` at the end of a file's name makes it N times as likely
+  (SWOS 2020's rule). The file just played from a category is not played again while
+  there is another.
+- **Three categories have only a folder.** `header` and `injury` are SWOS 2020's
+  additions (`DOS_EV_HEADER` at both header hits, `DOS_EV_INJURY` where a tackle injures;
+  for a human's team only; a header line never over another line). `end_game_so_close`
+  is the line the PC game never reaches; with files in its folder a draw gets it, and
+  without, the PC game's behaviour is kept (a draw of four goals or more is
+  "sensational").
+- **Formats.** `.raw` is played as the PC game's files are. `.wav` and `.mp3` are decoded
+  to 16-bit mono at their own rate (`AudioSDL_PcmPlay16`) and resampled by the mixer.
+  `.ogg` and `.flac` are not read; the log names any file left out.
+- **When.** The folders are scanned on the loading thread at start-up, after the PC
+  game's files; a line whose file has not arrived is not spoken. At most 64 files a
+  category and 96 MB of decoded sound.
+- **Not there:** a description file for a pack (a name, per-file settings). The file name
+  carries the one setting there is.
+
+`SWOS_DOS_SOUND_TRACE=1` names each line as it is started (`commentary/<category>, file N
+of M`). Under the replay rig a match is over before the loading thread is: test a pack
+with `--view-replay=<file> --replay-paced`.
+
 ## The music
 
 `[audio] music = pc` (or `--music=pc`; default `amiga`) plays the PC game's menu music in

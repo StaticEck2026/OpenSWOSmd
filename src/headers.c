@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "headers.h"
+#include "dos_sound.h"
 #include "dos_mode.h"      /* _gDosGameplay: the aim-anim tail is Amiga-only */
 
 extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
@@ -221,6 +222,7 @@ apply_dir:
     player->speed = (int16_t)(pSpeed >> 1);
     player->heading = 1;
 
+    DOS_SOUND(DOS_EV_HEADER, team->playerNumber != 0);
     PlayKickSample();
     ResetBothTeamSpinTimers();
 }
@@ -376,6 +378,7 @@ apply_hit:
     /* Mark heading done */
     player->heading = 1;
 
+    DOS_SOUND(DOS_EV_HEADER, team->playerNumber != 0);
     PlayKickSample();
     ResetBothTeamSpinTimers();
 }

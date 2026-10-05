@@ -49,7 +49,12 @@ enum {
     DOS_EV_SUBSTITUTION  = 35,
     DOS_EV_TACTICS       = 36,
     DOS_EV_SCORE         = 37,  /* after a goal. arg: team 1's goals << 8 | team 2's */
-    DOS_EV_GAME_OVER     = 38   /* arg as DOS_EV_SCORE */
+    DOS_EV_GAME_OVER     = 38,  /* arg as DOS_EV_SCORE */
+    /* Not the PC game's: SWOS 2020's two extra commentary categories, heard only from a
+     * commentary folder (docs/DOS_SOUND.md, "Your own commentary"). arg: 1 when the
+     * player's team is a human's. */
+    DOS_EV_HEADER        = 39,
+    DOS_EV_INJURY        = 40
 };
 
 #ifdef SWOS_SDL_BUILD
@@ -66,6 +71,9 @@ void Audio_DosEvent(uint8_t event, uint16_t arg);
 void    DosSound_SetStyle(int32_t pc);
 int32_t DosSound_Style(void);
 void    DosSound_SetCommentary(int32_t on);
+/* [audio] commentary_dir: the folder of commentary categories, relative to the game's
+ * data or absolute. NULL or "" is sound_dos/commentary. Before DosSound_SetStyle. */
+void    DosSound_SetCommentaryDir(const char *dir);
 
 /* The PC's effects, crowd and chants have this match: the Amiga's effects are not
  * started. (Commentary alone, over the Amiga's sound, does not count.) */

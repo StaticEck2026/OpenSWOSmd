@@ -112,6 +112,9 @@ int32_t     Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame);
 int32_t     Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count);
 /* GGPO's view of the link to `remotePlayer`: its round-trip ping in ms, and how many
  * frames this peer is ahead of the other, in tenths (negative = behind). For the log. */
+/* A short text to the other player, by GGPO's own chat: keyed like every packet, and
+ * not resent if lost. It arrives as NETPLAY_EVENT_CHAT. */
+int32_t     Netplay_Chat(NetplaySession *s, const char *text);
 int32_t     Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                              int32_t *framesAheadX10);
 /* Whether a refused call is only to be tried again next tick: the session is not

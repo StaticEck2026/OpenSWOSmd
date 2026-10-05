@@ -258,6 +258,7 @@ PlayerTackled(Sprite *player, TeamGeneralInfo *team)
 
 apply_injury:
     pi->isInjured = 1;
+    DOS_SOUND(DOS_EV_INJURY, team->playerNumber != 0);
 
     /* Only upgrade injury severity, never downgrade */
     if ((uint8_t)severity > (uint8_t)pi->injuriesBitfield) {

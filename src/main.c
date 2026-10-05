@@ -269,6 +269,8 @@ static void print_usage(const char *argv0)
         "  --music=amiga|pc          The music: the Amiga's (default) or the PC game's --\n"
         "                            the CD's title song in the intro, menu.xmi on an\n"
         "                            emulated AdLib card in the menus ([audio] music).\n"
+        "  --commentary-dir=<dir>    A folder of your own commentary, one sub-folder per\n"
+        "                            category ([audio] commentary_dir; docs/DOS_SOUND.md).\n"
         "  --menu-music=midi|mp3     With --music=pc: the menus play menu.xmi live on the\n"
         "                            emulated card (default) or a recording of it,\n"
         "                            sound_dos/menu.mp3 ([audio] menu_music).\n"
@@ -415,6 +417,7 @@ int main(int argc, char **argv)
     opts.sound_style = 0;         /* the Amiga's sounds */
     opts.music_style = 0;         /* the Amiga's menu music */
     opts.menu_recording = 0;      /* with the PC's music: menu.xmi on the emulated chip */
+    opts.commentary_dir[0] = '\0';
     opts.commentary = 2;          /* auto: with the PC's sounds */
     opts.dos_graphics = 0;        /* default Amiga graphics */
     /* ... and not the Jaguar's either, on any build. The browser one played with
@@ -437,6 +440,7 @@ int main(int argc, char **argv)
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
+    opts.netplay_balance = 1;     /* default: the two players share the guessing */
     opts.prediction = 1;          /* default: a live match's replay keeps what each player saw */
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     opts.reports = 1;             /* a tester build: match reports come back to us */
@@ -685,6 +689,8 @@ int main(int argc, char **argv)
             if      (strcmp(v, "amiga") == 0) opts.sound_style = 0;
             else if (strcmp(v, "pc") == 0 || strcmp(v, "dos") == 0) opts.sound_style = 1;
             else { fprintf(stderr, "--sound-style must be amiga or pc (got %s)\n", v); return 1; }
+        } else if ((v = match_kv(a, "commentary-dir")) != NULL) {
+            snprintf(opts.commentary_dir, sizeof opts.commentary_dir, "%s", v);
         } else if ((v = match_kv(a, "menu-music")) != NULL) {
             if      (strcmp(v, "midi") == 0) opts.menu_recording = 0;
             else if (strcmp(v, "mp3") == 0)  opts.menu_recording = 1;
@@ -998,6 +1004,7 @@ int main(int argc, char **argv)
     /* And whether a match report leaves this machine (include/match_report.h). */
     MatchReport_SetEnabled(opts.reports);
     { extern void ReplayRec_SetPredictionKept(int32_t on); ReplayRec_SetPredictionKept(opts.prediction); }
+    { extern void NetplayMatch_SetBalance(int32_t on); NetplayMatch_SetBalance(opts.netplay_balance); }
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;
@@ -1008,10 +1015,13 @@ int main(int argc, char **argv)
     /* SWOS_SOUND_STYLE=pc, SWOS_COMMENTARY=on: for the test scripts, which pass no options. */
     { const char *e = getenv("SWOS_SOUND_STYLE");
       if (e) opts.sound_style = strcmp(e, "pc") == 0;
+      e = getenv("SWOS_COMMENTARY_DIR");
+      if (e) snprintf(opts.commentary_dir, sizeof opts.commentary_dir, "%s", e);
       e = getenv("SWOS_MUSIC");
       if (e) opts.music_style = strcmp(e, "pc") == 0;
       e = getenv("SWOS_COMMENTARY");
       if (e) opts.commentary = strcmp(e, "auto") == 0 ? 2 : strcmp(e, "off") != 0; }
+    DosSound_SetCommentaryDir(opts.commentary_dir);
     DosSound_SetStyle(opts.sound_style);
     DosMusic_SetStyle(opts.music_style);
     DosMusic_SetMenuRecording(opts.menu_recording);
