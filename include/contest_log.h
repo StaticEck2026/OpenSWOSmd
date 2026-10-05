@@ -44,6 +44,11 @@ void ContestLog_Roll(const TeamGeneralInfo *team, const Sprite *player, int32_t 
 void ContestLog_NoRoll(const TeamGeneralInfo *team, const Sprite *player, int32_t reason);
 /* A slide tackle reached the ball: the other team is locked out, with no roll. */
 void ContestLog_Tackle(const TeamGeneralInfo *team, const Sprite *player);
+/* A slide has come to rest: the player lies there for `ticks` updates of his team, read
+ * from a table by HIS tackling skill (SetPlayerDowntimeAfterTackle: 30 for the worst
+ * tackler down to 9 for the best; a computer player 3). `ticks` is in the roll's "drawn"
+ * column. */
+void ContestLog_Down(const TeamGeneralInfo *team, const Sprite *player, int32_t ticks);
 /* The man on the ball turned for longer than his ball control allows and is locked out
  * himself: `steps` turning steps against the `allowed` his skill gives him. */
 void ContestLog_Turn(const TeamGeneralInfo *team, const Sprite *player, int32_t steps, int32_t allowed);

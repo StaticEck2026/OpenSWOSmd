@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "tackle_foul.h"
+#include "contest_log.h"    /* how long a slide leaves a player down (ContestLog_Down) */
 
 extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
 
@@ -177,6 +178,7 @@ SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
     tackleSkill = pi->tackling;
     downtime = table[tackleSkill];
     player->playerDownTimer = (int8_t)(uint8_t)downtime;
+    CONTEST_LOG(ContestLog_Down(team, player, downtime));
 }
 
 /* ========================================================================

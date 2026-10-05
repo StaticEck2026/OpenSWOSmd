@@ -154,6 +154,18 @@ void ContestLog_Tackle(const TeamGeneralInfo *team, const Sprite *player)
     fprintf(s_file, ",,,%d\n", (int)s_view);
 }
 
+void ContestLog_Down(const TeamGeneralInfo *team, const Sprite *player, int32_t ticks)
+{
+    if (!s_file)
+        return;
+    fprintf(s_file, "%u,down,%s,", s_frame, who(team));
+    put_man(team, player);
+    fprintf(s_file, ",,,,,,,,,,,,%d,,%s,", (int)ticks,
+            (uint16_t)player->tacklingTimer == 0xFFFF ? "computer" : "by-tackling-skill");
+    put_ball();
+    fprintf(s_file, ",,,%d\n", (int)s_view);
+}
+
 void ContestLog_Turn(const TeamGeneralInfo *team, const Sprite *player, int32_t steps, int32_t allowed)
 {
     const TeamGeneralInfo *opp = team->opponentsTeam;

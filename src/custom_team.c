@@ -694,7 +694,12 @@ void CustomTeam_Lineup(void)
     TeamFileEx before = _selectedTeams[0], other = _selectedTeams[1];
     uint16_t numSel = _numSelectedTeams, curNo = _currentTeamNumber, selNo = _selTeamNumber;
     uint16_t gameType = _gameType, isCareer = _isCareer, training = _trainingGame;
+    extern uint16_t _twoPlayers;
+    uint16_t twoPlayers = _twoPlayers;
 
+    /* One player sits here: see lineup_begin (online_menus.c) for why a _twoPlayers left
+     * over from the last match took the controller off this screen (ReportBot 0020). */
+    _twoPlayers = 0;
     _selectedTeams[0].team.teamControls = kPlayerCoach;
     _selectedTeams[1] = _selectedTeams[0];
     _numSelectedTeams = 2;
@@ -718,6 +723,7 @@ void CustomTeam_Lineup(void)
     _selectedTeams[1] = other;
     _numSelectedTeams = numSel; _currentTeamNumber = curNo; _selTeamNumber = selNo;
     _gameType = gameType; _isCareer = isCareer; _trainingGame = training;
+    _twoPlayers = twoPlayers;
 }
 
 /* ======================================================================

@@ -35,6 +35,7 @@ is the match without it — `--srp-resim` still matches every frame's hash with 
 | `tackle` | the slide tackle's ball contact | A slide reached the ball: the other side is locked out for 12 team steps, with no roll |
 | `turn` | the dribble's turn timer | The man on the ball turned for longer than `ballControlTurnThresholds[ball control]` and is locked out for 8 |
 | `trap` | `autoswitch_commit` | A player took over a moving ball: its speed, whose it was, and how far it was moved to his feet |
+| `down` | `SetPlayerDowntimeAfterTackle` | A slide came to rest: how many team steps the player lies there, in the `drawn` column, and which table gave it in `reason` (below) |
 
 `no-roll` reasons, as the code reaches them:
 
@@ -51,6 +52,27 @@ is the match without it — `--srp-resim` still matches every frame's hash with 
 `who` and `opp` are `P1`/`P2`, the netplay player numbers, read from the team at the
 moment of the event — the teams change ends at half-time, so "the top team" is not one
 player for a whole match.
+
+### How long a slide leaves a player down (`down`)
+
+Two tables, both the original's (`SWOS2.s` 23128, 23621-23639, 30704-30714; the same in the
+PC release):
+
+| `reason` | when | team steps down |
+|---|---|---|
+| `by-tackling-skill` | fire was still held past the slide's second step | 30, 27, 24, 21, 18, 15, 12, 9 for tackling 0-7 |
+| `computer` | **fire was let go within the slide's first two steps** (`tacklingTimer` ends as -1) | 3, whatever the skill |
+
+The second table is named for the computer's players in the disassembly, but a human gets it
+by TAPPING fire for the slide instead of holding it: the slide's timer counts while fire is
+held, is negated the first step fire is found released, and a value of -1 or -2 becomes -1,
+which selects that table. So a tapped slide has a player on his feet in 3 steps where a held
+one leaves the same player down for 9 to 30. Two players with the same tackling who slide a
+frame apart can get up five steps apart, and that is the rule, not the network.
+
+First seen answering ReportBot 0021 (match `ee7d141f`, 2026-10-04): at frame 10862 F.
+RAVANELLI (tackling 4) went down for 18; at 10863 H. CALHANOGLU (tackling 4) for 3. Over the
+match one player tapped 5 of 40 slides, the other 2 of 50.
 
 ## Views: what each player's own game showed
 

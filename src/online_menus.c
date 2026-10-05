@@ -1214,7 +1214,7 @@ static void mpGameSetup_teams_onSelect(void)
 static struct {
     TeamFileEx keep[2];
     TeamFileEx before;                  /* this player's side as the screen opened */
-    uint16_t   numSel, curNo, selNo, gameType, isCareer, training;
+    uint16_t   numSel, curNo, selNo, gameType, isCareer, training, twoPlayers;
     uint8_t    controls;
 } s_lineup;
 
@@ -1225,9 +1225,18 @@ static void lineup_begin(void)
 {
     extern TeamFileEx _selectedTeams[100];
     extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
-    extern uint16_t   _gameType, _isCareer, _trainingGame;
+    extern uint16_t   _gameType, _isCareer, _trainingGame, _twoPlayers;
     const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
     const LobbyPlayer *other = NetplayLobby_Player(3 - NetplayLobby_LocalPlayer());
+
+    /* ONE player sits at this screen, whatever the last match was. A live match sets
+     * _twoPlayers (SetupPlayers) and nothing clears it before the lobby comes back; with
+     * it set and one controller plugged in, input_sdl.c makes the controller PLAYER 2
+     * and the keyboard player 1 -- and this screen is opened for player 1 alone
+     * (controlFlags 1), so the controller did nothing on it and the keyboard did
+     * (ReportBot 0020). */
+    s_lineup.twoPlayers = _twoPlayers;
+    _twoPlayers = 0;
 
     s_lineup.keep[0] = _selectedTeams[0];
     s_lineup.keep[1] = _selectedTeams[1];
@@ -1287,7 +1296,7 @@ static void lineup_end(void)
 {
     extern TeamFileEx _selectedTeams[100];
     extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
-    extern uint16_t   _gameType, _isCareer, _trainingGame;
+    extern uint16_t   _gameType, _isCareer, _trainingGame, _twoPlayers;
     TeamFileEx arranged = _selectedTeams[0];
     KitLook kit;
 
@@ -1307,6 +1316,7 @@ static void lineup_end(void)
     _numSelectedTeams = s_lineup.numSel; _currentTeamNumber = s_lineup.curNo;
     _selTeamNumber = s_lineup.selNo; _gameType = s_lineup.gameType;
     _isCareer = s_lineup.isCareer; _trainingGame = s_lineup.training;
+    _twoPlayers = s_lineup.twoPlayers;
     NetplayLobby_SetTeam(&arranged);
 }
 
