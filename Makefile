@@ -664,7 +664,14 @@ DEPS      += $(OBJDIR)/netplay_netem_install.d
 DEPS      += $(GGPO_OBJS:.o=.d)
 CFLAGS    += -DSWOS_NETPLAY=1 -I$(GGPO_DIR)/include
 # -w: third-party code, compiled as upstream ships it (plus OPENSWOS.md's patches).
+# GGPO_SEND_FRAME_ADVANTAGE=0: the time sync works from each peer's own estimate alone.
+# That is how every build before 2026-10-06 ran without meaning to -- the fork's min()
+# returned a dangling reference, so the advantage a peer sent was noise, nearly always
+# 0 -- and it is what the pacing in src/netplay_match.c was tuned against: with the real
+# figure the same pacing over-corrects and the two peers swing five frames apart
+# (docs/NETPLAY_BALANCE.md). Sending a plain 0 keeps that behaviour without the noise.
 GGPO_CXXFLAGS := $(ARCHFLAGS) -O2 -g -std=gnu++17 -MMD -MP -w \
+                 -DGGPO_SEND_FRAME_ADVANTAGE=0 \
                  -I$(GGPO_DIR)/include -I$(GGPO_DIR)/lib/ggpo \
                  -I$(GGPO_DIR)/lib/ggpo/network -I$(GGPO_DIR)/lib/ggpo/backends \
                  -Iinclude

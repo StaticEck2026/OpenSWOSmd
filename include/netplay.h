@@ -44,6 +44,7 @@ typedef enum {
     NETPLAY_EVENT_CHAT          = 1008,
     NETPLAY_EVENT_DESYNC        = 1009,
     NETPLAY_EVENT_NETWORK_ERROR = 1010,
+    NETPLAY_EVENT_BALANCE       = 1011,  /* GGPO-X's prediction balance: this peer should wait */
 } NetplayEventCode;
 
 typedef struct {
@@ -58,6 +59,9 @@ typedef struct {
     uint16_t    remoteChecksum;  /* DESYNC */
     int32_t     errorCode;       /* NETWORK_ERROR */
     const char *chat;            /* CHAT */
+    int32_t     balanceWaitMilli;/* BALANCE: thousandths of a frame to wait ... */
+    int32_t     balanceSpread;   /* ... spread over this many frames */
+    int32_t     balanceLocalX100, balanceRemoteX100;  /* ... the two peers' average prediction depth, hundredths */
 } NetplayEvent;
 
 /* Return 0 from saveState/loadState/advanceFrame to report failure to GGPO. */
@@ -112,9 +116,9 @@ int32_t     Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame);
 int32_t     Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count);
 /* GGPO's view of the link to `remotePlayer`: its round-trip ping in ms, and how many
  * frames this peer is ahead of the other, in tenths (negative = behind). For the log. */
-/* A short text to the other player, by GGPO's own chat: keyed like every packet, and
- * not resent if lost. It arrives as NETPLAY_EVENT_CHAT. */
-int32_t     Netplay_Chat(NetplaySession *s, const char *text);
+/* GGPO-X's prediction balance (docs/NETPLAY_BALANCE.md) off or on for this session;
+ * on by default. Off here is off for both peers. */
+int32_t     Netplay_SetBalance(NetplaySession *s, int32_t on);
 int32_t     Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                              int32_t *framesAheadX10);
 /* Whether a refused call is only to be tried again next tick: the session is not

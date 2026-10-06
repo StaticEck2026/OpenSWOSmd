@@ -111,10 +111,18 @@ writes one zip of both logs and both HOW WAS THE MATCH? answers (`src/match_repo
 docs/NETPLAY_REPORT.md): kept in `save/netplay/` and sent to the server's `--reports DIR` —
 unless SEND MATCH REPORTS (`[netplay] reports`, on in tester builds) is off. Run
 `REPORTS=1 RELAY=0 scripts/relay_test.sh` after touching it, the rating screen, or the lobby's end.
-The two players SHARE the frames played on a guess (docs/NETPLAY_BALANCE.md, `balance_*` in
-`src/netplay_match.c`, `[netplay] balance`, on by default): each sends its average lag once a
-second by GGPO-X's chat and the one guessing more waits a quarter of the difference -- wall time
-only. `SWOS_LIVE_NO_BALANCE=1` for comparing; the doc has the lopsided-link test command.
+**Pacing and the prediction balance** (docs/NETPLAY_BALANCE.md). GGPO-X is built with
+`GGPO_SEND_FRAME_ADVANTAGE=0` (`GGPO_CXXFLAGS`): its time sync works from each peer's own
+estimate alone, which is what the pacing in `src/netplay_match.c` was tuned against -- until
+2026-10-06 by accident (the fork's `min()` returned a dangling reference, so the figure a peer
+sent was noise; that noise tipped matches into one player predicting 2+ frames deeper). Do not
+switch the true figure on without retuning the pacing: the peers swing five frames apart. The
+balance itself is in the fork (`lib/ggpo/prediction_balance.h`, `GGPO_PREDICTION_BALANCE`): the
+peers exchange their average prediction depth in the quality report and the one 1.5 frames or
+more deeper is told to wait a quarter of the gap (`NETPLAY_EVENT_BALANCE`) -- never a gap of
+one frame, which cannot be closed without adding prediction. `[netplay] balance = yes`, OFF by
+default, both players; `SWOS_LIVE_BALANCE=1` for a test. A change to either: several runs a
+link of the doc's matrix, never one.
 "Ghosting" (players running through each other online) has its own doc, docs/NETPLAY_GHOSTING.md:
 every match records each frame as drawn and as played (`src/netplay_ghost.c`), logs `[ghost]`
 lines, keeps windows around the worst detected events for the report zip, and

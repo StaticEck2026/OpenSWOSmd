@@ -102,6 +102,12 @@ static bool __cdecl on_event(void *context, GGPOEvent *info)
     case GGPO_EVENTCODE_CONNECTION_INTERRUPTED: ev.player = info->u.connection_interrupted.player; break;
     case GGPO_EVENTCODE_CONNECTION_RESUMED:     ev.player = info->u.connection_resumed.player; break;
     case GGPO_EVENTCODE_CHAT:                  ev.chat = info->u.chat.msg; break;
+    case GGPO_EVENTCODE_PREDICTION_BALANCE:
+        ev.balanceWaitMilli = (int32_t)(info->u.prediction_balance.frames_to_wait * 1000.0f);
+        ev.balanceSpread = info->u.prediction_balance.spread_in_frames;
+        ev.balanceLocalX100 = (int32_t)(info->u.prediction_balance.local_depth * 100.0f + 0.5f);
+        ev.balanceRemoteX100 = (int32_t)(info->u.prediction_balance.remote_depth * 100.0f + 0.5f);
+        break;
     case GGPO_EVENTCODE_DESYNC:
         ev.desyncFrame = info->u.desync.nFrameOfDesync;
         ev.localChecksum = info->u.desync.ourCheckSum;
@@ -292,11 +298,11 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
     return rc;
 }
 
-int32_t Netplay_Chat(NetplaySession *s, const char *text)
+int32_t Netplay_SetBalance(NetplaySession *s, int32_t on)
 {
-    if (!s || !s->ggpo || !text)
+    if (!s || !s->ggpo)
         return NETPLAY_ERR_UNAVAILABLE;
-    return (int32_t)ggpo_client_chat(s->ggpo, text);
+    return (int32_t)ggpo_set_prediction_balance(s->ggpo, on);
 }
 
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
@@ -739,7 +745,7 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
     return NETPLAY_ERR_UNAVAILABLE;
 }
 
-int32_t Netplay_Chat(NetplaySession *s, const char *text) { (void)s; (void)text; return NETPLAY_ERR_UNAVAILABLE; }
+int32_t Netplay_SetBalance(NetplaySession *s, int32_t on) { (void)s; (void)on; return NETPLAY_ERR_UNAVAILABLE; }
 
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                          int32_t *framesAheadX10)

@@ -446,10 +446,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; save/netplay either way). false: nothing leaves this machine.",
         opts->reports ? "true" : "false" };
     SETTING(n) = (IniEntry){ "netplay", "balance",
-        "; balance: true | false -- online, the two players share the frames played on a\n"
-        "; guess of the other's input: the one guessing more waits a little. Timing only;\n"
-        "; false leaves it to the network library's own time sync (docs/NETPLAY_BALANCE.md).\n",
-        opts->netplay_balance ? "true" : "false" };
+        "; balance: yes | no -- online, when one player is predicting the other's input two\n"
+        "; frames or more deeper than the other is, that player waits a little. Timing only,\n"
+        "; never the match. It works only when BOTH players have it on\n"
+        "; (docs/NETPLAY_BALANCE.md).\n",
+        opts->netplay_balance ? "yes" : "no" };
     SETTING(n) = (IniEntry){ "netplay", "prediction",
         "; prediction: true | false -- keep what each player SAW of an online match in its\n"
         "; replay: how many of the other player's inputs were guesses on each frame, the\n"

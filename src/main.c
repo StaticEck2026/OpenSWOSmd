@@ -440,7 +440,7 @@ int main(int argc, char **argv)
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
-    opts.netplay_balance = 1;     /* default: the two players share the guessing */
+    opts.netplay_balance = 0;     /* [netplay] balance: off unless asked for (docs/NETPLAY_BALANCE.md) */
     opts.prediction = 1;          /* default: a live match's replay keeps what each player saw */
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     opts.reports = 1;             /* a tester build: match reports come back to us */

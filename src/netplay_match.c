@@ -50,12 +50,6 @@ static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p", "r
 #define INPUTS_SIZE         (MATCH_INPUT_SIZE * MATCH_PLAYERS)
 #define MAX_PREDICTION      8           /* frames a peer may play ahead of confirmed input */
 
-/* Sharing the guessing (balance_*, docs/NETPLAY_BALANCE.md). */
-#define BALANCE_WINDOW      90          /* frames a lag average covers */
-#define BALANCE_EVERY       50          /* frames between reports, and a correction's length */
-#define BALANCE_HISTORY     512         /* a power of two, frames of this peer's lag kept */
-#define BALANCE_STALE_MS    6000        /* the other's reports this old: GGPO's time sync again */
-#define BALANCE_DEADBAND    60          /* hundredths of a frame of lag apart before acting */
 #define DEFAULT_TIMEOUT_MS  30000
 /* A live match: how long a silent peer freezes the game before the match ends and both go
  * back to the lobby. Long enough for a link that drops out for a moment (the netem
@@ -127,15 +121,9 @@ static struct {
     int32_t          slowPct;             /* live: SWOS_LIVE_SLOW_PCT, a slow clock for a test */
     int32_t          slowCount;
     int32_t          noPacing;            /* live: SWOS_LIVE_NO_PACING, to measure what pacing does */
-    /* live: sharing the guessing between the two players (balance_*, below) */
-    uint8_t          lagHist[BALANCE_HISTORY];        /* this peer's lag at each frame's first play */
-    int32_t          lagHistTop;                      /* the newest frame in it; -1 */
-    int32_t          peerLagFrame, peerLagX100;       /* the other's last report: its window's last frame, its average */
-    int32_t          peerLagPending;                  /* ... not compared yet: this peer has not played that frame */
-    uint32_t         peerLagMs;                       /* when one last arrived; 0 never */
-    uint32_t         balanceWaits, balanceReports;
-    int32_t          balanceQuietTo;                  /* no new correction on a window that starts before this frame */
-    int64_t          balanceDiffSum;                  /* of |mine - theirs|, hundredths, per compared report */
+    /* live: the prediction balance (docs/NETPLAY_BALANCE.md) */
+    uint32_t         balanceWaits;        /* waits GGPO-X asked for */
+    int64_t          balanceUs;           /* all of them */
     int32_t          hashEvery;           /* live: SWOS_LIVE_HASH_EVERY, frames between hash lines */
     int32_t          dumpFrames[LIVE_DUMP_FRAMES_MAX];  /* live: SWOS_LIVE_DUMP_FRAME, dump the state at these */
     int32_t          dumpFrameCount;
@@ -491,134 +479,20 @@ static void checkFirstRun(int32_t frame, int32_t checksum, const uint8_t *state)
 
 /* ---- the step ---- */
 
-/* ---- sharing the guessing (docs/NETPLAY_BALANCE.md) ----
+/* ---- the prediction balance (docs/NETPLAY_BALANCE.md) ----
  *
- * How many frames a peer plays on a guess of the other's input is set by the connection,
- * but WHICH peer carries it is not: on a route that is slower one way, or with one
- * machine a fraction of a frame ahead, one player guesses on every frame for minutes while
- * the other never does -- and GGPO's time sync, which assumes the two directions take the
- * same time, reports them level. Each peer knows its own lag exactly (PRED records it),
- * so the two tell each other and the one guessing more waits a little.
- *
- *   - every frame's first play: this peer's lag goes into a short history;
- *   - once a second: the average over the last BALANCE_WINDOW frames is sent to the other
- *     peer, with the frame the window ends at ("SWLAG <frame> <hundredths>");
- *   - on the other's report: compared with this peer's OWN average over the SAME frames
- *     (the first attempt compared windows a period apart, and the two peers took turns
- *     believing they were ahead). When this peer guesses more by BALANCE_DEADBAND, it
- *     waits a quarter of the difference, spread over the next second, and learns a
- *     little of it as a standing slowdown; otherwise the slowdown eases off;
- *   - while the other's reports are fresh GGPO's time sync is not acted on: it would
- *     pull the other way. Without them (an older build, balance off there) it is.
- *
- * Only wall time changes: the simulation never sees any of it. [netplay] balance = false
- * or SWOS_LIVE_NO_BALANCE=1 turns it off; this peer then neither reports nor acts. */
-static int32_t s_balanceOn = 1;
+ * GGPO-X's own (third_party/ggpo-x, lib/ggpo/prediction_balance.h): the two peers send
+ * each other their average prediction depth in the quality report, and the one predicting
+ * two frames or more deeper gets NETPLAY_EVENT_BALANCE -- wait this much of a frame,
+ * spread over that many. The wait is all that is done here, as for the time sync, which
+ * is left exactly as it was: wall time only. [netplay] balance = yes turns it on in the
+ * library (Netplay_SetBalance; off by default; SWOS_LIVE_BALANCE=1 / =0 for a test), and
+ * a peer with it off sends no depth, so both players must have it on. */
+static int32_t s_balanceOn;
 
 void NetplayMatch_SetBalance(int32_t on)
 {
     s_balanceOn = on != 0;
-}
-
-static int32_t balance_fresh(uint32_t now)
-{
-    return s_balanceOn && s_np.peerLagMs && now - s_np.peerLagMs < BALANCE_STALE_MS;
-}
-
-/* This peer's average lag over the BALANCE_WINDOW frames ending at `frame`, in
- * hundredths; -1 when the history does not hold them all. */
-static int32_t balance_average(int32_t frame)
-{
-    int32_t sum = 0, f;
-    if (frame > s_np.lagHistTop || frame - BALANCE_WINDOW + 1 < 0 ||
-        s_np.lagHistTop - (frame - BALANCE_WINDOW + 1) >= BALANCE_HISTORY)
-        return -1;
-    for (f = frame - BALANCE_WINDOW + 1; f <= frame; f++)
-        sum += s_np.lagHist[f & (BALANCE_HISTORY - 1)];
-    return sum * 100 / BALANCE_WINDOW;
-}
-
-static void balance_compare(uint32_t now)
-{
-    int32_t mine = balance_average(s_np.peerLagFrame), diff;
-    int64_t frameUs;
-
-    if (mine < 0) {
-        if (s_np.peerLagFrame <= s_np.lagHistTop)
-            s_np.peerLagPending = 0;        /* too old to compare: the next one */
-        return;
-    }
-    s_np.peerLagPending = 0;
-    s_np.peerLagMs = now ? now : 1;
-    diff = mine - s_np.peerLagX100;
-    s_np.balanceReports++;
-    s_np.balanceDiffSum += diff < 0 ? -diff : diff;
-    if (getenv("SWOS_LIVE_PACING_LOG"))
-        fprintf(stderr, "[balance] frames %d..%d: lag %d.%02d here, %d.%02d there\n",
-                s_np.peerLagFrame - BALANCE_WINDOW + 1, s_np.peerLagFrame, mine / 100, mine % 100,
-                s_np.peerLagX100 / 100, s_np.peerLagX100 % 100);
-    if (s_np.noPacing)
-        return;
-    frameUs = 1000000 / DosGameplay_TargetFps();
-    if (diff <= -BALANCE_DEADBAND) {
-        s_np.paceBiasUs -= s_np.paceBiasUs / 4;         /* the other guesses more: any standing wait here eases off */
-        return;
-    }
-    if (diff < BALANCE_DEADBAND)
-        return;                                         /* even enough: as it is */
-    /* The window must be of frames played AFTER the last correction was complete. Lag is
-     * whole frames -- 2/0, 1/1 or 0/2 on a link a frame apart -- and a correction shows in
-     * the average only once the window has moved past it: acting on every report (the
-     * first version of this) walked from 2/0 through 1/1 to 0/2 and back, every eight
-     * seconds. */
-    if (s_np.peerLagFrame - BALANCE_WINDOW + 1 < s_np.balanceQuietTo)
-        return;
-    {
-        /* A quarter of the difference, in the next BALANCE_EVERY frames: waiting a
-         * quarter of a frame takes a quarter off this peer's lag and adds it to the
-         * other's, which halves the difference... and a little learned, for two clocks
-         * that differ by a steady rate. */
-        int64_t close = frameUs * diff / 100 / 4 / BALANCE_EVERY;
-        s_np.paceBiasUs += close / 8;
-        if (s_np.paceBiasUs > frameUs / 10)
-            s_np.paceBiasUs = frameUs / 10;
-        s_np.paceUsPerFrame = (int32_t)close;
-        s_np.paceFramesLeft = BALANCE_EVERY;
-        s_np.balanceQuietTo = s_np.lagHistTop + BALANCE_EVERY + 1;
-        s_np.balanceWaits++;
-    }
-}
-
-/* A frame's first play: `lag` frames of the other's input are guesses. */
-static void balance_frame(int32_t frame, int32_t lag)
-{
-    if (!s_balanceOn || !s_np.live || frame < 0)
-        return;
-    s_np.lagHist[frame & (BALANCE_HISTORY - 1)] = (uint8_t)(lag < 15 ? lag : 15);
-    s_np.lagHistTop = frame;
-    if (s_np.peerLagPending)
-        balance_compare(SDL_GetTicks());
-    if (frame % BALANCE_EVERY == BALANCE_EVERY - 1) {
-        int32_t avg = balance_average(frame);
-        if (avg >= 0) {
-            char msg[40];
-            snprintf(msg, sizeof msg, "SWLAG %d %d", (int)frame, (int)avg);
-            Netplay_Chat(s_np.session, msg);
-        }
-    }
-}
-
-/* The other peer's report. */
-static void balance_report(const char *text)
-{
-    int f = 0, a = 0;
-    if (!s_balanceOn || !s_np.live || !text || sscanf(text, "SWLAG %d %d", &f, &a) != 2 ||
-        f < 0 || a < 0 || a > 1500)
-        return;
-    s_np.peerLagFrame = f;
-    s_np.peerLagX100 = a;
-    s_np.peerLagPending = 1;
-    balance_compare(SDL_GetTicks());
 }
 
 /* ---- sound during a rollback ----
@@ -940,15 +814,6 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
             fprintf(stderr, "[netplay] time sync at frame %u: %d.%03d frames ahead, period %d\n",
                     s_np.frames, ev->framesAheadMilli / 1000, abs(ev->framesAheadMilli % 1000),
                     ev->timeSyncPeriod);
-        /* While the two peers are telling each other their lag, that decides the fine
-         * split (balance_compare) and GGPO's figure, which would pull the other way, is
-         * left alone -- up to a frame and a half. Past that it is not the split any more
-         * but one machine running away from the other (a clock 2% slow in the test: with
-         * the time sync shut out altogether the slow side re-simulated twice as much),
-         * and the time sync is what closes that. */
-        if (s_np.live && balance_fresh(SDL_GetTicks()) &&
-            ev->framesAheadMilli < 1500 && ev->framesAheadMilli > -1500)
-            break;
         s_np.paceUsPerFrame = 0;
         s_np.paceFramesLeft = 0;
         if (s_np.live && !s_np.noPacing && ev->timeSyncPeriod > 0 &&
@@ -967,8 +832,19 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
             }
         }
         break;
-    case NETPLAY_EVENT_CHAT:
-        balance_report(ev->chat);
+    case NETPLAY_EVENT_BALANCE:
+        if (getenv("SWOS_LIVE_PACING_LOG"))
+            fprintf(stderr, "[balance] frame %u: predicting %d.%02d frames deep here, %d.%02d there: waiting %d.%03d of a frame\n",
+                    s_np.frames, ev->balanceLocalX100 / 100, ev->balanceLocalX100 % 100,
+                    ev->balanceRemoteX100 / 100, ev->balanceRemoteX100 % 100,
+                    ev->balanceWaitMilli / 1000, ev->balanceWaitMilli % 1000);
+        if (s_np.live && !s_np.noPacing && ev->balanceWaitMilli > 0 && ev->balanceSpread > 0) {
+            int64_t frameUs = 1000000 / DosGameplay_TargetFps();
+            s_np.paceUsPerFrame = (int32_t)(frameUs * ev->balanceWaitMilli / 1000 / ev->balanceSpread);
+            s_np.paceFramesLeft = ev->balanceSpread;
+            s_np.balanceUs += frameUs * ev->balanceWaitMilli / 1000;
+            s_np.balanceWaits++;
+        }
         break;
     case NETPLAY_EVENT_NETWORK_ERROR:
         if (!s_np.live)
@@ -1047,6 +923,15 @@ int32_t NetplayMatch_Start(void)
             return 1;
         }
     }
+    {
+        /* SWOS_LIVE_BALANCE=1 / =0: for the tests, whatever SWOS.ini says. */
+        const char *e = getenv("SWOS_LIVE_BALANCE");
+        if (e)
+            s_balanceOn = atoi(e) != 0;
+        if (getenv("SWOS_LIVE_NO_BALANCE"))
+            s_balanceOn = 0;
+    }
+    Netplay_SetBalance(s_np.session, s_balanceOn);      /* GGPO-X's prediction balance */
 
     Audio_SetSfxFilter(soundFilter);      /* sound during a rollback, above */
     if (Netem_Enabled())
@@ -1199,12 +1084,8 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
         s_np.noPacing = getenv("SWOS_LIVE_NO_PACING") != NULL;
         if (getenv("SWOS_LIVE_NO_BALANCE"))
             s_balanceOn = 0;
-        s_np.lagHistTop = -1;
-        s_np.peerLagPending = 0;
-        s_np.peerLagMs = 0;
-        s_np.balanceWaits = s_np.balanceReports = 0;
-        s_np.balanceQuietTo = 0;
-        s_np.balanceDiffSum = 0;
+        s_np.balanceWaits = 0;
+        s_np.balanceUs = 0;
         streamNewMatch();
         ringNewMatch();
         {
@@ -1637,10 +1518,8 @@ static void liveEnd(int32_t outcome, const char *why)
             s_np.frames, s_np.resimulated, s_np.loads, s_np.predictionWaits, s_np.timeSyncs,
             (long long)(s_np.pacedUs / 1000), (long long)s_np.paceBiasUs);
     if (s_balanceOn)
-        fprintf(stderr, "[balance] %u reports compared, the two players' lag %d.%02d frames apart on average; "
-                "this one waited %u times to even it\n", s_np.balanceReports,
-                (int)(s_np.balanceReports ? s_np.balanceDiffSum / s_np.balanceReports / 100 : 0),
-                (int)(s_np.balanceReports ? s_np.balanceDiffSum / s_np.balanceReports % 100 : 0), s_np.balanceWaits);
+        fprintf(stderr, "[balance] this player was predicting two frames or more deeper than the other %u times, "
+                "and waited %lld ms in all to close it\n", s_np.balanceWaits, (long long)(s_np.balanceUs / 1000));
     else
         fprintf(stderr, "[balance] off\n");
     /* PRED's premise, measured: every guessed frame's guess was the last input known. */
@@ -2223,7 +2102,6 @@ prepared:
         Netplay_ConfirmedFrame(s_np.session, &confirmed);
         lag = frame > confirmed ? frame - confirmed : 0;
         Ghost_Lag(frame, lag, s_np.stalledPending);
-        balance_frame(frame, lag);
         s_np.stalledPending = 0;
         if (lag > 0 && lag < 64) {
             /* GGPO-X guesses by repeating the last input it has: the one at `confirmed`,
