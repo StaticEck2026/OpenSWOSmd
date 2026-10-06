@@ -58,6 +58,16 @@
 <body>
 
 <article>
+  <header><code>913d4eb</code><time datetime="2026-10-06T07:42Z">2026-10-06 07:42 UTC</time></header>
+  <ul>
+    <li>Online, fixed: a fault in how the two games keep in step. Each game tells the other how far ahead it is, and that number was being sent wrong, so the games sometimes corrected in the wrong direction and one player ended up playing several frames ahead on guesses (seen as rollbacks and players jumping). It affected every online match so far.</li>
+    <li>Online: the "balance" of the previous build is replaced and is now <b>off</b> unless you turn it on. The old one evened the two players out even when there was nothing to gain, which made good connections worse. The new one only steps in when one player is two or more frames deeper in guesses than the other.</li>
+    <li>To try it, both players set <code>balance = yes</code> under <code>[netplay]</code> in <code>SWOS.ini</code>; with <code>balance = no</code> (the default) on either side it is off for both. If you saved settings in the previous build, your file may still say <code>balance = true</code>, which means on. At the end of a match <code>SWOS.log</code> has a <code>[balance]</code> line.</li>
+    <li>Both players need this build to play each other.</li>
+  </ul>
+</article>
+
+<article>
   <header><code>3c01239</code><time datetime="2026-10-05T17:38Z">2026-10-05 17:38 UTC</time></header>
   <ul>
     <li>Fixed: the game crashed on macOS as soon as an option was changed (for example the gameplay style). The same fault could quietly damage settings on other systems. If you have the previous build, update before changing options.</li>
