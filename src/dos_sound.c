@@ -619,6 +619,16 @@ static void match_start(uint16_t arg)
     s_muteCommentary = 0;
     s_live = 1;
     s_full = s_style;
+    if (s_full) {
+        /* The Amiga's own crowd is already running: the match starts it (presets 1 and
+         * 6, PlaySample1IfNotTraining and its neighbours) before this event, while the
+         * PC sounds are not yet "live" and nothing holds it back -- and it loops for the
+         * whole match, at about five times the PC crowd's level, under everything here.
+         * Heard as a background as loud as the commentary (ReportBot 0027). A recording's
+         * playback never showed it: it silences the effects when it starts. */
+        extern void AudioSDL_SilenceSfx(void);
+        AudioSDL_SilenceSfx();
+    }
     if (s_full && !s_training)
         play(VOICE_CROWD, k_dosEffects[FX_CROWD], 100, -1);     /* PlayCrowdNoiseSample */
     fprintf(stderr, "[sound] %s%s\n", s_full ? "PC sounds" : "Amiga sounds",
