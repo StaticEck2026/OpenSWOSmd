@@ -552,6 +552,14 @@ static void UpdateUniformButton(void) {
         uniform->dwHeight = exitBtn->dwHeight;
         uniform->upEntry = 55;                  /* the formation above, as EDIT TACTICS' */
         viewOpp->rightEntry = kUniformEntry;
+        /* Two computer teams: the button beside this one is VIEW OTHER TEAM, 93 wide,
+         * which reaches under it (ReportBot 0031). It gets the width and the words it
+         * has when a player's team is shown. */
+        if (viewOpp->x + viewOpp->dwWidth > uniform->x - 1) {
+            viewOpp->dwWidth = uniform->x - 1 - viewOpp->x;
+            if (viewOpp->fg == (uintptr_t)_aViewOtherTeam)
+                viewOpp->fg = (uintptr_t)_aViewOppo;
+        }
     } else {
         tactics->y = exitBtn->y - 2;
         tactics->dwHeight = 10;
