@@ -1215,6 +1215,7 @@ static struct {
     TeamFileEx keep[2];
     TeamFileEx before;                  /* this player's side as the screen opened */
     uint16_t   numSel, curNo, selNo, gameType, isCareer, training, twoPlayers;
+    uint16_t   marked[2];
     uint8_t    controls;
 } s_lineup;
 
@@ -1226,8 +1227,18 @@ static void lineup_begin(void)
     extern TeamFileEx _selectedTeams[100];
     extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
     extern uint16_t   _gameType, _isCareer, _trainingGame, _twoPlayers;
+    extern uint16_t   _team1SelectedPlayerIndex, _team2SelectedPlayerIndex;
     const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
     const LobbyPlayer *other = NetplayLobby_Player(3 - NetplayLobby_LocalPlayer());
+
+    /* No player is marked as the one to play as. A friendly sets these to "nobody"
+     * before it opens this screen (game_init.c); here nothing had, and they start the
+     * program as 0 -- the goalkeeper -- so his row carried the blinking marker
+     * (ReportBot 0022). */
+    s_lineup.marked[0] = _team1SelectedPlayerIndex;
+    s_lineup.marked[1] = _team2SelectedPlayerIndex;
+    _team1SelectedPlayerIndex = 0xFFFF;
+    _team2SelectedPlayerIndex = 0xFFFF;
 
     /* ONE player sits at this screen, whatever the last match was. A live match sets
      * _twoPlayers (SetupPlayers) and nothing clears it before the lobby comes back; with
@@ -1297,8 +1308,12 @@ static void lineup_end(void)
     extern TeamFileEx _selectedTeams[100];
     extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
     extern uint16_t   _gameType, _isCareer, _trainingGame, _twoPlayers;
+    extern uint16_t   _team1SelectedPlayerIndex, _team2SelectedPlayerIndex;
     TeamFileEx arranged = _selectedTeams[0];
     KitLook kit;
+
+    _team1SelectedPlayerIndex = s_lineup.marked[0];
+    _team2SelectedPlayerIndex = s_lineup.marked[1];
 
     /* A kit chosen on the UNIFORM screen: both of the team's kits become it, so SWOS's
      * own kit rule, run on each machine at kick-off, can only dress this side in it. */

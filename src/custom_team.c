@@ -694,8 +694,14 @@ void CustomTeam_Lineup(void)
     TeamFileEx before = _selectedTeams[0], other = _selectedTeams[1];
     uint16_t numSel = _numSelectedTeams, curNo = _currentTeamNumber, selNo = _selTeamNumber;
     uint16_t gameType = _gameType, isCareer = _isCareer, training = _trainingGame;
-    extern uint16_t _twoPlayers;
+    extern uint16_t _twoPlayers, _team1SelectedPlayerIndex, _team2SelectedPlayerIndex;
     uint16_t twoPlayers = _twoPlayers;
+    uint16_t marked1 = _team1SelectedPlayerIndex, marked2 = _team2SelectedPlayerIndex;
+
+    /* Nobody is marked as the player to play as: see lineup_begin (ReportBot 0022, the
+     * goalkeeper's row blinking). */
+    _team1SelectedPlayerIndex = 0xFFFF;
+    _team2SelectedPlayerIndex = 0xFFFF;
 
     /* One player sits here: see lineup_begin (online_menus.c) for why a _twoPlayers left
      * over from the last match took the controller off this screen (ReportBot 0020). */
@@ -724,6 +730,8 @@ void CustomTeam_Lineup(void)
     _numSelectedTeams = numSel; _currentTeamNumber = curNo; _selTeamNumber = selNo;
     _gameType = gameType; _isCareer = isCareer; _trainingGame = training;
     _twoPlayers = twoPlayers;
+    _team1SelectedPlayerIndex = marked1;
+    _team2SelectedPlayerIndex = marked2;
 }
 
 /* ======================================================================
