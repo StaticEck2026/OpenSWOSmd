@@ -16,7 +16,7 @@ void Uniform_Clear(void);
 /* The two team headers a match takes its kits from: copies of the teams', with a side's
  * choice written over BOTH its kits -- so whichever of the two SWOS's rule picks for
  * that side is the one chosen. */
-void Uniform_Kits(const TeamFile *team1, const TeamFile *team2, TeamFile *kit1, TeamFile *kit2);
+int32_t Uniform_Kits(const TeamFile *team1, const TeamFile *team2, TeamFile *kit1, TeamFile *kit2);   /* 1: a side chose */
 
 /* This team's kit for the match, as if chosen on the screen. */
 void Uniform_Choose(const TeamFile *team, const KitLook *look);

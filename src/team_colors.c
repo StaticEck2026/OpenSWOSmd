@@ -690,6 +690,23 @@ SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File)
 }
 
 
+#ifdef SWOS_SDL_BUILD
+/* ============================================================
+ * SetInGameTeamsFirstKits
+ * ============================================================
+ * Both sides in their FIRST kit, whatever the two look like: SWOS 2020's
+ * g_CustomUniform, which makes its copy of the routine above take the first
+ * combination without looking at the similarity it has just measured. For a match
+ * whose kits were chosen -- every live online match, and an offline one after the
+ * UNIFORM screen (ReportBot 0028). The measuring is still done, as there.
+ */
+void SetInGameTeamsFirstKits(TeamFile *team1File, TeamFile *team2File)
+{
+    MeasureTeamKitsSimilarity(team1File, team2File);
+    SetInGameTeamColors(0, team1File, team2File);
+}
+#endif
+
 /* ============================================================
  * ConvertPlayerDressColor
  * ============================================================

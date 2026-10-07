@@ -1098,19 +1098,29 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
          * header (src/uniform_menu.c). Nothing after this reads a kit from the team
          * file: the match, its replay and a rollback all work from the in-game teams. */
         static TeamFile kit1, kit2;
+        int32_t chosen;
         extern int32_t NetplayMatch_Enabled(void);
+        extern int32_t NetplayMatch_IsLive(void);
+        extern void SetInGameTeamsFirstKits(TeamFile *team1File, TeamFile *team2File);
         /* A netplay match (live, or one replayed from its recording) is dressed from
          * the teams alone: a choice made online is already IN the team both machines
          * have (online_menus.c lineup_end), and one left over on this machine would
          * dress the side differently here than there. */
         if (NetplayMatch_Enabled())
             Uniform_Clear();
-        Uniform_Kits(team1, team2, &kit1, &kit2);
+        chosen = Uniform_Kits(team1, team2, &kit1, &kit2);
         SetTeamSecondaryColors((uint16_t)kit1.prShirtType, kit1.prStripesColor,
             kit1.prBasicColor, kit1.prShortsColor, kit1.prSocksColor, &_topTeamInGame);
         SetTeamSecondaryColors((uint16_t)kit2.prShirtType, kit2.prStripesColor,
             kit2.prBasicColor, kit2.prShortsColor, kit2.prSocksColor, &_bottomTeamInGame);
-        SetInGameTeamsPrimaryColors(&kit1, &kit2);
+        /* Chosen kits are worn as chosen, as in SWOS 2020 (ReportBot 0028): the game's
+         * rule for kits that are too alike is asked only when nobody chose. Online it is
+         * never asked -- each player's team arrives with the kit they settled on as its
+         * first, and both machines dress the match the same way from that alone. */
+        if (chosen || NetplayMatch_IsLive())
+            SetInGameTeamsFirstKits(&kit1, &kit2);
+        else
+            SetInGameTeamsPrimaryColors(&kit1, &kit2);
         /* What each side kicks off in, for SWOS.log: shirt type, then the palette
          * entries of the shirt, its second colour, the shorts and the socks. */
         fprintf(stderr, "[match] kits: %.16s type %d colours %d/%d/%d/%d, %.16s type %d colours %d/%d/%d/%d\n",

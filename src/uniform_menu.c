@@ -11,13 +11,13 @@
  *     lasts one match: SetupPlayers forgets it, kick-off dresses the side from it
  *     (Uniform_Kits, called by InitializeInGameTeamsAndStartGame).
  *
- *   - SWOS'S OWN RULE STILL DECIDES A CLASH. SWOS 2020 forced both sides into whatever
- *     was on the screen (g_CustomUniform). Here a chosen kit replaces both of that
- *     side's kits and SetInGameTeamsPrimaryColors runs as it always has: a side nobody
- *     touched still changes to its second kit to avoid the other's, and two chosen kits
- *     that are too alike are resolved the way the game resolves any two that are. That
- *     is what makes it safe online, where each player chooses without seeing the other
- *     do it, and it needs nothing sent but the team.
+ *   - A CHOSEN KIT IS WORN, AS IN SWOS 2020 (g_CustomUniform; ReportBot 0028, since
+ *     2026-10-07). When either side chose, and in every live online match, both sides
+ *     wear their first kit and SWOS's rule for kits that are too alike is not asked
+ *     (SetInGameTeamsFirstKits). A chosen kit replaces both of that side's kits, so
+ *     "first" is the choice, and online that needs nothing sent but the team. Until
+ *     then the rule still decided, which overruled choices that were fine. A match
+ *     where nobody chose is dressed by the rule as it always was.
  *
  *   - THE SCREEN SHOWS WHAT WILL BE WORN. A side nobody has touched is drawn in the kit
  *     that rule would give it against the other side as it stands, so opening the
@@ -45,6 +45,8 @@ extern uint16_t  _controlMask;
 extern uint8_t   _currentMenu[];
 extern void      SetExitMenuFlag(void);
 extern void      SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
+extern void      SetInGameTeamsFirstKits(TeamFile *team1File, TeamFile *team2File);
+extern uint8_t   _teamKitsSimilarity[4];
 
 enum {
     kLeft, kRight, kSides,
@@ -87,14 +89,17 @@ static void effective(const TeamFile *team, TeamFile *out)
     }
 }
 
-void Uniform_Kits(const TeamFile *team1, const TeamFile *team2, TeamFile *kit1, TeamFile *kit2)
+int32_t Uniform_Kits(const TeamFile *team1, const TeamFile *team2, TeamFile *kit1, TeamFile *kit2)
 {
+    int32_t chosen = choice_of(team1) || choice_of(team2);
+
     effective(team1, kit1);
     effective(team2, kit2);
-    if (choice_of(team1) || choice_of(team2))
-        fprintf(stderr, "[uniform] kick-off: %.16s %s, %.16s %s\n",
-                (const char *)team1->teamName, choice_of(team1) ? "in a chosen kit" : "as the game picks",
-                (const char *)team2->teamName, choice_of(team2) ? "in a chosen kit" : "as the game picks");
+    if (chosen)
+        fprintf(stderr, "[uniform] kick-off: %.16s %s, %.16s %s; the game changes neither\n",
+                (const char *)team1->teamName, choice_of(team1) ? "in a chosen kit" : "in its first kit",
+                (const char *)team2->teamName, choice_of(team2) ? "in a chosen kit" : "in its first kit");
+    return chosen;
 }
 
 void Uniform_Choose(const TeamFile *team, const KitLook *look)
@@ -130,6 +135,7 @@ static struct {
     int32_t     editable[kSides];
     int32_t     leftIsTop;
     int32_t     overruled;          /* SWOS's rule will change a chosen kit */
+    int32_t     alike;              /* the two kits, kept as chosen, are too alike by that rule */
     int32_t     laidOut;            /* this unpack of the menu has been arranged */
 } s_menu;
 
@@ -184,6 +190,7 @@ static void refresh(void)
     int32_t  top = s_menu.leftIsTop ? kLeft : kRight, side;
 
     s_menu.overruled = 0;
+    s_menu.alike = 0;
     if (!s_menu.team[kRight]) {             /* nobody to clash with yet */
         const struct Choice *c = choice_of(&s_menu.team[kLeft]->team);
         if (c) s_menu.shown[kLeft] = c->look;
@@ -194,7 +201,14 @@ static void refresh(void)
     effective(&s_menu.team[kRight]->team, &kit[kRight]);
     keepTop = _topTeamInGame;
     keepBottom = _bottomTeamInGame;
-    SetInGameTeamsPrimaryColors(&kit[top], &kit[1 - top]);
+    /* As kick-off will: a chosen kit is worn as chosen, and so is every kit of an
+     * online match (game_init.c). Then the screen only says when the two are alike. */
+    if (s_online >= 0 || choice_of(&s_menu.team[kLeft]->team) || choice_of(&s_menu.team[kRight]->team)) {
+        SetInGameTeamsFirstKits(&kit[top], &kit[1 - top]);
+        s_menu.alike = _teamKitsSimilarity[0] >= 11;    /* the rule's own measure of "too alike" */
+    } else {
+        SetInGameTeamsPrimaryColors(&kit[top], &kit[1 - top]);
+    }
     worn(&_topTeamInGame, &kit[top], &will[top]);
     worn(&_bottomTeamInGame, &kit[1 - top], &will[1 - top]);
     _topTeamInGame = keepTop;
@@ -389,6 +403,8 @@ static void selectUniformMenuOnDraw(void)
         text = "";
     if (s_menu.overruled)
         text = "THESE KITS ARE TOO ALIKE: THE GAME WILL CHANGE ONE";
+    else if (s_menu.alike)
+        text = "THESE KITS ARE ALIKE - THE GAME WILL NOT CHANGE THEM";
     snprintf(help, sizeof help, "%s", text);
     e->fg = (uintptr_t)help;
 }
