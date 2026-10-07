@@ -14,8 +14,8 @@
  *     rollback a frame is simulated more than once;
  *   - the crowd chants keep the Amiga's rhythm. Their state machine calls the game's
  *     random generator in both releases, with different numbers in each, and the
- *     match depends on those calls: the PC samples are played when the Amiga's
- *     machine starts a chant and at the volume it fades to.
+ *     match depends on those calls: a PC chant is started when the Amiga's machine
+ *     starts one, and from there has the PC game's own fade and length.
  */
 #include "dos_sound.h"
 
@@ -539,14 +539,18 @@ void DosSound_ChantStart(int32_t slot)
      * count of 0 whatever its caller asked for). The fade brings it in. */
     play(VOICE_CHANT, id, 0, -1);
     s.chantPhase = 1;
-    s.chantTimer = 127;                     /* fadeInChantTimer */
+    s.chantTimer = 128;                     /* fadeInChantTimer */
     s.chantAcc = 0;
 }
 
-/* The Amiga's chant channel volume. Not followed: the Amiga holds a chant for 500 to
- * 1010 of its frames, 10 to 20 seconds, where the PC game holds one for 250 to 760 of
- * its ticks, 3.6 to 10.9 seconds -- and a PC chant is one short phrase repeated. So the
- * Amiga's machine says WHEN a chant starts, and chant_tick gives it the PC's length. */
+/* The Amiga's chant channel volume. Not followed: the Amiga's machine says WHEN a chant
+ * starts, and chant_tick gives it the PC game's own shape -- in at 128 ticks to volume
+ * 64 (half), held 500 to 1010 ticks (7 to 14 seconds), out over 128.
+ *
+ * The PC game has TWO copies of this routine, and until 2026-10-07 this was the one
+ * nothing calls (swos.asm cseg_18236: to volume 127, held 250 to 760): chants were twice
+ * as loud as the PC game's and half as long. PlayCrowdChants, which PlayEnqueuedSamples
+ * calls, is the one below. */
 void DosSound_ChantVolume(int32_t volume)
 {
     (void)volume;
@@ -561,23 +565,26 @@ static void chant_tick(void)
     if (!s.chantPhase)
         return;
     for (s.chantAcc += 70; s.chantAcc >= fps && s.chantPhase; s.chantAcc -= fps) {
-        if (s.chantPhase == 1) {            /* crowdChantVolume = 127 - fadeInChantTimer */
-            AudioSDL_PcmVolume(VOICE_CHANT, 127 - --s.chantTimer);
+        if (s.chantPhase == 1) {            /* crowdChantVolume = (128 - fadeInChantTimer) / 2 */
+            int32_t volume = (128 - --s.chantTimer) >> 1;
+            if (volume)                     /* "don't stop it when it's zero" */
+                AudioSDL_PcmVolume(VOICE_CHANT, volume);
             if (s.chantTimer == 0) {
                 s.chantPhase = 2;
-                s.chantTimer = (int32_t)(rnd() & 0xFF) * 2 + 250;      /* nextChantTimer */
+                s.chantTimer = (int32_t)(rnd() & 0xFF) * 2 + 500;      /* nextChantTimer */
             }
         } else if (s.chantPhase == 2) {
             if (--s.chantTimer == 0) {
                 s.chantPhase = 3;
-                s.chantTimer = 127;         /* fadeOutChantTimer */
+                s.chantTimer = 128;         /* fadeOutChantTimer */
             }
-        } else {                            /* crowdChantVolume = fadeOutChantTimer; 0 stops it */
-            if (--s.chantTimer == 0) {
+        } else {                            /* crowdChantVolume = fadeOutChantTimer / 2; 0 stops it */
+            int32_t volume = --s.chantTimer >> 1;
+            if (volume == 0) {
                 AudioSDL_PcmStop(VOICE_CHANT);
                 s.chantPhase = 0;
             } else {
-                AudioSDL_PcmVolume(VOICE_CHANT, s.chantTimer);
+                AudioSDL_PcmVolume(VOICE_CHANT, volume);
             }
         }
     }

@@ -219,8 +219,8 @@ most events are sent from the Amiga's routine (`src/sfx_crowd.c`):
 | `LoadAndPlayEndGameComment` | `GAME_OVER` | `GameOver` |
 | `StopAudio` | `MATCH_END` | `StopAudioAndClearFlags` |
 
-Volumes are the PC game's: kick 25, bounce and whistles 42, crowd loop 100, everything
-else 127, of 127.
+Volumes are the PC game's: kick 25, bounce and whistles 42, crowd loop 100, a chant up
+to 64, everything else 127, of 127.
 
 ## What is not the PC game's
 
@@ -239,10 +239,12 @@ else 127, of 127.
   from it, and the match depends on those calls (`sim_state.c`). So the machine stays the
   Amiga's and only says when: the PC chant in the same place of the table is started
   (the shirt-colour chant or `chant4l`, `chant8l`, `chant10l`, `chant4l`). From there the
-  chant has the PC game's own shape (`chant_tick`): it repeats without end at volume 0,
-  fades in over 127 PC ticks (1.8 s), holds for 250 to 760 (3.6 to 10.9 s), fades out
-  over 127 and is stopped. The Amiga's chant volume is not followed -- it holds a chant
-  for 10 to 20 seconds, which is a long time for one short phrase on repeat. After a
+  chant has the PC game's own shape (`chant_tick`, the PC game's `PlayCrowdChants`): it
+  repeats without end from volume 0, fades in over 128 PC ticks (1.8 s) to volume 64 --
+  half, so under the crowd loop's 100 -- holds for 500 to 1010 ticks (7 to 14 s), fades
+  out over 128 and is stopped. The Amiga's chant volume is not followed. (The PC game
+  carries a second, uncalled copy of the routine -- to 127, held 250 to 760 -- which
+  this followed until 2026-10-07: read which copy is CALLED.) After a
   goal the PC game's rule decides whether the next chants are about the score ("one
   nil" ... "five nil", "easy", "here we go", "you're not singing any more").
 - **Mixing headroom.** The PCM voices are mixed at 160/256 (`PCM_HEADROOM`): crowd, chant,
