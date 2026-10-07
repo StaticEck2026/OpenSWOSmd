@@ -230,8 +230,42 @@ static void logInMenu_layout(void)
     entry_at(LogInMenu_showPassword)->isInvisible = 1;
 }
 
+/* REMEMBER LOGIN INFO: the name is kept in SWOS.ini beside the server ([netplay] name,
+ * remember_login) while the switch is on, and taken out of it when it is turned off
+ * (ReportBot 0023: the switch was drawn and did nothing, so the name was typed again
+ * at every start). */
+static void login_load(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    static int32_t loaded;
+
+    if (loaded || !g_arcadeOpts)
+        return;
+    loaded = 1;
+    s_rememberLogin = g_arcadeOpts->netplay_remember != 0;
+    if (s_rememberLogin && !s_username[0])
+        snprintf(s_username, sizeof s_username, "%s", g_arcadeOpts->netplay_name);
+}
+
+static void login_save(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    extern const char *g_arcadeIniPath;
+    const char *name = s_rememberLogin ? s_username : "";
+
+    if (!g_arcadeOpts)
+        return;
+    if (g_arcadeOpts->netplay_remember == s_rememberLogin && strcmp(g_arcadeOpts->netplay_name, name) == 0)
+        return;                         /* nothing to write */
+    g_arcadeOpts->netplay_remember = s_rememberLogin;
+    snprintf(g_arcadeOpts->netplay_name, sizeof g_arcadeOpts->netplay_name, "%s", name);
+    if (g_arcadeIniPath)
+        Settings_Save(g_arcadeOpts, g_arcadeIniPath);
+}
+
 static void logInMenu_OnInit(void)
 {
+    login_load();
     logInMenu_layout();
 }
 
@@ -247,6 +281,7 @@ static void logInMenu_OnDraw(void)
 static void usernameInput_OnSelect(void)
 {
     InputText(sizeof s_username, (uint8_t *)entry_at(LogInMenu_usernameInput));
+    login_save();
 }
 
 /* SERVER: type "host" or "host:port". Saved on the way out, so it is typed once
@@ -266,7 +301,7 @@ static void serverInput_OnSelect(void)
     server_save();
 }
 
-static void rememberLogInInfo_OnSelect(void) { s_rememberLogin = !s_rememberLogin; }
+static void rememberLogInInfo_OnSelect(void) { s_rememberLogin = !s_rememberLogin; login_save(); }
 static void liveCast_OnSelect(void)          { s_liveCast = !s_liveCast; }
 
 /* Which server to talk to. There is no account service -- the matchmaker has no
@@ -287,6 +322,7 @@ static void logInMenuLogInContinue_OnSelect(void)
 {
     if (!s_username[0])
         snprintf(s_username, sizeof s_username, "PLAYER");
+    login_save();
     MmClient_Connect(mm_host(), mm_port(), s_username, NULL);
     OnlineMenus_Show(SWOS2020_MENU(matchMakingMenu));
 }

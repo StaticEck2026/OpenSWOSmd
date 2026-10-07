@@ -128,6 +128,9 @@ typedef struct {
     char                   matchmaker[80];   /* [netplay] matchmaker: the server MULTIPLAYER logs in to,
                                               * "host" or "host:port". Typed on the login menu and saved
                                               * there; empty = a server on this machine. */
+    char                   netplay_name[33]; /* [netplay] name: the name typed on the MULTIPLAYER login
+                                              * screen, kept while REMEMBER LOGIN INFO is on */
+    int                    netplay_remember; /* [netplay] remember_login: that switch (default on) */
     char                   record[80];       /* [netplay] record: stream every live match to a
                                               * recorder -- "server" (the matchmaker), "host[:port]",
                                               * or empty/"off". include/match_record.h */

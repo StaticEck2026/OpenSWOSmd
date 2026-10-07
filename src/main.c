@@ -438,6 +438,8 @@ int main(int argc, char **argv)
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.contest_own_ratings = 0; /* default: the original's roll, team-mate's rating and all */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
+    opts.netplay_name[0] = '\0';
+    opts.netplay_remember = 1;    /* REMEMBER LOGIN INFO: on, as the login screen shows it */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
     opts.netplay_balance = 0;     /* [netplay] balance: off unless asked for (docs/NETPLAY_BALANCE.md) */

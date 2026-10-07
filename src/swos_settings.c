@@ -172,7 +172,13 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "netplay")) {
         if (eqi(name, "matchmaker"))
             snprintf(opts->matchmaker, sizeof opts->matchmaker, "%s", value);
-        else if (eqi(name, "record"))
+        else if (eqi(name, "name"))
+            snprintf(opts->netplay_name, sizeof opts->netplay_name, "%s", value);
+        else if (eqi(name, "remember_login")) {
+            int b;
+            if (parse_bool(value, &b))
+                opts->netplay_remember = b;
+        } else if (eqi(name, "record"))
             snprintf(opts->record, sizeof opts->record, "%s", value);
         else if (eqi(name, "reports")) {
             int b;
@@ -434,6 +440,13 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (default port 19602). Empty means the public server, us.swos.eu. You can type it\n"
         "; on the login screen instead -- it is saved back here.",
         opts->matchmaker };
+    SETTING(n) = (IniEntry){ "netplay", "name",
+        "; name: your name on the MULTIPLAYER login screen. Typed there and saved back\n"
+        "; here while REMEMBER LOGIN INFO is on.",
+        opts->netplay_name };
+    SETTING(n) = (IniEntry){ "netplay", "remember_login",
+        "; remember_login: yes | no -- the login screen's REMEMBER LOGIN INFO switch.",
+        opts->netplay_remember ? "yes" : "no" };
     SETTING(n) = (IniEntry){ "netplay", "record",
         "; record: stream every live match to a recorder, which keeps it and compares the\n"
         "; two players' frames to catch a desync: \"server\" (the default: the matchmaker\n"
