@@ -58,6 +58,17 @@
 <body>
 
 <article>
+  <header><code>5944f50</code><time datetime="2026-10-07T03:00Z">2026-10-07 03:00 UTC</time></header>
+  <ul>
+    <li>Fixed: with <code>widescreen = stretch</code> in a window, a match in the DOS view was drawn in the top-left corner with the last menu still showing around it. To play in a 4:3 window, set <code>resolution = 640x480</code>, <code>widescreen = stretch</code> and <code>fullscreen = off</code> under <code>[video]</code> in <code>SWOS.ini</code>.</li>
+    <li>Fixed: MULTIPLAYER forgot your name at every start. REMEMBER LOGIN INFO now works: the name is kept while the switch is on.</li>
+    <li>Fixed: the goalkeeper's row blinked on the line-up screen in the online lobby and in MY CUSTOM TEAM.</li>
+    <li>PC sounds: crowd chants now have the PC game's own level and length. They were twice as loud and half as long as in the original; they are now quieter under the crowd and last 7 to 14 seconds.</li>
+    <li>Online: both players need this build to play each other.</li>
+  </ul>
+</article>
+
+<article>
   <header><code>913d4eb</code><time datetime="2026-10-06T07:42Z">2026-10-06 07:42 UTC</time></header>
   <ul>
     <li>Online, fixed: a fault in how the two games keep in step. Each game tells the other how far ahead it is, and that number was being sent wrong, so the games sometimes corrected in the wrong direction and one player ended up playing several frames ahead on guesses (seen as rollbacks and players jumping). It affected every online match so far.</li>
