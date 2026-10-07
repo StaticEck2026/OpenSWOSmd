@@ -92,7 +92,7 @@ extern volatile uint16_t _keyCount;
 /* ---- Controller buttons -> in-match key functions --------------------------
  * Play uses only TWO pad buttons — A and B for fire, B doubling as skip — plus
  * direction. Everything else the match understands is a KEY: pause, the
- * statistics overlay, the two replay kinds, the substitutes menus, quit. On a
+ * statistics overlay, the two replay kinds, quit. On a
  * console there is no keyboard at all, so without this none of it is reachable;
  * on a desktop pad it meant reaching for the keyboard mid-match.
  *
@@ -102,15 +102,19 @@ extern volatile uint16_t _keyCount;
  * against 0x50 for pause: 0x50 is ASCII 'P' AFTER the translation, not the raw
  * scancode for P, which is 0x19.)
  *
- * Deliberately NOT mapped: A and B (play), the D-pad and sticks (direction),
- * and GUIDE — which is HOME on a Switch and belongs to the system. */
+ * Deliberately NOT mapped: A and B (play), the D-pad and sticks (direction), the
+ * shoulder buttons (below), and GUIDE — which is HOME on a Switch and belongs to the system. */
 static const struct { int button; uint8_t akey; const char *what; } k_padKeys[] = {
     { SDL_CONTROLLER_BUTTON_START,         0x19, "P   pause"                    },
     { SDL_CONTROLLER_BUTTON_BACK,          0x21, "S   statistics"               },
     { SDL_CONTROLLER_BUTTON_Y,             0x13, "R   instant replay"           },
     { SDL_CONTROLLER_BUTTON_X,             0x25, "H   replay after the match"   },
-    { SDL_CONTROLLER_BUTTON_LEFTSHOULDER,  0x4C, "UP  substitutes, bottom team" },
-    { SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0x4D, "DN  substitutes, top team"    },
+    /* The shoulder buttons do NOTHING until there is a CONTROLS menu to assign them
+     * in (ReportBot 0030, the owner's decision). They used to send UP and DOWN -- the
+     * keys that call the two substitutes' benches -- but those are the cursor keys
+     * too: they moved a menu's cursor and steered the keyboard's player, by accident,
+     * mid-match. The bench is still the game's own way: three taps left or right
+     * with the ball out of play, or the second fire button in the PC style. */
     /* Quit is on a stick CLICK on purpose: it ends the match, and a click is
      * not something you hit by accident mid-game the way a face button is. */
     { SDL_CONTROLLER_BUTTON_RIGHTSTICK,    0x45, "ESC quit the match"           },
