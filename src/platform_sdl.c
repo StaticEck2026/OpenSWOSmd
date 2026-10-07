@@ -1860,7 +1860,14 @@ static int scale_pass_factor(void)
  * start being able to. */
 static SDL_Texture *scale_target_for(int n)
 {
-    if (s_scale_target && s_scale_n == n) return s_scale_target;
+    /* ...or when the PICTURE changes size: a DOS-view match is 320x200 where the menus
+     * are 336x272. Keyed on the factor alone, a window where both round to the same
+     * one (640x480 stretched: 1.9 and 2.4) kept the menus' target -- the match was
+     * drawn into its top-left corner, with the last menu still showing around it
+     * (ReportBot 0029's follow-up). */
+    static int target_w, target_h;
+    if (s_scale_target && s_scale_n == n &&
+        target_w == _screen_width && target_h == _screen_height) return s_scale_target;
 
     if (s_scale_target) {
         SDL_DestroyTexture(s_scale_target);
@@ -1886,6 +1893,8 @@ static SDL_Texture *scale_target_for(int n)
 
     s_scale_target = t;
     s_scale_n      = n;
+    target_w       = _screen_width;
+    target_h       = _screen_height;
     if (!s_scale_logged) {
         float sx = 1.0f, sy = 1.0f;
         SDL_RenderGetScale(s_renderer, &sx, &sy);
