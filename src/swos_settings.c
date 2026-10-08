@@ -165,6 +165,11 @@ static int handler(void *user, const char *section,
          * style was a hybrid matching neither original, and online it was a second
          * rule two players had to agree on. --view on the command line still pins it,
          * for replaying a recording made that way (docs/PLAYBACK.md). */
+    } else if (eqi(section, "input")) {
+        if (eqi(name, "stick_deadzone")) {
+            int n = atoi(value);
+            if (n >= 5 && n <= 90) opts->stick_deadzone = n;
+        }
     } else if (eqi(section, "replays")) {
         int b;
         if (eqi(name, "auto_save") && parse_bool(value, &b))
@@ -405,6 +410,13 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; commentary: auto | true | false. The PC game's commentary. auto (the\n"
         "; default): with style = pc only. true: always, over the Amiga's sounds too.\n",
         opts->commentary == 2 ? "auto" : opts->commentary ? "true" : "false" };
+    snprintf(vbuf[7], 24, "%d", opts->stick_deadzone);
+    SETTING(n) = (IniEntry){ "input", "stick_deadzone",
+        "; stick_deadzone: 5-90. How far an analog stick must be pushed, in percent of\n"
+        "; its travel, before it counts as a direction. Raise it if the stick drifts or\n"
+        "; feels twitchy; lower it for a lighter touch. Past it, the stick gives whichever\n"
+        "; of the eight directions it points nearest to. The D-pad is not affected.",
+        vbuf[7] };
     SETTING(n) = (IniEntry){ "gameplay", "fire_hold_lockout",
         "; fire_hold_lockout: true | false — true restores a BUG IN THE ORIGINAL\n"
         "; AMIGA GAME: an OPPONENT's tackle wipes your held fire button's shot charge,\n"

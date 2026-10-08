@@ -435,6 +435,7 @@ int main(int argc, char **argv)
     opts.hair_shading = 1;
     opts.shade_step = 2;
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
+    opts.stick_deadzone = 25;     /* percent: about what the old per-axis threshold was */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.contest_own_ratings = 0; /* default: the original's roll, team-mate's rating and all */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
@@ -1014,6 +1015,7 @@ int main(int argc, char **argv)
     PitchMap_SetEnabled(opts.pitch_maps);
     JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.hair_shading, opts.shade_step);
     KitArt_SetJaguar(opts.kit_art);
+    { extern void InputSDL_SetStickDeadzone(int percent); InputSDL_SetStickDeadzone(opts.stick_deadzone); }
     /* SWOS_SOUND_STYLE=pc, SWOS_COMMENTARY=on: for the test scripts, which pass no options. */
     { const char *e = getenv("SWOS_SOUND_STYLE");
       if (e) opts.sound_style = strcmp(e, "pc") == 0;

@@ -675,6 +675,38 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     }
 }
 
+/* An analog stick as the eight-way joystick the game was written for (ReportBot 0032).
+ *
+ * Inside the dead zone -- a RADIUS, [input] stick_deadzone percent of the travel -- it
+ * is centred. Outside, it is whichever of the eight directions it points nearest to:
+ * each gets the same 45 degrees. A diagonal is the stick more than 22.5 degrees off an
+ * axis, i.e. its smaller part over tan(22.5) = 0.4142 of its larger.
+ *
+ * It used to be one threshold an axis (24% each), which made a diagonal of anything
+ * more than 14 degrees off straight at full push: 62 degrees of every quarter turn
+ * against 28 for a straight line, so a quick left-then-up read as up-left. */
+static int32_t s_stickDeadzone = 8192;      /* of 32768: 25% */
+
+void InputSDL_SetStickDeadzone(int percent)
+{
+    if (percent < 5)  percent = 5;
+    if (percent > 90) percent = 90;
+    s_stickDeadzone = 32768 * percent / 100;
+}
+
+static void stick_directions(int32_t ax, int32_t ay, int *_up, int *_down, int *left, int *right)
+{
+    const int64_t mx = ax < 0 ? -(int64_t)ax : ax, my = ay < 0 ? -(int64_t)ay : ay;
+    int horizontal, vertical;
+
+    if (mx * mx + my * my < (int64_t)s_stickDeadzone * s_stickDeadzone)
+        return;
+    horizontal = mx * 10000 > my * 4142;     /* not within 22.5 degrees of straight up/down */
+    vertical   = my * 10000 > mx * 4142;     /* not within 22.5 degrees of straight left/right */
+    if (horizontal) { if (ax < 0) *left = 1; else *right = 1; }
+    if (vertical)   { if (ay < 0) *_up  = 1; else *_down = 1; }
+}
+
 /* Read directional + fire state from a single pad slot. `skip` (may be
  * NULL) is set when the conventional "second button" (B on mapped pads,
  * button index 1 on raw joysticks) is pressed — used for the SDL-only
@@ -694,10 +726,11 @@ static void read_device_state(int d,
     if (pad) {
         Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
         Sint16 ay = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY);
-        if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *_up    = 1;
-        if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *_down  = 1;
-        if (ax < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
-        if (ax >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
+        stick_directions(ax, ay, _up, _down, left, right);
+        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *_up    = 1;
+        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *_down  = 1;
+        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
+        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
         if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
             SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
             *_fire = 1;
@@ -720,10 +753,7 @@ static void read_device_state(int d,
         if (naxes >= 2) {
             Sint16 ax = SDL_JoystickGetAxis(raw, 0);
             Sint16 ay = SDL_JoystickGetAxis(raw, 1);
-            if (ax < -8000) *left  = 1;
-            if (ax >  8000) *right = 1;
-            if (ay < -8000) *_up    = 1;
-            if (ay >  8000) *_down  = 1;
+            stick_directions(ax, ay, _up, _down, left, right);
         }
         if (nhats >= 1) {
             Uint8 h = SDL_JoystickGetHat(raw, 0);

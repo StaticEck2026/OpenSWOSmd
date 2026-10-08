@@ -128,6 +128,8 @@ typedef struct {
     char                   matchmaker[80];   /* [netplay] matchmaker: the server MULTIPLAYER logs in to,
                                               * "host" or "host:port". Typed on the login menu and saved
                                               * there; empty = a server on this machine. */
+    int                    stick_deadzone;   /* [input] stick_deadzone: how far an analog stick must be
+                                              * pushed, in percent of its travel, before it counts */
     char                   netplay_name[33]; /* [netplay] name: the name typed on the MULTIPLAYER login
                                               * screen, kept while REMEMBER LOGIN INFO is on */
     int                    netplay_remember; /* [netplay] remember_login: that switch (default on) */
