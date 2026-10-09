@@ -222,6 +222,11 @@ most events are sent from the Amiga's routine (`src/sfx_crowd.c`):
 Volumes are the PC game's: kick 25, bounce and whistles 42, crowd loop 100, a chant up
 to 64, everything else 127, of 127.
 
+Two files are recordings at HALF the rate, 11,025 Hz: `fx/foul.raw` and `fx/endgamew.raw`,
+the foul and the end-of-half whistles. The PC game plays them through a routine of their
+own (the disassembly calls it `PlayRefereeWhistleSample22Khz`; it sets 11,025), and so
+does `play_long_whistle`. The kick-off whistle, `fx/whistle.raw`, is 22,050 like the rest.
+
 ## What is not the PC game's
 
 - **The random numbers.** The PC game picks a commentary line, the post-or-bar line and

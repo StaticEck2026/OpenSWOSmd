@@ -380,19 +380,35 @@ static int32_t trace_on(void)
     return on;
 }
 
-static void play(int32_t voice, int32_t id, int32_t volume, int32_t loops)
+static void play_at(int32_t voice, int32_t id, int32_t volume, int32_t loops, int32_t rate)
 {
     if (id == DOS_SOUND_NONE || id < 0 || id >= DOS_SOUND_FILES || !s_file[id].data)
         return;
     if (trace_on())
-        fprintf(stderr, "[dos-sound] voice %d: %s, volume %d%s\n", voice, k_dosSoundFiles[id], volume,
-                loops ? ", looped" : "");
-    AudioSDL_PcmPlay(voice, s_file[id].data, s_file[id].len, RATE, volume, loops);
+        fprintf(stderr, "[dos-sound] voice %d: %s, volume %d%s%s\n", voice, k_dosSoundFiles[id], volume,
+                loops ? ", looped" : "", rate != RATE ? ", at half rate" : "");
+    AudioSDL_PcmPlay(voice, s_file[id].data, s_file[id].len, rate, volume, loops);
+}
+
+static void play(int32_t voice, int32_t id, int32_t volume, int32_t loops)
+{
+    play_at(voice, id, volume, loops, RATE);
 }
 
 static void play_fx(int32_t fx, int32_t volume)
 {
     play(VOICE_FX_FIRST + s.fxNext, k_dosEffects[fx], volume, 0);
+    s.fxNext = (s.fxNext + 1) % VOICE_FX_COUNT;
+}
+
+/* The two long whistles -- the foul and the end of a half -- are recordings at HALF the
+ * rate of everything else. The PC game plays them through a routine of their own, which
+ * the disassembly names PlayRefereeWhistleSample22Khz and which sets 11,025 Hz; played
+ * at 22,050 they were an octave high and half as long (ReportBot 0033). The kick-off
+ * whistle is a 22,050 Hz file like the rest. */
+static void play_long_whistle(int32_t fx)
+{
+    play_at(VOICE_FX_FIRST + s.fxNext, k_dosEffects[fx], 42, 0, RATE / 2);
     s.fxNext = (s.fxNext + 1) % VOICE_FX_COUNT;
 }
 
@@ -710,8 +726,8 @@ void DosSound_Event(uint8_t event, uint16_t arg)
     case DOS_EV_KICK:           if (s_full) play_fx(FX_KICK, 25); break;
     case DOS_EV_BOUNCE:         if (s_full) play_fx(FX_BOUNCE, 42); break;
     case DOS_EV_WHISTLE:        if (s_full) play_fx(FX_WHISTLE, 42); break;
-    case DOS_EV_FOUL_WHISTLE:   if (s_full) play_fx(FX_FOUL, 42); break;
-    case DOS_EV_END_WHISTLE:    if (s_full) play_fx(FX_ENDGAME, 42); break;
+    case DOS_EV_FOUL_WHISTLE:   if (s_full) play_long_whistle(FX_FOUL); break;
+    case DOS_EV_END_WHISTLE:    if (s_full) play_long_whistle(FX_ENDGAME); break;
     case DOS_EV_GOAL_CROWD:
         if (s_full && !s_training)
             play(VOICE_REACTION, k_dosEffects[FX_HOMEGOAL], 127, 0);
