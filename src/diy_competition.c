@@ -2624,9 +2624,16 @@ void DIY_ReorderTeamsBySelectionFlags(void)
     while (d1 < a0s->totalMatchesInRound) {
         /* Check bit 1 of selection flags */
         if (selFlags[d1] & 0x02) {
-            /* Bit 1 set — skip (already selected), just increment d2 */
+            /* Bit 1 set: this tie is decided. Only d1 moves on (loc_12A31E: addq.w #1,d1);
+             * d2 stays on the next place at the front for an undecided one.
+             *
+             * This used to advance d2 as well, which made every swap below a swap of
+             * an entry with itself: nothing was reordered, and the replays -- which
+             * are the first `secondLegCounter` ties -- were whichever ties came first.
+             * A draw behind a decided tie sent the DECIDED tie to a replay and lost the
+             * drawn one (ReportBot 0034: Linfield, 11-0 winners, drawn into a Q/F
+             * replay because the tie after theirs was 1-1). */
             d1++;
-            d2++;
             continue;
         }
 
