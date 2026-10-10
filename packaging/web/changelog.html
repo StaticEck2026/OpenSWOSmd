@@ -58,6 +58,15 @@
 <body>
 
 <article>
+  <header><code>44bb01c</code><time datetime="2026-10-10T06:13Z">2026-10-10 06:13 UTC</time></header>
+  <ul>
+    <li>Online recordings now also keep, for every frame and each player, what that player's game read from the controls and when, beside the input the match was played with. It is how we check that the input delay stays constant through a match. Nothing is written or logged while you play.</li>
+    <li>The recordings page shows the match's input delay and whether <code>balance</code> was on, and marks on its timeline the frames where a player's game was being slowed: cyan for a balance wait, blue for a time sync wait. (This appears once the server has been updated; older recordings say "not recorded".)</li>
+    <li>Online: both players need this build to play each other.</li>
+  </ul>
+</article>
+
+<article>
   <header><code>f24a9ae</code><time datetime="2026-10-09T21:40Z">2026-10-09 21:40 UTC</time></header>
   <ul>
     <li>PC sounds, fixed: the full-time (and half-time) whistle and the foul whistle were played at twice their speed, so they sounded too high and too short. They now play at the right speed. The kick-off whistle was already right.</li>
