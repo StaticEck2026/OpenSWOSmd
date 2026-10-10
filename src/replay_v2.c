@@ -734,7 +734,7 @@ static int32_t s_predKept = 1;
 static struct {
     int32_t       player;           /* this machine's half: 1 or 2; 0 when there is none */
     SrpPrediction own;
-    uint8_t      *ownBuf;           /* own.pred then own.seen, one allocation */
+    uint8_t      *ownBuf;           /* own.pred, own.seen, then own.read: one allocation */
     char          written[2][64];   /* the files this match went to */
     int32_t       nWritten;
 } s_pred;
@@ -765,7 +765,8 @@ static const SrpPrediction *pred_own(uint32_t frames)
     if (!s_resume.kickoff || !ReplayRec_PredictionKept() || player < 1 || player > 2 ||
         Ghost_Prediction(frames, &g) != 0)
         return NULL;
-    s_pred.ownBuf = (uint8_t *)malloc((size_t)g.predFrames + g.seenLen + 1);
+    s_pred.ownBuf = (uint8_t *)malloc((size_t)g.predFrames + g.seenLen +
+                                      (size_t)g.readFrames * SRP_READ_BYTES + 1);
     if (!s_pred.ownBuf)
         return NULL;
     memcpy(s_pred.ownBuf, g.pred, g.predFrames);
@@ -774,6 +775,14 @@ static const SrpPrediction *pred_own(uint32_t frames)
     s_pred.own.predFrames = g.predFrames;
     s_pred.own.seen = s_pred.ownBuf + g.predFrames;
     s_pred.own.seenLen = g.seenLen;
+    if (g.read) {
+        uint8_t *at = s_pred.ownBuf + g.predFrames + g.seenLen;
+        memcpy(at, g.read, (size_t)g.readFrames * SRP_READ_BYTES);
+        s_pred.own.read = at;
+        s_pred.own.readFrames = g.readFrames;
+        s_pred.own.delay = g.delay;
+        s_pred.own.balance = g.balance;
+    }
     s_pred.player = player;
     return &s_pred.own;
 #else
@@ -907,6 +916,8 @@ static struct {
     uint32_t    cursor, audioCursor;
     /* What each player saw (PRED, SEEN), when the recording has it. */
     uint8_t    *pred;           /* 2 a frame, SRP_PRED_* plus the PLAY_PRED_* found on load */
+    uint8_t    *read;           /* READ's frames: 2 * SRP_READ_BYTES a frame; NULL without the chunk */
+    uint8_t     readDelay, readHead;    /* its input delay and SRP_READ_HEAD_* */
     uint8_t    *seen;           /* SEEN's records */
     uint32_t    seenLen;
     uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
@@ -928,6 +939,7 @@ void ReplayV2_Unload(void)
     free(s_play.offsets);
     free(s_play.audio);
     free(s_play.pred);
+    free(s_play.read);
     free(s_play.seen);
     free(s_play.seenAt);
     memset(&s_play, 0, sizeof s_play);
@@ -1218,6 +1230,19 @@ static void load_prediction(const uint8_t *file, uint32_t fileLen)
             }
         }
     }
+    /* READ: what each player's game read, when, and the waits it was taking. */
+    {
+        uint32_t readLen = 0;
+        uint8_t *read = chunk_get(file, fileLen, CHUNK_READ, &readLen);
+        if (read && readLen >= SRP_READ_HEAD + 2 * SRP_READ_BYTES * n &&
+            BE_READ_U16(read) == SRP_READ_VERSION && BE_READ_U32(read + 4) == n &&
+            (s_play.read = (uint8_t *)malloc(2 * SRP_READ_BYTES * (size_t)n + 1)) != NULL) {
+            memcpy(s_play.read, read + SRP_READ_HEAD, 2 * SRP_READ_BYTES * (size_t)n);
+            s_play.readDelay = read[2];
+            s_play.readHead = read[3];
+        }
+        free(read);
+    }
     if (s_play.pred || s_play.seenAt)
         fprintf(stderr, "[replay] what each player saw: %s%s\n", s_play.pred ? "PRED" : "",
                 s_play.seenAt ? (s_play.pred ? " and SEEN" : "SEEN") : "");
@@ -1427,6 +1452,25 @@ EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerPredAt(int32_t frame)
     if (!s_play.pred || frame < 0 || (uint32_t)frame >= s_play.frameCount)
         return -1;
     return s_play.pred[2 * frame] | (s_play.pred[2 * frame + 1] << 8);
+}
+/* READ (docs/REPLAY_FORMAT_V2.md): -1 without the chunk, else the input delay in the low
+ * byte and SRP_READ_HEAD_* (who had the prediction balance on) in the next. */
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerReadInfo(void)
+{
+    return s_play.read ? s_play.readDelay | (s_play.readHead << 8) : -1;
+}
+/* One player's (1, 2) three READ bytes for a frame, packed: the controls as read, the
+ * milliseconds since the frame before << 8, the wait flags (SRP_READ_BALANCE,
+ * SRP_READ_TIMESYNC) << 16. -1 without them. */
+EMSCRIPTEN_KEEPALIVE int32_t ReplayV2_PlayerReadAt(int32_t frame, int32_t player)
+{
+    const uint8_t *p;
+    if (!s_play.read || frame < 0 || (uint32_t)frame >= s_play.frameCount || player < 1 || player > 2)
+        return -1;
+    p = s_play.read + ((size_t)frame * 2 + (uint32_t)(player - 1)) * SRP_READ_BYTES;
+    if (p[0] == SRP_READ_UNKNOWN && p[1] == SRP_READ_UNKNOWN && p[2] == SRP_READ_UNKNOWN)
+        return -1;
+    return p[0] | (p[1] << 8) | (p[2] << 16);
 }
 /* Who played (PLYR): player 1's or 2's name, "" when the recording does not say. */
 EMSCRIPTEN_KEEPALIVE const char *ReplayV2_PlayerName(int32_t player)

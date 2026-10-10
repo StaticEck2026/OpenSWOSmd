@@ -6,12 +6,14 @@
  *
  * The message, on the link's channel 4 (P2P_NUM_CHANNELS), big-endian:
  *   0  4  "SWPD"
- *   4  1  version (1)
+ *   4  1  version (2)
  *   5  1  whose half it is: player 1 or 2
- *   6  2  0
+ *   6  1  the input delay the READ bytes were made under
+ *   7  1  1: this player had the prediction balance on
  *   8  4  frames (the PRED bytes)
  *  12  4  SEEN bytes
- *  16     the PRED bytes then the SEEN records, raw-deflated (the vendored miniz)
+ *  16  4  frames of READ (SRP_READ_BYTES each; 0: none)
+ *  20     the PRED bytes, the READ bytes, then the SEEN records, raw-deflated (the vendored miniz)
  * A half too big for one message (the link takes 128 KB) goes without its SEEN.
  */
 #ifndef MATCH_PREDICTION_H

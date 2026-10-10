@@ -76,6 +76,10 @@ private:
         bool inputsBroken = false;              // a batch came without its inputs
         // What this player SAW (RECORD_REPLAY_PRED): its half of PRED and SEEN.
         std::vector<uint8_t> pred, seen;
+        // What this player's game READ (RECORD_REPLAY_READ): SRP_READ_BYTES a frame.
+        std::vector<uint8_t> read;
+        uint16_t readDelay = 0;
+        uint8_t readBalance = 0;
     };
     struct Match
     {
@@ -107,6 +111,7 @@ private:
     void OnReplayMeta(Connection& c, const uint8_t* p, uint32_t len);
     bool OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayPred(Connection& c, const uint8_t* p, uint32_t len);
+    void OnReplayRead(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayScore(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayResume(Connection& c, const uint8_t* p, uint32_t len);
     void WriteReplay(Match& m, bool last);

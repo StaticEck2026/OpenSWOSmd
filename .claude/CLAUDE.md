@@ -200,6 +200,11 @@ own to the recorder and they swap them in the lobby (`src/match_prediction.c`), 
 host's file still equals the recorder's. Optional (`[netplay] prediction`); the page draws
 it as a timeline and an overlay. GGPO-X's guess is "repeat the last input", checked on every
 guessed frame (`[pred]` log line) -- so PRED + INPT rebuild each player's predictions.
+It also keeps what each player's game READ from its controls each frame and when (`READ`,
+beside `INPT`, what was applied): `scripts/srp_inputs.py <file.SRP>` checks that every input
+was applied the agreed delay after it was read, and how evenly each game's frames were paced.
+Carried like PRED (recorder stream `RECORD_REPLAY_READ`, lobby swap), so the server must be
+rebuilt with the game for its copy to have it.
 A replay is shown in the VIEW its match was played in (`ReplayV2_UseRecordedView`: META flags
 8/16, else SIMV, else the camera) -- a DOS-view match drawn 272 tall showed rows past the
 stadium. The page names who played whom from the recorder's per-match card (`<rec>.json`,

@@ -107,6 +107,7 @@ static struct {
     uint32_t         chaseInput;          /* live: SWOS_LIVE_CHASE_INPUT's generator, 0 = off */
     int32_t          paceUsPerFrame;      /* live: extra wait per frame GGPO's time sync asks for */
     int32_t          paceFramesLeft;      /* ... for this many more frames */
+    uint8_t          paceKind;            /* whose wait that is: SRP_READ_BALANCE or SRP_READ_TIMESYNC */
     int64_t          paceBiasUs;          /* ... and the standing slowdown it has learned */
     int64_t          pacedUs;             /* live: all of it, for the report */
     uint32_t         timeSyncs;           /* p2p: TIMESYNC events that asked for a wait */
@@ -828,6 +829,7 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
             if (close > 0) {
                 s_np.paceUsPerFrame = (int32_t)close;
                 s_np.paceFramesLeft = ev->timeSyncPeriod;
+                s_np.paceKind = SRP_READ_TIMESYNC;
                 s_np.timeSyncs++;
             }
         }
@@ -842,6 +844,7 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
             int64_t frameUs = 1000000 / DosGameplay_TargetFps();
             s_np.paceUsPerFrame = (int32_t)(frameUs * ev->balanceWaitMilli / 1000 / ev->balanceSpread);
             s_np.paceFramesLeft = ev->balanceSpread;
+            s_np.paceKind = SRP_READ_BALANCE;
             s_np.balanceUs += frameUs * ev->balanceWaitMilli / 1000;
             s_np.balanceWaits++;
         }
@@ -2085,6 +2088,10 @@ prepared:
         waitForPeer();
         return GAME_FRAME_DONE;
     }
+    /* READ: what was read for this frame and when, now that GGPO has taken it. */
+    if (s_np.mode == NETPLAY_MATCH_P2P && frame >= 0)
+        Ghost_Read(frame, local[0], SDL_GetTicks(), s_np.delay,
+                   s_np.paceFramesLeft > 0 ? s_np.paceKind : 0, s_balanceOn);
     rc = Netplay_SyncInput(s_np.session, synced, &disconnect);
     if (rc != NETPLAY_OK) {
         if (!s_np.live)

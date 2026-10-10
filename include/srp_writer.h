@@ -44,6 +44,7 @@ extern "C" {
 #define CHUNK_PLYR          FOURCC('P', 'L', 'Y', 'R')     /* who played: both players' names */
 #define CHUNK_PRED          FOURCC('P', 'R', 'E', 'D')     /* per frame, per player: the lag, rollbacks */
 #define CHUNK_SEEN          FOURCC('S', 'E', 'E', 'N')     /* where players were drawn, where they were */
+#define CHUNK_READ          FOURCC('R', 'E', 'A', 'D')     /* per frame, per player: the input as read, and when */
 
 #define FRAME_HEAD_BYTES    20      /* count, camera x/y (16.16), goals, crowd, minute, flags */
 #define SPRITE_BYTES        6       /* image, world x, world y */
@@ -78,13 +79,32 @@ extern "C" {
 #define SRP_SEEN_OBJECTS    23
 #define SRP_SEEN_BALL       22
 
-/* One player's half of PRED and SEEN, as that player's game knows it: a byte for each of
- * frames 0..predFrames-1, and its own SEEN records laid out as in the chunk, by frame. */
+/* READ: what each player's game READ from its controls on each frame, and when -- beside
+ * INPT, which is what was APPLIED (the same input, `delay` frames later, if the input
+ * delay held). Per frame, per player, SRP_READ_BYTES: the controls byte as read, the
+ * milliseconds since that player's read for the frame before (255 = that or more), and
+ * flags: which wait that game was taking when it played the frame. */
+#define SRP_READ_VERSION    1
+#define SRP_READ_HEAD       8       /* version u16, the input delay u8, SRP_READ_HEAD_* u8, frame count u32 */
+#define SRP_READ_HEAD_BALANCE1  0x01u   /* player 1 had [netplay] balance on */
+#define SRP_READ_HEAD_BALANCE2  0x02u   /* player 2 had: it works only when both did */
+#define SRP_READ_BYTES      3
+#define SRP_READ_BALANCE    0x01u   /* slowed by a prediction balance wait (docs/NETPLAY_BALANCE.md) */
+#define SRP_READ_TIMESYNC   0x02u   /* slowed by a time sync wait */
+#define SRP_READ_UNKNOWN    0xFFu   /* all three bytes: this player's half never reached the file */
+
+/* One player's half of PRED, SEEN and READ, as that player's game knows it: a byte for
+ * each of frames 0..predFrames-1, its own SEEN records laid out as in the chunk, by frame,
+ * and SRP_READ_BYTES for each of frames 0..readFrames-1 (read NULL: a build without it). */
 typedef struct SrpPrediction {
     const uint8_t *pred;
     uint32_t       predFrames;
     const uint8_t *seen;
     uint32_t       seenLen;
+    const uint8_t *read;
+    uint32_t       readFrames;
+    uint16_t       delay;           /* the match's input delay, as this player played it */
+    uint8_t        balance;         /* this player had the prediction balance on */
 } SrpPrediction;
 
 /* Where in META the final score sits: filled in when the match is over. */

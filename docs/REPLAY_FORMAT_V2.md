@@ -303,6 +303,39 @@ stream was cut -- stays `0xFF` / absent; the file is otherwise whole.
 
 The playback page draws it (docs/PLAYBACK.md, "What each player saw").
 
+### What each player's game READ: `READ`
+
+`INPT` is the input every frame was PLAYED with. `READ` is what each player's own game
+read from its controls on each frame, and when -- so the two can be compared (ReportBot
+0025: "it feels like the input delay changes"). Optional, written with `PRED` and `SEEN`
+and carried the same way: each game keeps its own half, streams it to the recorder
+(`RECORD_REPLAY_READ`) and swaps it in the lobby; an older recorder skips the message and
+its copy has no `READ`.
+
+| Chunk | Stored | Content |
+|---|---|---|
+| `READ` | deflated | version u16 (1), the input delay u8, flags u8, frame count u32, then 6 bytes a frame: player 1's three, player 2's three |
+
+The header's flags say who had the **prediction balance** on (docs/NETPLAY_BALANCE.md):
+`0x01` player 1, `0x02` player 2. It works only when both did.
+
+A player's three bytes for frame F: the **controls byte as read** when GGPO accepted the
+input for F (the byte `INPT` holds, `MatchStep_PackInput`'s first); the **milliseconds
+since that player's read for frame F-1** (255 = that or more; 0 on the first); and which
+**wait** that game was taking as it played the frame -- `0x01` a prediction balance wait,
+`0x02` a time sync wait (each stretches a run of frames a little; none holds one). All
+three `0xFF`: that half never reached the file.
+
+GGPO applies an input `delay` frames after it is read, so `INPT[F + delay]` is `READ[F]`
+for every frame, if the delay held; the second byte shows how evenly that game's frames
+were paced, which is the other thing "the delay changes" can mean, and the third why a
+frame was stretched. `scripts/srp_inputs.py <file.SRP>` checks the first and summarises
+the rest (`--frames`, `--csv` for the detail); the playback page marks the waits on its
+timeline and says whether the balance was on (docs/PLAYBACK.md). It is gathered in memory
+-- three bytes a frame, nothing written or logged during play -- by `Ghost_Read` (`src/netplay_ghost.c`), called where `src/netplay_match.c` hands
+the input to GGPO. A frame GGPO would not take input for (the prediction limit) is read
+again on the next pass, and its time is the whole wait.
+
 ### `quirks`
 
 **Which game this was recorded against.** We deliberately depart from the

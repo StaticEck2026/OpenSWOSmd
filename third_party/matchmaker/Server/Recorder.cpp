@@ -212,6 +212,8 @@ bool Recorder::Handle(Connection& c, uint8_t type, const uint8_t* p, uint32_t le
         OnReplayResume(c, p, len);
     else if (type == RECORD_REPLAY_PRED)
         OnReplayPred(c, p, len);
+    else if (type == RECORD_REPLAY_READ)
+        OnReplayRead(c, p, len);
     // Anything newer than us is skipped: a player may be a later build.
     c.match->lastMs = ServerTime::NowMs();
     return true;
@@ -467,6 +469,20 @@ void Recorder::OnReplayPred(Connection& c, const uint8_t* p, uint32_t len)
     s.seen.insert(s.seen.end(), p + 10 + count, p + len);
 }
 
+// What this player's game read from its controls on those frames, and when.
+void Recorder::OnReplayRead(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 8)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    uint32_t first = Record_Get32(p), count = Record_Get16(p + 4);
+    if (first * SRP_READ_BYTES != s.read.size() || 8 + (uint64_t)count * SRP_READ_BYTES != len)
+        return;
+    s.readDelay = p[6];
+    s.readBalance = p[7];
+    s.read.insert(s.read.end(), p + 8, p + len);
+}
+
 void Recorder::OnReplayScore(Connection& c, const uint8_t* p, uint32_t len)
 {
     if (len < 4)
@@ -537,7 +553,7 @@ void Recorder::WriteReplay(Match& m, bool last)
         c.players[1] = names[1].c_str();
     }
     // What each player saw, from each player's own stream: both halves in one file.
-    SrpPrediction halves[2];
+    SrpPrediction halves[2] = {};
     for (int i = 0; i < 2; i++)
     {
         const Side& h = m.side[i];
@@ -547,6 +563,13 @@ void Recorder::WriteReplay(Match& m, bool last)
         halves[i].predFrames = (uint32_t)h.pred.size();
         halves[i].seen = h.seen.data();
         halves[i].seenLen = (uint32_t)h.seen.size();
+        if (!h.read.empty())
+        {
+            halves[i].read = h.read.data();
+            halves[i].readFrames = (uint32_t)(h.read.size() / SRP_READ_BYTES);
+            halves[i].delay = h.readDelay;
+            halves[i].balance = h.readBalance;
+        }
         c.prediction[i] = &halves[i];
     }
     uint32_t len = 0;

@@ -34,7 +34,9 @@
     #playhead { position: absolute; top: -2px; bottom: -2px; width: 1px; margin-left: -1px;
                 background: var(--accent); pointer-events: none; }
     /* What each player saw (PRED): a row a player, one column a slice of frames. */
-    #timeline { width: 100%; height: 12px; display: block; cursor: pointer; background: #0b0b0b; }
+    #timeline { width: 100%; height: 16px; display: block; cursor: pointer; background: #0b0b0b; }
+    #bal { font: 12px/1.4 monospace; color: var(--dim); }
+    .balw { color: #30d0ff; } .tsw { color: #6080ff; }
     .pred[hidden] { display: none; }
     #lag { font: 12px/1.4 monospace; color: var(--dim); }
     .p1 { color: #ffe600; } .p2 { color: #ffffff; } .bad { color: #ff4040; } .off { color: #ff9a30; }
@@ -57,7 +59,7 @@
     <div id="status">loading…</div>
   </div>
   <div id="bar">
-    <div id="tlwrap" hidden><canvas id="timeline" title="What each player saw: top row player 1 (yellow), bottom row player 2 (white). Brighter = more of the other player's input guessed; orange = a guess was wrong; red = the player saw something that did not happen; a dotted line = no data from that player. Click to jump."></canvas><div id="playhead"></div></div>
+    <div id="tlwrap" hidden><canvas id="timeline" title="What each player saw: top row player 1 (yellow), bottom row player 2 (white). Brighter = more of the other player's input guessed; orange = a guess was wrong; red = the player saw something that did not happen; a dotted line = no data from that player. The thin line under a row: cyan = that player's game was slowed by a prediction balance wait, blue = by a time sync wait. Click to jump."></canvas><div id="playhead"></div></div>
     <input id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Frame">
     <div class="row">
       <button id="back10" title="10 frames back (Shift+Left)">&laquo;10</button>
@@ -77,6 +79,7 @@
       <button id="nextEv" title="The next moment a player saw something that did not happen (])">rollback &rsaquo;</button>
       <button id="screen" title="Whose screen the picture is: the match as it was finally played, or what one player's screen showed (S)">screen: the match</button>
       <button id="view" title="Whose view the overlay draws (V)">view: both</button>
+      <span id="bal" title="The match's input delay, and whether the prediction balance was on (it takes both players)"></span>
       <span id="lag"></span>
       <span id="help2" class="help">[ ] rollbacks &middot; S screen &middot; V view</span>
     </div>
@@ -158,6 +161,8 @@
           step:     Module._ReplayV2_PlayerStep,
           has:      Module._ReplayV2_PlayerPrediction,
           predAt:   Module._ReplayV2_PlayerPredAt,
+          readInfo: Module._ReplayV2_PlayerReadInfo,     // absent in a player built before READ
+          readAt:   Module._ReplayV2_PlayerReadAt,
           overlay:  Module._ReplayV2_PlayerOverlay,
           screen:   Module._ReplayV2_PlayerPerspective,
         };
@@ -193,7 +198,24 @@
       // that came, whether or not it moved anything visibly.
       function seen(b)  { return b !== 0xFF && (b & 0x80) !== 0; }
       function wrong(b) { return b !== 0xFF && (b & 0xC0) !== 0; }
+      // READ (docs/REPLAY_FORMAT_V2.md): per frame per player, which wait that player's game
+      // was taking -- 1 a prediction balance wait, 2 a time sync wait; 0xFF no data.
+      var waits = null;
+      function loadRead(n) {
+        var balEl = document.getElementById('bal');
+        if (typeof api.readInfo !== 'function' || typeof api.readAt !== 'function') return;
+        var info = api.readInfo();
+        if (info < 0) { balEl.textContent = 'balance: not recorded'; return; }
+        waits = new Uint8Array(2 * n);
+        for (var f = 0; f < n; f++)
+          for (var p = 0; p < 2; p++) { var v = api.readAt(f, p + 1); waits[2 * f + p] = v < 0 ? 0xFF : (v >> 16) & 0xFF; }
+        var on = (info >> 8) & 3;
+        balEl.innerHTML = 'input delay ' + (info & 0xFF) + ' &middot; balance: ' +
+          (on === 3 ? '<span class="balw">ON</span>' :
+           on === 0 ? 'off' : 'off (only ' + esc(nameOf(on === 1 ? 0 : 1)) + ' had it on)');
+      }
       function loadPred(n) {
+        loadRead(n);
         if (!(api.has() & 1)) return;
         pred = new Uint8Array(2 * n);
         for (var f = 0; f < n; f++) { var v = api.predAt(f); pred[2 * f] = v & 0xFF; pred[2 * f + 1] = (v >> 8) & 0xFF; }
@@ -203,7 +225,7 @@
       }
       function drawTimeline() {
         if (!pred) return;
-        var n = pred.length / 2, w = timeline.clientWidth || 600, h = 12;
+        var n = pred.length / 2, w = timeline.clientWidth || 600, h = 16;
         timeline.width = w; timeline.height = h;
         var g = timeline.getContext('2d');
         g.fillStyle = '#0b0b0b'; g.fillRect(0, 0, w, h);
@@ -214,8 +236,9 @@
           var a = Math.ceil((x - 0.5) * (n - 1) / w), b = Math.ceil((x + 0.5) * (n - 1) / w);
           a = Math.max(0, a); b = Math.min(n, Math.max(a + 1, b));
           for (var p = 0; p < 2; p++) {
-            var lag = 0, bad = false, off = false, known = false;
+            var lag = 0, bad = false, off = false, known = false, wait = 0;
             for (var f = a; f < b; f++) {
+              if (waits && waits[2 * f + p] !== 0xFF) wait |= waits[2 * f + p];
               var v = pred[2 * f + p];
               if (v === 0xFF) continue;
               known = true;
@@ -223,8 +246,10 @@
               if (seen(v)) bad = true;
               else if (wrong(v)) off = true;
             }
+            // Under the row: the wait that player's game was taking, balance over time sync.
+            if (wait & 3) { g.fillStyle = (wait & 1) ? '#30d0ff' : '#4058c8'; g.fillRect(x, p * 8 + 5, 1, 2); }
             if (!known) {                       // no data from this player: a dotted line
-              if (x % 3 === 0) { g.fillStyle = '#555'; g.fillRect(x, p * 6 + 2, 1, 1); }
+              if (x % 3 === 0) { g.fillStyle = '#555'; g.fillRect(x, p * 8 + 2, 1, 1); }
               continue;
             }
             if (bad) g.fillStyle = '#ff4040';
@@ -232,7 +257,7 @@
             else if (!lag) continue;
             else { var k = 0.25 + 0.75 * Math.min(lag, 8) / 8, c = rgb[p];
                    g.fillStyle = 'rgb(' + (c[0] * k | 0) + ',' + (c[1] * k | 0) + ',' + (c[2] * k | 0) + ')'; }
-            g.fillRect(x, p * 6, 1, 5);
+            g.fillRect(x, p * 8, 1, 5);
           }
         }
       }
@@ -263,6 +288,9 @@
           var t = esc(nameOf(p)) + ' guessed ' + (v & 15);
           if (v & 0x20) t += ', replayed';
           if (v & 0x10) t += ', stalled';
+          var wv = waits ? waits[2 * f + p] : 0xFF;
+          if (wv !== 0xFF && (wv & 1)) t += ', <span class="balw">balance wait</span>';
+          else if (wv !== 0xFF && (wv & 2)) t += ', <span class="tsw">time sync wait</span>';
           out.push('<span class="' + cls + '">' + t + '</span>' +
                    (seen(v) ? ' <span class="bad">saw it wrong</span>' :
                     wrong(v) ? ' <span class="off">guess wrong, not visible</span>' : ''));

@@ -399,6 +399,26 @@ static void send_replay(const SrpContent *c, uint32_t from, uint32_t to)
     s_rec.replayFrames += to - from + 1;
 }
 
+/* This player's READ bytes for frames `from`..`to`: what it read, and when. */
+static void send_read(uint32_t from, uint32_t to)
+{
+    uint32_t count = to - from + 1, f;
+    uint8_t *buf = (uint8_t *)malloc(8 + (size_t)count * SRP_READ_BYTES);
+
+    if (!buf) {
+        drop("out of memory");
+        return;
+    }
+    Record_Put32(buf, from);
+    Record_Put16(buf + 4, count);
+    buf[6] = (uint8_t)Ghost_ReadDelay();
+    buf[7] = (uint8_t)Ghost_ReadBalance();
+    for (f = from; f <= to; f++)
+        Ghost_ReadBytes(f, buf + 8 + (size_t)(f - from) * SRP_READ_BYTES);
+    hold_message(RECORD_REPLAY_READ, buf, 8 + count * SRP_READ_BYTES);
+    free(buf);
+}
+
 /* This player's PRED bytes and SEEN records for frames `from`..`to`, confirmed, so final. */
 static void send_pred(uint32_t from, uint32_t to)
 {
@@ -492,8 +512,11 @@ void MatchRecord_Replay(uint32_t confirmed)
         uint32_t to = s_rec.replayNext + 255 < last ? s_rec.replayNext + 255 : last;
         uint32_t from = s_rec.replayNext;
         send_replay(&c, from, to);
-        if (s_rec.sock >= 0 && ReplayRec_PredictionKept())
+        if (s_rec.sock >= 0 && ReplayRec_PredictionKept()) {
             send_pred(from, to);
+            if (s_rec.sock >= 0)
+                send_read(from, to);
+        }
     }
 }
 

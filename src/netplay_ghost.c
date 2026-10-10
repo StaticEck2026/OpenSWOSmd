@@ -74,7 +74,12 @@ static struct {
     char       *clips;              /* Ghost_Clips: the windows, as CSV */
     uint32_t    clipsLen, clipsCap;
     uint8_t    *pred;               /* PRED: each frame's lag and flags (SRP_PRED_*) */
-    uint8_t    *predOut, *seenOut;  /* Ghost_Prediction's */
+    uint8_t    *read;               /* READ: SRP_READ_BYTES a frame -- the controls as read, ms since the last */
+    uint32_t    readLastMs;
+    int32_t     readAny;            /* a frame's read has been noted this match */
+    uint16_t    delay;              /* the input delay the reads were made under */
+    uint8_t     balance;            /* this player has the prediction balance on */
+    uint8_t    *predOut, *seenOut, *readOut;  /* Ghost_Prediction's */
     uint32_t    seenOutLen;
 } s_g;
 
@@ -82,7 +87,7 @@ static int32_t reserve(uint32_t frame)
 {
     uint32_t cap;
     GhostFrame *d, *f;
-    uint8_t *p;
+    uint8_t *p, *r;
     if (frame < s_g.cap)
         return 0;
     cap = s_g.cap ? s_g.cap : 4096;
@@ -97,8 +102,12 @@ static int32_t reserve(uint32_t frame)
     p = (uint8_t *)realloc(s_g.pred, cap);
     if (p)
         s_g.pred = p;
-    if (!d || !f || !p)
+    r = (uint8_t *)realloc(s_g.read, (size_t)cap * SRP_READ_BYTES);
+    if (r)
+        s_g.read = r;
+    if (!d || !f || !p || !r)
         return 1;
+    memset(s_g.read + (size_t)s_g.cap * SRP_READ_BYTES, SRP_READ_UNKNOWN, (size_t)(cap - s_g.cap) * SRP_READ_BYTES);
     memset(s_g.drawn + s_g.cap, 0, (cap - s_g.cap) * sizeof *d);
     memset(s_g.final + s_g.cap, 0, (cap - s_g.cap) * sizeof *f);
     memset(s_g.pred + s_g.cap, SRP_PRED_UNKNOWN, cap - s_g.cap);
@@ -117,7 +126,11 @@ void Ghost_Begin(int32_t player)
         memset(s_g.drawn, 0, s_g.cap * sizeof *s_g.drawn);
         memset(s_g.final, 0, s_g.cap * sizeof *s_g.final);
         memset(s_g.pred, SRP_PRED_UNKNOWN, s_g.cap);
+        memset(s_g.read, SRP_READ_UNKNOWN, (size_t)s_g.cap * SRP_READ_BYTES);
     }
+    s_g.readAny = 0;
+    s_g.delay = 0;
+    s_g.balance = 0;
 }
 
 static void capture(GhostFrame *g)
@@ -161,6 +174,35 @@ void Ghost_Lag(int32_t frame, int32_t lag, int32_t stalled)
     if (lag > (int32_t)SRP_PRED_LAG)
         lag = SRP_PRED_LAG;
     s_g.pred[frame] = (uint8_t)(lag | (stalled ? SRP_PRED_STALLED : 0));
+}
+
+/* READ (ReportBot 0025): the controls this player's game read for `frame`, taken when
+ * GGPO accepted them -- they are applied `delay` frames later -- and the wall clock then.
+ * Two bytes kept in memory; nothing is written or logged during play. */
+void Ghost_Read(int32_t frame, uint8_t controls, uint32_t nowMs, int32_t delay, uint8_t flags,
+                int32_t balanceOn)
+{
+    uint32_t dt;
+    if (frame < 0 || reserve((uint32_t)frame))
+        return;
+    dt = s_g.readAny ? nowMs - s_g.readLastMs : 0;
+    s_g.readLastMs = nowMs;
+    s_g.readAny = 1;
+    s_g.delay = (uint16_t)(delay < 0 ? 0 : delay > 255 ? 255 : delay);
+    s_g.balance = balanceOn != 0;
+    s_g.read[(size_t)frame * SRP_READ_BYTES] = controls;
+    s_g.read[(size_t)frame * SRP_READ_BYTES + 1] = (uint8_t)(dt > 255 ? 255 : dt);
+    s_g.read[(size_t)frame * SRP_READ_BYTES + 2] = flags;
+}
+
+int32_t Ghost_ReadDelay(void) { return s_g.delay; }
+int32_t Ghost_ReadBalance(void) { return s_g.balance; }
+
+void Ghost_ReadBytes(uint32_t frame, uint8_t *out)
+{
+    uint32_t b;
+    for (b = 0; b < SRP_READ_BYTES; b++)
+        out[b] = frame < s_g.cap ? s_g.read[(size_t)frame * SRP_READ_BYTES + b] : SRP_READ_UNKNOWN;
 }
 
 int32_t Ghost_Player(void)
@@ -224,12 +266,16 @@ int32_t Ghost_Prediction(uint32_t frames, SrpPrediction *out)
     memset(out, 0, sizeof *out);
     free(s_g.predOut);
     free(s_g.seenOut);
+    free(s_g.readOut);
+    s_g.readOut = (uint8_t *)malloc((size_t)frames * SRP_READ_BYTES + 1);
     s_g.predOut = (uint8_t *)malloc(frames + 1);
     seen = (uint8_t *)malloc((size_t)frames * 8 + 256);     /* grown below as needed */
     s_g.seenOut = seen;
     s_g.seenOutLen = 0;
-    if (!s_g.predOut || !seen)
+    if (!s_g.predOut || !seen || !s_g.readOut)
         return 1;
+    for (f = 0; f < frames; f++)
+        Ghost_ReadBytes(f, s_g.readOut + (size_t)f * SRP_READ_BYTES);
     {
         uint32_t cap = frames * 8 + 256;
         for (f = 0; f < frames; f++) {
@@ -255,6 +301,12 @@ int32_t Ghost_Prediction(uint32_t frames, SrpPrediction *out)
     out->predFrames = frames;
     out->seen = s_g.seenOut;
     out->seenLen = n;
+    if (s_g.readAny) {
+        out->read = s_g.readOut;
+        out->readFrames = frames;
+        out->delay = s_g.delay;
+        out->balance = s_g.balance;
+    }
     return 0;
 }
 

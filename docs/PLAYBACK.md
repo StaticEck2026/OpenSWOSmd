@@ -86,7 +86,12 @@ player's input, corrected a few frames later. When a recording has it, the page 
   yellow, player 2 below in white. Brighter where more of the other player's input was
   guessed; **orange** where a guess was wrong but moved nothing visibly; **red** where the
   player SAW something that never happened. Dark grey: that player's half is missing. Click
-  it to jump.
+  it to jump. Under each row a thin line marks the frames that player's game was being
+  slowed: **cyan** by a prediction balance wait, **blue** by a time sync wait (`READ`,
+  docs/REPLAY_FORMAT_V2.md §4). Beside the buttons the page says the match's input delay
+  and whether the balance was ON (it takes both players), off, or not recorded (a match
+  from before 2026-10-09, or a server not yet updated); the line under the bar names a
+  wait on the frame shown.
 - **The overlay** on the picture, for the views chosen (**V** / the *view* button: both,
   player 2, player 1, off). Every object a player saw somewhere else gets a line from where
   it really was (a red dot) to where that player's screen showed it (a box in that player's

@@ -51,6 +51,18 @@ void Ghost_Lag(int32_t frame, int32_t lag, int32_t stalled);
 /* The player this machine is (Ghost_Begin's), 0 before any match. */
 int32_t Ghost_Player(void);
 
+/* READ: the controls this player's game read for `frame` (applied `delay` frames later),
+ * the wall clock at that moment in milliseconds, which waits it is taking (SRP_READ_BALANCE,
+ * SRP_READ_TIMESYNC), and whether this player has the balance on. Kept in memory. */
+void Ghost_Read(int32_t frame, uint8_t controls, uint32_t nowMs, int32_t delay, uint8_t flags,
+                int32_t balanceOn);
+
+int32_t Ghost_ReadDelay(void);
+int32_t Ghost_ReadBalance(void);
+
+/* A frame's SRP_READ_BYTES, SRP_READ_UNKNOWN for one never read. */
+void Ghost_ReadBytes(uint32_t frame, uint8_t *out);
+
 /* A frame's PRED byte, SRP_PRED_UNKNOWN for one never played. */
 uint8_t Ghost_PredByte(uint32_t frame);
 
