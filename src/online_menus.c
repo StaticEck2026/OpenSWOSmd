@@ -401,6 +401,36 @@ static void matchMaking_link_list(void)
     entry_at(MatchMakingMenu_rankings)->upEntry     = (int8_t)last;
 }
 
+/* Where SWOS 2020's .mnu put things, corrected (ReportBot 0035). Absolute positions, set
+ * on every draw: coming back from SETTINGS restores the menu from its template.
+ *
+ *  - The nine buttons stand in three columns from x 34 to 312 of the menu's 320, hard
+ *    against the right edge. Centred under the header (whose middle is 152) they start
+ *    at 13; the line of help above them moves with them.
+ *  - "N ONLINE" is right-aligned in a box ending at 312, the last pixel of the 336-wide
+ *    screen, where the font's trailing column fell off it and took the final letter
+ *    with it. The box ends 8 short of that.
+ *
+ * An entry's x is the .mnu's + 24 (menu_load_json.c, as UnpackMenu). */
+static void matchMaking_layout(void)
+{
+    enum { kLeft = 13 + 24, kStep = 97, kShift = 34 - 13 };
+    static const int16_t column[3][3] = {
+        { MatchMakingMenu_menuSettings, MatchMakingMenu_menuCustomTeam, -1 },
+        { MatchMakingMenu_openGame, MatchMakingMenu_cancelGame, MatchMakingMenu_menuExit },
+        { MatchMakingMenu_rankings, MatchMakingMenu_leagues, MatchMakingMenu_matchLogs },
+    };
+    int32_t c, r;
+
+    for (c = 0; c < 3; c++)
+        for (r = 0; r < 3; r++)
+            if (column[c][r] >= 0)
+                entry_at(column[c][r])->x = (uint16_t)(kLeft + c * kStep);
+    entry_at(MatchMakingMenu_desc)->x = (uint16_t)(20 + 24 - kShift);
+    entry_at(MatchMakingMenu_connector)->x = (uint16_t)(203 + 24 - kShift);
+    entry_at(MatchMakingMenu_numOfUsers)->dwWidth = 120 - 8;
+}
+
 static void matchMakingMenu_OnDraw(void)
 {
     const MmUser *users;
@@ -409,6 +439,8 @@ static void matchMakingMenu_OnDraw(void)
     int32_t numUsers = 0, numGames = 0, row;
     MmState state;
     char who[MM_NAME_MAX];
+
+    matchMaking_layout();
 
     /* Every row's text and visibility is rebuilt below each frame, but these two
      * were set only in onInit -- so coming back from SETTINGS, which restores this

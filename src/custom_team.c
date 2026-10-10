@@ -756,7 +756,7 @@ static void read_slots(void)
             snprintf(s_slots.label[slot], sizeof s_slots.label[slot], "%.16s", (const char *)team.team.teamName);
         else
             snprintf(s_slots.label[slot], sizeof s_slots.label[slot], "%s",
-                     s_slots.picking ? "-" : "EMPTY - SELECT TO CREATE");
+                     s_slots.picking ? "-" : "EMPTY SLOT");
     }
 }
 
