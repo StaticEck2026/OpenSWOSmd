@@ -2321,16 +2321,6 @@ __attribute__((used, externally_visible))
 void SWOSMainMenuInit(void)
 {
     CommonMenuExit();
-#ifndef SWOS_SDL_BUILD
-    /* CREDITS (entry 15) opens a JSON menu, which only the SDL build runs. */
-    _menuEntries[15].isInvisible = 1;
-#endif
-#ifndef SWOS_NETPLAY
-    /* OpenSWOS's MULTIPLAYER button (entry 14) plays over the network, so it is only
-     * in a build that has the netplay library (make NETPLAY=1, docs/NETPLAY.md): never
-     * on the Amiga, and never on the web, where a browser has no UDP to play over. */
-    _menuEntries[14].isInvisible = 1;
-#endif
 }
 
 /* MultiplayerMenuSelected — OpenSWOS's MULTIPLAYER button: SWOS 2020's online flow,
@@ -2414,6 +2404,20 @@ void CommonMenuExit(void)
 {
     uint8_t *nameStr;
     uint8_t *fmtStr;
+
+    /* Here, not in SWOSMainMenuInit: coming back from a sub-menu shows the main menu
+     * again without its onInit, and the two buttons came back with it (seen on the
+     * Amiga). Every way into the main menu ends in this function. */
+#ifndef SWOS_SDL_BUILD
+    /* CREDITS (entry 15) opens a JSON menu, which only the SDL build runs. */
+    _menuEntries[15].isInvisible = 1;
+#endif
+#ifndef SWOS_NETPLAY
+    /* OpenSWOS's MULTIPLAYER button (entry 14) plays over the network, so it is only
+     * in a build that has the netplay library (make NETPLAY=1, docs/NETPLAY.md): never
+     * on the Amiga, and never on the web, where a browser has no UDP to play over. */
+    _menuEntries[14].isInvisible = 1;
+#endif
 
     if (_gameType == GAME_TYPE_DIY_COMPETITION) {
         nameStr = (uint8_t *)_primaryCompetitionBuf.tourn.header.competitionName;

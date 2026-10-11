@@ -248,9 +248,15 @@ static inline uint16_t spriteNumPlanes(int16_t ordinal)
  * it the first block can't use the -4 smoothing -> the ~1-tile-in "jump back to
  * the start". PLANE_STRIDE = FMODE_FETCH_BYTES(48 data) + margin(4) = 52. The data
  * lives at byte SCROLL_LEFT_MARGIN_BYTES..PLANE_STRIDE; the margin at byte 0.. */
+/* 2026-10-10: the margin is GONE (0) and the AGA plane row is the 48 bytes the display
+ * fetches. It existed because the FMODE=1 display stood 16px left of the camera, so at
+ * the left touchline 16px of off-pitch memory were on screen. The display now starts
+ * at the camera (AGA_PITCH_DISPLAY_SHIFT_PX, display.c): the long fetched to the left
+ * stays under the fine-scroll delay, and what it holds is never seen. The name is kept
+ * (as 0) where drawing code adds it. */
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-#define SCROLL_LEFT_MARGIN_BYTES    4
-#define PLANE_STRIDE                52
+#define SCROLL_LEFT_MARGIN_BYTES    0
+#define PLANE_STRIDE                48
 #else
 #define SCROLL_LEFT_MARGIN_BYTES    0
 #define PLANE_STRIDE                44

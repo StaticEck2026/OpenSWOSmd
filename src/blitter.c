@@ -317,19 +317,32 @@ void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t colo
     x += _cameraXMod320;
     y += _cameraYMod320;
 
+#if !defined(AGA)
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
+#endif
 #endif
 
     /* Check for vertical wrap (still needed on SDL when a caller asks
      * for a rectangle that straddles the bottom edge — rare, but the
      * wrap math is harmless when y starts in-range). */
     wrapRows = 0;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* AGA: no wrap -- the display reads the 2x-tall buffer straight down from
+     * cameraYMod320 (see blitStringToFrontBuffer). Only clip at the buffer's end. */
+    overflow = (int16_t)(y + h - 2 * SCREEN_HEIGHT);
+    if (overflow > 0) {
+        if ((uint16_t)overflow >= h)
+            return;
+        h -= (uint16_t)overflow;
+    }
+#else
     overflow = (int16_t)(y + h - SCREEN_HEIGHT);
     if (overflow > 0) {
         wrapRows = (uint16_t)overflow;
         h -= wrapRows;
     }
+#endif
 
 #ifdef SWOS_SDL_BUILD
     if (buf) {
@@ -977,8 +990,13 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         BLT_L(_custom->bltdpt, (uint32_t)dstPtr);
     }
 
-    /* Kick final blit (no wait — caller or next operation will sync) */
+    /* Kick final blit, and wait for it. SWOS2.s leaves it running ("the next blit will
+     * sync"), but what comes next after the LAST glyph is no blit: the CPU builds the
+     * sprite's mask from these planes (BlitSpritePlanar_*). On the A1200 the CPU got
+     * there before this blit -- the shadow plane -- had finished, so the mask had no
+     * shadow under the last character of a name. */
     BLT_W(_custom->bltsize, blitsize);
+    waitBlit();
     }
 }
 #endif /* !SWOS_SDL_BUILD for BlitGlyphToSpriteBitmap */

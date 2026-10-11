@@ -134,7 +134,7 @@ docs drift: search by function name.
 | [MACOS_BUILD.md](MACOS_BUILD.md) | Building on a Mac: universal binary, `make macos-app`, Gatekeeper; releases go through `scripts/build_macos.sh`. | current | building on the Mac itself |
 | [SWITCH.md](SWITCH.md) | Building, packaging and debugging the Switch flavour; the filesystem/logging differences. No SDK content (NDA). | current — but it says "builds, links and packages" where CLAUDE.md says "not yet linked or run": the owner knows which | `Makefile.switch`, `scripts/build_switch.*` |
 
-## The Amiga target (AGA work is parked)
+## The Amiga target (AGA resumed 2026-10-10: a whole match plays)
 
 | doc | what it is | status | read when |
 |---|---|---|---|

@@ -145,8 +145,10 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     /* Apply camera offset */
     x += (int16_t)_cameraXMod320;
     y += (int16_t)_cameraYMod320;
+#if !defined(AGA)
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
+#endif
 
     /* Wait for any previous blit */
     waitBlit();
@@ -182,16 +184,38 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     /* Compute vertical wrap */
     uint16_t wrapLines = 0;
     uint16_t firstHeight = glyphHeight;
+#if defined(AGA)
+    /* AGA: no wrap. The display reads rows [cameraYMod320, +SCREEN_HEIGHT) of the
+     * 2x-tall buffer straight down, and bobs (the bars text stands on) are drawn the
+     * same way. Wrapped to the top like OCS, text below the wrap row went into rows
+     * that were not on screen -- the stats' last lines missing -- and stayed there,
+     * outside every undraw, to scroll into view later as a stray row of dashes. */
+    if ((uint16_t)y >= 2u * SCREEN_HEIGHT)
+        return;
+    if ((uint16_t)y + glyphHeight > 2u * SCREEN_HEIGHT)
+        firstHeight = (uint16_t)(2u * SCREEN_HEIGHT - (uint16_t)y);
+#else
     if ((uint16_t)y + glyphHeight > SCREEN_HEIGHT) {
         wrapLines = (uint16_t)y + glyphHeight - SCREEN_HEIGHT;
         firstHeight = glyphHeight - wrapLines;
     }
+#endif
 
     uint16_t savedFirstHeight = firstHeight;
 
     /* Compute destination pointer */
     int16_t wordOffset = ((int16_t)x >> 4) << 1;
     int32_t dstXByteOffset = (int32_t)(int16_t)wordOffset;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* In a match the AGA plane row starts with the 4-byte verge margin, which the
+     * display and the bobs skip: text drawn over the pitch (MATCH STATS) without it
+     * stood 32px left of the bars it belongs in. */
+    {
+        extern volatile uint16_t _playGame;
+        if (_playGame)
+            dstXByteOffset += SCROLL_LEFT_MARGIN_BYTES;
+    }
+#endif
     uint8_t *destPtr = dstBase + (uint16_t)y * (uint32_t)ROW_STRIDE_BYTES + dstXByteOffset;
 
     /* BLTSIZE = height << 6 | blitWords */

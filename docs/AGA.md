@@ -10,6 +10,35 @@ speedup) pending** — see [AMIGA_SPRITES.md](AMIGA_SPRITES.md).
 > and the plane23 band is disabled on AGA (§11c, [AGA_TEST.md](AGA_TEST.md) §5c). The
 > test-bed entry point for the Amiga side is [AGA_TEST.md](AGA_TEST.md).
 
+> **Status (2026-10-10): resumed, and a whole match plays on AGA** (FS-UAE, owner's play-test:
+> scroll, bobs, crowd, text, result bar, stats, replay). What changed that day, and which
+> sections below it overrides:
+>
+> - **The 4-byte verge margin is gone** (`SCROLL_LEFT_MARGIN_BYTES` 0, `PLANE_STRIDE` 48, a
+>   384px row). It existed because the FMODE=1 display stood 16px left of the camera, so at
+>   the left touchline 16px of off-pitch memory were on screen. In a match the display now
+>   starts AT the camera (`AGA_PITCH_DISPLAY_SHIFT_PX`, `display.c`); the long fetched to the
+>   left stays under the fine-scroll delay. With it went `ScrollYVergeRefresh`'s call, the
+>   per-row pull-back fill, the -32 left lead of ScrollX and the +16 of the hardware sprites.
+>   Menus keep their picture with a +4 on the plane pointer outside a match. §11's account of
+>   the margin is history.
+> - **The buffer is linear, not a ring:** pitch pixel X of a plane is at byte X/8 from the
+>   row's start, running on into the next plane's row (the last plane's into the next ROW).
+>   Anything that copies "a row" must start at the scroll's coarse byte (`MirrorFrontbuffer`
+>   did not: one row, one plane wrong from x 384 after a replay).
+> - **Everything in a match is drawn with no Y wrap** into rows `[cameraYMod320, +272)` of the
+>   2x-tall buffer: bobs already were; now also the ScrollX column, text and rectangle fills.
+>   A wrapped draw lands in rows that are not on screen and outside every undraw.
+> - **The mask buffer** (what bobs are undrawn from) gets a new column on the frame it is
+>   blitted, never later; the deferred copy only fills the off-screen half, and is never dropped.
+> - **The animated crowd tile** is an 8-plane pitch tile and is written as one
+>   (`drawPatternFromIndex`), not through the 4-plane sprite path.
+> - **FS-UAE launched through the gdb harness tears** (VSYNC light red, transparent rows in
+>   Alt-S screenshots). That is the emulator; launched from the desktop it does not. Test
+>   display work from the desktop.
+>
+> Not verified: real hardware, the OCS build after these changes, a replay that scrolls down.
+
 AGA mode gives the game a 256-colour display (8 bitplanes) for backgrounds and
 the pitch, while keeping sprite/menu/charset banks at **4 bitplanes (16 colours)**.
 The depth is **mixed per bank** and auto-detected at load, so the same decode path

@@ -474,6 +474,17 @@ void DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, 
 /* ================================================================
  * DrawMenuItemBackgroundMasked — masked rectangle
  * ================================================================ */
+/* _menu_draw_x_offset is added to the frame buffer's BASE by the drawing primitives:
+ * pixels on SDL (one byte a pixel), BYTES of a bitplane row on the Amiga (8 pixels a
+ * byte). These two rectangles take an x in pixels: on AGA, where the offset is 2 bytes,
+ * adding it as 2 pixels put them 14px left of the text they clear -- over the end of
+ * the button beside it (ABORT / EXIT next to "SELECT 2 MORE TEAMS"). */
+#ifdef SWOS_SDL_BUILD
+#define MENU_DRAW_X_OFFSET_PX   (_menu_draw_x_offset)
+#else
+#define MENU_DRAW_X_OFFSET_PX   (_menu_draw_x_offset * 8)
+#endif
+
 __attribute__((used, externally_visible))
 void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
@@ -482,7 +493,7 @@ void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h
      * primitives. Both the mask read and the front write shift by the offset. Without
      * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
      * Same fix as BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + _menu_draw_x_offset), y, w, h,
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + MENU_DRAW_X_OFFSET_PX), y, w, h,
                                     _frontbufferMaskBuffer, (uint8_t *)_frontbufferBasePtr);
 }
 
@@ -1998,7 +2009,7 @@ void BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
      * base-shifted primitives), so sync the SAME region between the two buffers.
      * Without this the rect copies the un-offset region and leaves stale/garbage
      * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + _menu_draw_x_offset), y, w, h,
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + MENU_DRAW_X_OFFSET_PX), y, w, h,
                                     (uint8_t *)_frontbufferBaseAltPtr, (uint8_t *)_frontbufferBasePtr);
 }
 

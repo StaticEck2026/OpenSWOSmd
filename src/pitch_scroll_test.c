@@ -152,6 +152,8 @@ int32_t g_pstForceBobs   = 1;
  * the far edge so the chosen direction scrolls continuously for observation.
  * Step size = |g_pstAutoScrollX| (default 2). */
 int32_t g_pstScrollMode = 0;
+int32_t g_pstPathFrame = 0;     /* mode 5: frames of the repro path played */
+int32_t g_pstPathLaps  = 0;     /* ... and whole laps of it */
 
 /* one nibble -> hex ASCII */
 static uint8_t hexNib(uint16_t v)
@@ -349,6 +351,13 @@ void PitchScrollTest(void)
 {
     int16_t maxX, maxY;
 
+    /* The display and the bobs place themselves differently in a match (the AGA verge
+     * margin, the display's 16px correction): the rig must show what a match shows. */
+    {
+        extern volatile uint16_t _playGame;
+        _playGame = 1;
+    }
+
     /* --- set up a single pitch --- */
     _pitchNumberAndType = 0x0004;              /* pitch 0, normal type */
     LoadPitchMap((uint16_t)(_pitchNumberAndType >> 8));
@@ -441,6 +450,19 @@ void PitchScrollTest(void)
                 case 2:  g_pstCamX -= spd; if (g_pstCamX <= 0)    { g_pstCamX = maxX; s_pstRedrawFrames = 2; } break;  /* left  */
                 case 3:  g_pstCamY += spd; if (g_pstCamY >= maxY) { g_pstCamY = 0;    s_pstRedrawFrames = 2; } break;  /* down  */
                 case 4:  g_pstCamX += spd; if (g_pstCamX >= maxX) { g_pstCamX = 0;    s_pstRedrawFrames = 2; } break;  /* right */
+                case 5:  /* the owner's repro path, looped, 1 px a frame: from the top-left
+                          * corner right 5 tiles, down 5, left 2, up 5, then left 3 back to
+                          * the corner. Turns and reversals, which the circuit never makes. */
+                {
+                    static const int8_t legDx[5] = { 1, 0, -1, 0, -1 }, legDy[5] = { 0, 1, 0, -1, 0 };
+                    static const int16_t legLen[5] = { 80, 80, 32, 80, 48 };
+                    static int16_t leg, done;
+                    g_pstCamX += legDx[leg];
+                    g_pstCamY += legDy[leg];
+                    g_pstPathFrame++;
+                    if (++done >= legLen[leg]) { done = 0; if (++leg >= 5) { leg = 0; g_pstPathLaps++; } }
+                    break;
+                }
                 default: /* 0 = circular circuit: right -> down -> left -> up */
                     switch (s_pstScrollPhase)
                     {

@@ -111,7 +111,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
  * ================================================================ */
 static uint32_t s_pendingSrc[2];    /* frontbuffer src addr of the column; 0 = empty */
 static uint32_t s_pendingBuf[2];    /* draw-buffer base the slot belongs to */
-static uint8_t  s_pendingPhase[2];  /* 0 = mirror pending, 1 = mask pending */
+static uint16_t s_pendingY[2];      /* cameraYMod320 the column was drawn at */
 
 /* Batched A->D column copy: 1 word wide, `rows` tall (rows may exceed the
  * blitter's 1024-row-per-blit max), plane-step modulo on both channels. A batch
@@ -136,29 +136,28 @@ static void columnBlitCopy(uint32_t src, uint32_t dst, uint16_t rows, uint16_t w
     }
 }
 
-/* Execute the next deferred phase for the current draw buffer. Mirror and mask
- * are each a FULL-column (SCREEN_HEIGHT*NUM_PLANES-row) copy -- doing both on one
- * frame would overrun vblank, so they run on TWO successive non-cross frames
- * (mirror first, then mask). Both are done well before the freshly-drawn column
- * scrolls into view (the ~1-coarse-quantum lead SWOS draws each column with). */
+/* Finish the column deferred for the current draw buffer: its copy into the mirror
+ * half, a FULL-column (SCREEN_HEIGHT*NUM_PLANES-row) blit kept off the frame that
+ * blits the column itself. (The mask column is copied on the crossing frame.) */
 static void flushPendingColumn(void)
 {
     int i;
     for (i = 0; i < 2; i++) {
         if (!s_pendingSrc[i] || s_pendingBuf[i] != (uint32_t)_frontbufferBasePtr)
             continue;
-        if (s_pendingPhase[i] == 0) {
-            /* Mirror the 32px (2-word) column into the +SCREEN_HEIGHT half. */
-            columnBlitCopy(s_pendingSrc[i], s_pendingSrc[i] + FB_MIRROR_OFFSET_BYTES,
-                           (uint16_t)(SCREEN_HEIGHT * NUM_PLANES), 2u);
-            s_pendingPhase[i] = 1;
-        } else {
-            /* Copy the 32px (2-word) column into the mask buffer (Phase 3, occlusion). */
-            uint32_t xByteOff = s_pendingSrc[i] - s_pendingBuf[i];
-            columnBlitCopy(s_pendingSrc[i], xByteOff + (uint32_t)_frontbufferMaskBuffer,
-                           (uint16_t)(SCREEN_HEIGHT * NUM_PLANES), 2u);
-            s_pendingSrc[i] = 0;    /* slot done */
+        {
+            /* The column was blitted as the display reads it: rows [y, y+SCREEN_HEIGHT)
+             * of the 2x-tall buffer. Fill the rows it did not write from their twins:
+             * [0, y) from the mirror half, [SCREEN_HEIGHT+y, 2*SCREEN_HEIGHT) from the top. */
+            uint32_t col = s_pendingSrc[i];
+            uint32_t yOff = (uint32_t)s_pendingY[i] * ROW_STRIDE_BYTES;
+            if (s_pendingY[i])
+                columnBlitCopy(col + FB_MIRROR_OFFSET_BYTES, col,
+                               (uint16_t)(s_pendingY[i] * NUM_PLANES), 2u);
+            columnBlitCopy(col + yOff, col + yOff + FB_MIRROR_OFFSET_BYTES,
+                           (uint16_t)((SCREEN_HEIGHT - s_pendingY[i]) * NUM_PLANES), 2u);
         }
+        s_pendingSrc[i] = 0;    /* slot done */
     }
 }
 
@@ -171,10 +170,17 @@ static void recordPendingColumn(uint32_t mSrc)
     if (slot < 0)
         for (i = 0; i < 2; i++)                      /* else a free slot */
             if (!s_pendingSrc[i]) { slot = i; break; }
-    if (slot < 0) slot = 0;                          /* else clobber (fast-scroll fallback) */
+    if (slot < 0) slot = 0;                          /* else another buffer's (never: two buffers) */
+    /* The slot still holds this buffer's PREVIOUS column (the camera crossed two tiles
+     * before two quiet frames came): finish it now. Overwriting it left that column's
+     * mirror half and its mask column stale for good -- wrong tiles below the Y wrap,
+     * and bobs undrawn there with whatever the mask held. Costs time on a fast scroll,
+     * never a column. */
+    while (s_pendingSrc[slot] && s_pendingBuf[slot] == (uint32_t)_frontbufferBasePtr)
+        flushPendingColumn();
     s_pendingBuf[slot] = (uint32_t)_frontbufferBasePtr;
     s_pendingSrc[slot] = mSrc;
-    s_pendingPhase[slot] = 0;
+    s_pendingY[slot] = _cameraYMod320;
 }
 #endif /* AGA && !SWOS_SDL_BUILD */
 
@@ -231,9 +237,19 @@ static void scrollXBlitColumn(uint8_t *a1, uint32_t destXByteOff)
     }
 
     /* ---- Phase 2: wrap to top of frontbuffer ---- */
+#if defined(AGA)
+    /* AGA: no wrap. The blitter's dest pointer is already at row SCREEN_HEIGHT, the
+     * first row of the mirror half, so the rest of the column lands in rows
+     * [SCREEN_HEIGHT, SCREEN_HEIGHT+y) -- the rows the display reads next. Wrapped to
+     * the top (as on OCS), the part of the entering column below the wrap row showed
+     * what the ring held 384px ago until the mirror copy came a frame or two later:
+     * the line down the right edge on a rightward scroll. */
+    waitBlit();
+#else
     a0 = (uint8_t *)_frontbufferBasePtr + destXByteOff;
     waitBlit();
     BLT_L(_custom->bltdpt, (uint32_t)a0);
+#endif
     d2 = _cameraYMod320;
     if (d2 >= TILE_HEIGHT) {
         do {
@@ -303,8 +319,7 @@ void ScrollXUpdateColumnsAndBlit(void)
      * as the DATA columns roll). It is a full-screen CPU write, so at ~1 iteration/frame it's
      * ~1/10th of a full ScrollY refill; if the loop is ever unthrottled it multiplies (see the
      * 2026-07 rig-throttle notes) -- fix the loop rate, not this. */
-    if (_cameraXMod320 < 32u)
-        ScrollYVergeRefresh();
+    /* (the left-touchline verge refresh went with the verge margin, 2026-10-10) */
 #endif
 
     if (d0 >= _oldCameraX) {
@@ -323,7 +338,10 @@ void ScrollXUpdateColumnsAndBlit(void)
          * strip -> write at the left leading edge (d5 = -32), mirroring the
          * rightward +335 lead. Below the guard (pitch left edge) the display does
          * not pull back, so keep 0 and never read pitch-x < 0. */
-        d5 = (_cameraX.s.i >= 32) ? (int16_t)-32 : (int16_t)0;
+        /* 2026-10-10: no lead. The display starts at cameraX now, so the entering
+         * column is the one holding cameraX, as on OCS -- and in the 384px ring a
+         * column 32px further left IS the screen's right edge. */
+        d5 = 0;
 #else
         d5 = 0;
 #endif
@@ -384,6 +402,24 @@ void ScrollXUpdateColumnsAndBlit(void)
 
         /* DEFER the 32px-wide (2-word) mirror (block-B elimination) + mask copy to
          * the next two non-cross frames of this buffer (they'd overrun vblank here). */
+        /* The mask column NOW, before this frame's bobs are drawn: the mask is what a
+         * bob is undrawn from. Deferred (as it was, two quiet frames later), a player on
+         * the incoming column was undrawn from the column that had been in this place of
+         * the ring 416px ago -- a block of other tiles beside him -- and the late copy,
+         * taken from the frame buffer, then kept that block in the mask for good. The
+         * column just blitted is clean: nothing has been drawn on it yet. */
+        {
+            uint32_t col = _frontbufferBasePtr + dest32;
+            uint32_t msk = (uint32_t)_frontbufferMaskBuffer + dest32;
+            uint32_t yOff = (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
+            /* the mask is 1x tall and wraps: rows [y, SCREEN_HEIGHT) from the top half,
+             * rows [0, y) from the mirror half, where the column's tail now is */
+            columnBlitCopy(col + yOff, msk + yOff,
+                           (uint16_t)((SCREEN_HEIGHT - _cameraYMod320) * NUM_PLANES), 2u);
+            if (_cameraYMod320)
+                columnBlitCopy(col + FB_MIRROR_OFFSET_BYTES, msk,
+                               (uint16_t)(_cameraYMod320 * NUM_PLANES), 2u);
+        }
         recordPendingColumn(_frontbufferBasePtr + dest32);
     }
 #else
@@ -557,6 +593,20 @@ void ScrollYUpdateRowsAndBlit(void)
     /* ---- Init mask blit accumulators ---- */
     maskBlitDestPtr = (uint32_t)a3;
     blitWordCount = d6 + 1;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* The mask copy takes the pull-back long too: the whole 52-byte plane row from
+     * a3-4, not the 48 bytes from a3.
+     *
+     * The mask buffer is the clean pitch every bob is undrawn FROM (the sprite blit
+     * queue's source). The rows written below include the long at a3-4 (the FMODE
+     * pull-back, or the verge at the pitch's left edge), but the copy to the mask
+     * started at a3 -- so for every row a vertical scroll exposed, the mask kept
+     * whatever those 4 bytes held 272 rows earlier. Nothing shows while that 32px
+     * band stays under the fine-scroll delay; scroll LEFT until a player stands on
+     * it and his undraw paints the stale band into the pitch -- a rectangle of crowd
+     * or of other tiles, which then stays (the corruption that needed "right, down,
+     * left, up" to appear, and never showed with the sprites off). */
+#endif
     maskBlitPendingBytesA = 0;
     maskBlitPendingBytesB = 0;
     maskBlitSecondStreamPtr = 0;
@@ -591,11 +641,10 @@ void ScrollYUpdateRowsAndBlit(void)
          * repeats tile column 0 — byte-for-byte the old verge-margin write this
          * replaces (there xByteOff == 4, so a3-4 IS the verge margin at byte 0).
          * Mirror-written too, like the main fill (2x-tall frontbuffer). */
-#ifdef PITCH_SCROLL_TEST
-        /* rig A/B: 0 = pre-fix behaviour (write only the left-edge verge margin). */
-        extern int32_t g_pstPullbackFill;
-        if (g_pstPullbackFill || pbDup)
-#endif
+        /* 2026-10-10: not written any more. The row is the 48 bytes the fill below
+         * writes whole, the pull-back long is never on screen, and in the 384px ring
+         * a3-4 is the right edge of the picture. */
+        if (0)
         {
             uint8_t *psrc0 = *(uint8_t **)a1_pb + d3;
             uint8_t *psrc1 = pbDup ? psrc0 : (*(uint8_t **)(a1_pb + 4) + d3);
@@ -803,6 +852,9 @@ void ScrollYVergeRefresh(void)
     do {
         uint8_t *vsrc = *(uint8_t **)a1_verge + d3;
         uint8_t *m = a3 - xByteOff;   /* byte 0 of this row = the verge margin */
+        /* ... and the same bytes of the mask buffer, which bobs are undrawn from: left
+         * stale, a player at the left touchline is undrawn with whatever was there. */
+        uint8_t *mm = _frontbufferMaskBuffer + (uint32_t)(m - (uint8_t *)_frontbufferBasePtr);
         int16_t vp;
         for (vp = 0; vp < NUM_PLANES; vp++) {
             uint16_t vv = *(uint16_t *)vsrc;
@@ -810,6 +862,8 @@ void ScrollYVergeRefresh(void)
             *(uint16_t *)(m + vp * PLANE_STRIDE + 2)                          = vv;
             *(uint16_t *)(m + vp * PLANE_STRIDE + FB_MIRROR_OFFSET_BYTES)     = vv;
             *(uint16_t *)(m + vp * PLANE_STRIDE + 2 + FB_MIRROR_OFFSET_BYTES) = vv;
+            *(uint16_t *)(mm + vp * PLANE_STRIDE)                             = vv;
+            *(uint16_t *)(mm + vp * PLANE_STRIDE + 2)                         = vv;
             vsrc += 2;
         }
         /* advance source scanline; cross a tile -> next pitch-pointer row */

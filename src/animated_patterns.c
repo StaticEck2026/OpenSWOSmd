@@ -205,6 +205,52 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     if (screenX <= (int16_t)0xFFF0 || screenY <= (int16_t)0xFFF0)
         return;
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* AGA: the fan is an 8-plane PITCH tile (16 rows of NUM_PLANES words), but sprite 137
+     * goes through the 4-plane sprite path, which reads it at half its row stride (the
+     * crowd drawn as striped rows) -- and, drawing no-wrap into what it takes for a
+     * 2x-tall buffer, wrote the mask copy up to SCREEN_HEIGHT rows past the end of the
+     * 1x mask buffer. Write the tile's words directly instead: the displayed row, its
+     * copy in the other half of the 2x buffer, and the mask's row. */
+    {
+        extern volatile uint16_t _playGame;
+        extern uint16_t _cameraXMod320, _cameraYMod320;
+        const uint16_t *src = *(const uint16_t **)((uint32_t *)(void *)_spriteGraphicsPtr)[137];
+        uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
+        int16_t bx = (int16_t)(screenX + (int16_t)_cameraXMod320);
+        int32_t xOff = (int32_t)(int16_t)((bx >> TILE_SHIFT_X) << 1);
+        int16_t r;
+        if (_playGame)
+            xOff += SCROLL_LEFT_MARGIN_BYTES;
+        /* a blit still running over these rows would land on top of the tile */
+        _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+        (void)(_custom->dmaconr & (1u << 14));
+        while (_custom->dmaconr & (1u << 14))
+            ;
+        _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+        for (r = 0; r < TILE_HEIGHT; r++, src += NUM_PLANES) {
+            int16_t sy = (int16_t)(screenY + r);
+            uint16_t by, my;
+            uint8_t *d, *d2, *m;
+            int16_t pl;
+            if (sy < 0 || sy >= SCREEN_HEIGHT)
+                continue;
+            by = (uint16_t)(sy + (int16_t)_cameraYMod320);          /* 0 .. 2*SCREEN_HEIGHT-1 */
+            my = (by >= SCREEN_HEIGHT) ? (uint16_t)(by - SCREEN_HEIGHT) : by;
+            d  = fb + (uint32_t)by * ROW_STRIDE_BYTES + xOff;
+            d2 = fb + (uint32_t)(by >= SCREEN_HEIGHT ? my : by + SCREEN_HEIGHT) * ROW_STRIDE_BYTES + xOff;
+            m  = (uint8_t *)_frontbufferMaskBuffer + (uint32_t)my * ROW_STRIDE_BYTES + xOff;
+            for (pl = 0; pl < NUM_PLANES; pl++) {
+                uint16_t w = src[pl];
+                *(uint16_t *)(d  + pl * PLANE_STRIDE) = w;
+                *(uint16_t *)(d2 + pl * PLANE_STRIDE) = w;
+                *(uint16_t *)(m  + pl * PLANE_STRIDE) = w;
+            }
+        }
+    }
+    return;
+#endif
+
     /* draw to frontbuffer */
     DrawSprite16Pixels(137, screenX, screenY);
 

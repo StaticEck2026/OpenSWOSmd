@@ -200,6 +200,13 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
     }
 #else
     (void)present;
+#if defined(AGA)
+    /* Each blit waits for the one before it, so the frame's LAST blit can still be
+     * running here: let it finish before the buffer it draws into is put on screen. */
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
+        ;
+#endif
     _waitingInterrupt = 1;
     while (_waitingInterrupt != 0) {}
 #endif

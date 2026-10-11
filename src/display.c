@@ -341,8 +341,17 @@ __attribute__((used, externally_visible))
 void MirrorFrontbuffer(void)
 {
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-    uint32_t *src = (uint32_t *)(void *)(uintptr_t)_frontbufferBasePtr;
-    uint32_t *dst = (uint32_t *)(void *)(uintptr_t)(_frontbufferBasePtr + FB_MIRROR_OFFSET_BYTES);
+    /* The copy starts at the scroll's coarse byte, not at byte 0. A plane row is drawn
+     * from that byte for a whole PLANE_STRIDE, so it runs on into the head of the next
+     * plane's row -- and the last plane's into the head of the NEXT ROW. The first
+     * bytes of the mirror half are therefore the tail of row SCREEN_HEIGHT-1's last
+     * plane, which the fill has just written there; copying from byte 0 put the head
+     * of row 0 (nobody's picture) over them: one row, one plane, wrong from pitch x 384
+     * rightwards -- the dashed line that appeared after an instant replay and moved
+     * with the pitch. Shifted, the copy takes whole rows as they are drawn. */
+    uint32_t skip = ((uint32_t)(_cameraXMod320 >> 3)) & (uint32_t)(uint16_t)SCROLL_X_COARSE_ALIGN_MASK;
+    uint32_t *src = (uint32_t *)(void *)(uintptr_t)(_frontbufferBasePtr + skip);
+    uint32_t *dst = (uint32_t *)(void *)(uintptr_t)(_frontbufferBasePtr + skip + FB_MIRROR_OFFSET_BYTES);
     int32_t n = (SCREEN_HEIGHT * ROW_STRIDE_BYTES) / 4;
     while (n-- > 0)
         *dst++ = *src++;
@@ -513,6 +522,31 @@ void InitDisplayAndCopper(void)
  * alignment, builds plane pointer tables for double-buffered display.
  * ================================================================ */
 __attribute__((used, externally_visible))
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* Where the display reads the plane row from, in pixels: the scroll position, plus
+ * AGA_PITCH_DISPLAY_SHIFT_PX in a match. The FMODE=1 set-up below (12 longs from DDFSTRT
+ * 0x20, the pull-back long) put the picture 16px RIGHT of the scroll position: the
+ * screen's left edge showed cameraX-16. Bobs sit on the pitch either way, but everything
+ * placed by SCREEN coordinates stood 16px right (the result bar, the MATCH STATS bars),
+ * hardware sprites needed a +16 of their own, and the view was 16px off the camera's.
+ * Reading 16px further along puts screen x 0 on cameraX. In a match only: the menus'
+ * placement (AGA_MENU_FG_SHIFT_BYTES) was set against the unshifted display.
+ * 0 here = the display as it was (then AGA_HwSpriteXShift() is 16 again). */
+#define AGA_PITCH_DISPLAY_SHIFT_PX 16
+extern volatile uint16_t _playGame;
+static inline uint16_t agaDisplayX(void)
+{
+    return (uint16_t)(_cameraXMod320 + (_playGame ? AGA_PITCH_DISPLAY_SHIFT_PX : 0));
+}
+int16_t AGA_HwSpriteXShift(void)
+{
+    return (int16_t)(_playGame ? 16 - AGA_PITCH_DISPLAY_SHIFT_PX : 16);
+}
+#elif defined(AGA)
+/* SDL has no copper: the AGA branches below still compile there, unshifted. */
+static inline uint16_t agaDisplayX(void) { return _cameraXMod320; }
+#endif
+
 void UpdatePlanePtrsAndBlitParams(void)
 {
     uint32_t d0;
@@ -572,7 +606,7 @@ void UpdatePlanePtrsAndBlitParams(void)
      * H7 + pointer-advance scheme showed the right position but revealed the
      * pre-fetch gap = the column, and disagreeing pointer/delay = the jitter).
      * See RandyAGA.txt "Smooth Hardware Scrolling" + "LONG burst mode", docs/AGA.md. */
-    d1 = _cameraXMod320 & 0x1Fu;               /* fine fraction 0..31px */
+    d1 = agaDisplayX() & 0x1Fu;                /* fine fraction 0..31px */
     copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
     copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
     copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0020u);
@@ -642,13 +676,24 @@ void UpdatePlanePtrsAndBlitParams(void)
         /* Add X byte offset (coarse scroll). 4-byte / 32px aligned under
          * FMODE=1 so the 32-bit fetch pointer is 32-bit aligned; 2-byte
          * otherwise. The residual sub-align px is the BPLCON1 fine scroll above. */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        d1 = agaDisplayX();
+#else
         d1 = _cameraXMod320;
+#endif
         d1 >>= 3;
         d1 &= SCROLL_X_COARSE_ALIGN_MASK;
         /* Skip the per-plane verge margin: the pitch DATA lives at byte
          * SCROLL_LEFT_MARGIN_BYTES.. of each plane row; the -4 pull-back below then
          * reads the margin (byte 0..) at coarse=0 = the pitch's extreme-left edge. */
         d1 += SCROLL_LEFT_MARGIN_BYTES;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Outside a match (menus: scroll position 0, so the pull-back below applies)
+         * the picture starts at byte 0 of the row, as it did when the row had a 4-byte
+         * margin for the pull-back to land on. */
+        if (!_playGame)
+            d1 += 4;
+#endif
         /* No H7 +32px advance: the fine scroll is the continuous 0..31 delay above,
          * and the plane pointer is pulled one long earlier below (baseOffset -= 4)
          * so the 12-long fetch's extra LEFT long sits under that delay. */
@@ -672,7 +717,7 @@ void UpdatePlanePtrsAndBlitParams(void)
          * coarse. This delay-conditional pull-back is what cancels the coarse pointer
          * step at each 32px boundary, making frac 31->0, 0->1 and 16->17 all per-pixel
          * smooth while keeping every fraction column-free (verified on FS-UAE). */
-        if ((32u - (uint32_t)(_cameraXMod320 & 0x1Fu)) >= 16u)
+        if ((32u - (uint32_t)(agaDisplayX() & 0x1Fu)) >= 16u)
         {
             /* The pull-back fetches the plane byte at coarse-4 (32px LEFT of the
              * visible edge). Mid-pitch that is the previous pitch block; at the

@@ -2148,7 +2148,7 @@ void DrawQueuedSprites(void)
  * menus) re-centred +16px vs OCS; hardware sprites use raw screen coords via the fixed 0x70
  * reference and never got that +16px, so they landed a tile left of the bobs (the on-pitch
  * "twitch" + ball/shadow separation). Add the same +16px. */
-enum { AGA_HW_SPRITE_X_SHIFT = 16 };
+extern int16_t AGA_HwSpriteXShift(void);   /* display.c: 16, or 0 where the display itself is corrected */
 #endif
 
 static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t y,
@@ -2161,7 +2161,7 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     int16_t d3 = y + sprGfx->nlines;
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-    x += AGA_HW_SPRITE_X_SHIFT;   /* re-centre HW sprites onto the +16px-shifted bobs/pitch */
+    x += AGA_HwSpriteXShift();   /* re-centre HW sprites onto the +16px-shifted bobs/pitch */
 #endif
     /* Add display offsets */
     x += 0x70;    /* horizontal display start */
