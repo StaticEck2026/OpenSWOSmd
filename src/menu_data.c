@@ -6792,6 +6792,35 @@ Menu_ContinueAbort _continueAbortMenu = {
     },
     MENU_MARK_END_MENU
 };
+#ifndef SWOS_SDL_BUILD   /* the Amiga's; shown on AGA only (menus.c) */
+/* The Amiga AGA CREDITS screen. The SDL builds run SWOS 2020's credits.mnu from JSON
+ * (online_menus.c); the Amiga has no JSON menus, so this is the same screen as a native
+ * one. Coordinates are bytes: 140 = -116, 200 = -56. */
+extern void CreditsAgaInit(void);
+extern void CreditsAgaDraw(void);
+char _aCreditsAgaHeader[] = "OPENSWOS - CREDITS";
+char _aCreditsAgaExit[]   = "STAY UNITED";
+Menu_CreditsAga _creditsAgaMenu = {
+    { CreditsAgaInit, 0, CreditsAgaDraw, 1 },
+    MENU_MARK_BYTE_COORDS,
+    {
+        { 82, 0, -116, 15 },
+        { MENU_CMD_COLORS, 0x17 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aCreditsAgaHeader },
+        MENU_CMD_END
+    },
+    {
+        { 82, -56, -116, 15 },
+        { MENU_CMD_NAV, -1, -1, -1, -1 },
+        { MENU_CMD_COLORS, 0x4 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aCreditsAgaExit },
+        { MENU_CMD_ONSELECT_FIRE, SetExitMenuFlag },
+        MENU_CMD_END
+    },
+    MENU_MARK_END_MENU
+};
+#endif
+
 Menu_SWOSMainMenu _swosMainMenu = {
     { SWOSMainMenuInit, GlobalRetn, 0, 6 },
     { 88, -24, 128, 76 },

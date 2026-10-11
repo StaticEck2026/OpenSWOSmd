@@ -1284,6 +1284,20 @@ typedef struct Menu_Continue
 } Menu_Continue;
 #pragma pack(pop)
 
+/* OpenSWOS: the Amiga AGA CREDITS screen (menus.c CreditsMenuSelected). A header box
+ * and the exit button; everything else on it is the backdrop (grafs_aga/CREDITS.RAW,
+ * the photos) and text its onDraw writes. */
+#pragma pack(push, 1)
+typedef struct Menu_CreditsAga
+{
+  MenuHeader hdr;
+  MenuMark markByteCoords;
+  MenuEntry_Byte_Colors_TextPtr entry0;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry1;
+  MenuMark markEndMenu;
+} Menu_CreditsAga;
+#pragma pack(pop)
+
 /* 204 - Menu 24: continueAbortMenu (0x74 = 116 bytes) */
 #pragma pack(push, 1)
 typedef struct Menu_ContinueAbort
@@ -3460,6 +3474,9 @@ extern Menu_ChooseTeams _chooseTeamsMenu;
 extern Menu_SelectFiles _selectFilesMenu;
 extern Menu_Continue _continueMenu;
 extern Menu_ContinueAbort _continueAbortMenu;
+#ifndef SWOS_SDL_BUILD   /* the Amiga's; shown on AGA only (menus.c) */
+extern Menu_CreditsAga _creditsAgaMenu;
+#endif
 extern Menu_SWOSMainMenu _swosMainMenu;
 extern Menu_Offers _offersMenu;
 extern Menu_PlayerTransfer _playerTransferMenu;
