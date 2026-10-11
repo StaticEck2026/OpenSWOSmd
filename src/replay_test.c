@@ -830,9 +830,11 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
 
     /* Refuse to run against a binary whose COMPILE-TIME flags change the
      * simulation. `make` compares timestamps, not CFLAGS, so a plain `make`
-     * after scripts/build_dist.sh (which builds the tester drop with
-     * SWOS_TEST_NO_INJURIES_CARDS=1) relinks those objects and produces a
-     * binary that still has the flag baked in. Exit 0, no warning — and the
+     * after a build with one of them relinked those objects and produced a
+     * binary that still had the flag baked in. (The worst offender, the tester
+     * drops' SWOS_TEST_NO_INJURIES_CARDS, is a setting since 2026-10-11 and the
+     * rigs never apply it -- include/test_rules.h -- and both makefiles now
+     * rebuild on a flag change; the guard stays for the flags below.) Exit 0, no warning — and the
      * corpus then reports a regression that is not there.
      *
      * That has now cost real time three times, twice in one day, and it always
@@ -851,9 +853,6 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
     {
         const char *flags[6];
         int nflags = 0;
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-        flags[nflags++] = "SWOS_TEST_NO_INJURIES_CARDS";
-#endif
 #ifdef SWOS_ORIGINAL_TACTICS
         flags[nflags++] = "SWOS_ORIGINAL_TACTICS";
 #endif

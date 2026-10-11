@@ -429,8 +429,9 @@ this is the most common reason a match will not start. Both players need:
 - **the same build** — same commit, and the game checks it (since 2026-09-27): a different
   one is refused with THE OTHER PLAYER HAS ANOTHER VERSION, and `SWOS.log` names both. The
   version is on the main menu's bottom line, the window title and `--version`;
-- **the same rules** — a **tester build** (`SWOS_TEST_NO_INJURIES_CARDS=1`, "test build: no
-  injuries or cards" on its version line) cannot play a **release** build;
+- **the same rules** — since 2026-10-11 every build plays the real rules online (no
+  injuries / no cards is an offline setting, `[testing] no_injuries_cards`). An OLDER tester
+  build ("test build: no injuries or cards" on its version line) cannot play a newer one;
 - **the same arcade mode and fire-hold lockout** (`[gameplay] fire_hold_lockout`).
 
 Not needed any more: **the same gameplay style** — since 2026-09-29 a game plays its
@@ -452,7 +453,6 @@ hash in a browser as natively.
 
 ```bash
 make WASM=1                                             # -> dist/web/SWOS.html (+ .js .wasm .data)
-make WASM=1 SWOS_TEST_NO_INJURIES_CARDS=1               # to play the TESTER natives (§8 rules)
 ```
 
 Match the native builds' rules, or the handshake refuses them (§8).
@@ -628,7 +628,7 @@ accepted for that key only (§13).
 | stuck on **CONNECTING TO SERVER** | nothing answering at that address | wrong address or port in **SERVER**, or UDP 19602 blocked (§5) |
 | **THE HOST DID NOT ANSWER** / CHECK THE ADDRESS, PORT AND FIREWALL | the other player was never reached | usually NATs that will not punch -- one player forwarding UDP 19602 on their router often fixes it; a private server with `--relay` always does, at the cost of latency (§4). Otherwise the firewall and forward (§5) |
 | **THE OTHER PLAYER HAS ANOTHER VERSION** / BOTH OF YOU NEED THE SAME BUILD | different commits | both download the same build; compare the version line |
-| **YOUR BUILDS PLAY BY DIFFERENT RULES** / ONE OF YOU HAS A TEST BUILD | tester build v release build | both use tester, or both release (§8) |
+| **YOUR BUILDS PLAY BY DIFFERENT RULES** / ONE OF YOU HAS A TEST BUILD | one build is an old tester build (before 2026-10-11) | both update (§8) |
 | **YOU PLAY BY DIFFERENT RULES** / CHECK FIRE_HOLD_LOCKOUT IN SWOS.INI | one has the original's fire-hold lockout on | `[gameplay] fire_hold_lockout`, the same on both. (AMIGA v DOS is NOT refused: the joiner plays the host's style) |
 | **ONE OF YOU PINNED THE VIEW** / RUN WITHOUT --VIEW | the same style, but one side started with `--view=` pinning the other view | run without `--view` (SWOS.ini has no view setting any more: `[gameplay] style` sets it) |
 | **YOUR SCREEN WIDTHS ARE DIFFERENT** / BOTH OF YOU NEED THE SAME ONE | from an old build only: widths are no longer refused (§8) | both update to the same build |

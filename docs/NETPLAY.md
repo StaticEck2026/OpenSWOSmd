@@ -730,9 +730,12 @@ up instead of hanging.
 Every rule a match is played by is one bit of the handshake's `gameplay` byte
 (`P2PLink_GameplayFlags`, `P2P_RULE_*`): what the player chose — DOS gameplay and its view (followed, not refused),
 arcade mode, the fire-hold lockout (P2P_FAIL_GAMEPLAY, "YOU PLAY BY DIFFERENT RULES"), a
-view pinned with --view (P2P_FAIL_VIEW, "ONE OF YOU PINNED THE VIEW") — and what
-the BUILD decided: `SWOS_TEST_NO_INJURIES_CARDS` turns bookings and injuries off
-(P2P_FAIL_BUILD, "YOUR BUILDS PLAY BY DIFFERENT RULES / ONE OF YOU HAS A TEST BUILD").
+view pinned with --view (P2P_FAIL_VIEW, "ONE OF YOU PINNED THE VIEW"). Two more bits
+said what the BUILD decided: until 2026-10-11 a tester build was compiled without bookings
+and injuries (`SWOS_TEST_NO_INJURIES_CARDS`). That is a setting now and never applies
+online (`include/test_rules.h`), so every build sends 0 there — and an old tester build,
+which sends 1, is still refused (P2P_FAIL_BUILD, "YOUR BUILDS PLAY BY DIFFERENT RULES /
+ONE OF YOU HAS A TEST BUILD").
 
 The build's bits are reported by the objects that implement the rules —
 `TackleFoul_BookingsEnabled` (tackle_foul.c), `CareerStatus_InjuriesEnabled`
@@ -1481,7 +1484,7 @@ hash.
 
 ```bash
 build/matchmaker/swos-matchmaker 19602 --websocket     # [--relay --netem P] [--record]
-make WASM=1 NETPLAY=1 [SWOS_TEST_NO_INJURIES_CARDS=1]  # the same rules as the natives
+make WASM=1 NETPLAY=1                         # every build plays the same rules online
 scripts/wasm_netplay_test.sh                  # browser v browser, headless Chrome
 PAIR=web-native scripts/wasm_netplay_test.sh  # browser v this machine's native build
 PAIR=mac-web scripts/wasm_netplay_test.sh     # the Mac's native build v a browser here

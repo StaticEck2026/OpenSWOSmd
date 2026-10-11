@@ -5,8 +5,8 @@
  *
  *   [video]
  *   renderer=accel        ; software | accel
- *   vsync=off             ; on | off
- *   subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling
+ *   vsync=false           ; true | false
+ *   subpixel_scroll=true  ; true | false — smooth sub-pixel scrolling
  *   scaling=smooth        ; sharp | smooth — even pixels at a non-integer scale
  *   crt_mask=off          ; off | aperture | slot | scanlines
  *   crt_mask_strength=45  ; 0-100
@@ -262,6 +262,10 @@ static int handler(void *user, const char *section,
             snprintf(opts->arcade_key_p2_start, sizeof opts->arcade_key_p2_start, "%s", value);
         else if (eqi(name, "key_service") && value && value[0])
             snprintf(opts->arcade_key_service, sizeof opts->arcade_key_service, "%s", value);
+    } else if (eqi(section, "testing")) {
+        int b;
+        if (eqi(name, "no_injuries_cards") && parse_bool(value, &b))
+            opts->no_injuries_cards = b;
     } else if (eqi(section, "general")) {
         if (eqi(name, "language") && value && value[0])
             snprintf(opts->language, sizeof opts->language, "%s", value);
@@ -364,8 +368,8 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
      * line N" on our own generated file. Cost me one round-trip to notice. */
     int n = 0;
     SETTING(n) = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
-    SETTING(n) = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
-    SETTING(n) = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
+    SETTING(n) = (IniEntry){ "video",  "vsync",      "; vsync: true | false  (accel renderer only)", opts->vsync ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: true | false. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "true" : "false" };
     SETTING(n) = (IniEntry){ "video",  "scaling",    "; scaling: sharp | smooth. A fullscreen scale is rarely a whole number (1080/272 = 3.97), so a plain nearest copy makes some pixels bigger than others. smooth evens them", opts->scaling_smooth ? "smooth" : "sharp" };
     SETTING(n) = (IniEntry){ "video",  "crt_mask",   "; crt_mask: off | aperture | slot | scanlines. Synthetic CRT shadow-mask drawn over the finished frame. Costs one full-screen draw however many effects are on", crt_mask_str(opts->crt_mask) };
     SETTING(n) = (IniEntry){ "video",  "crt_mask_strength", "; crt_mask_strength: 0-100. How dark the grille's off-phase gets. 0 = invisible, 100 = black between phosphors", vbuf[4] };
@@ -457,8 +461,8 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; here while REMEMBER LOGIN INFO is on.",
         opts->netplay_name };
     SETTING(n) = (IniEntry){ "netplay", "remember_login",
-        "; remember_login: yes | no -- the login screen's REMEMBER LOGIN INFO switch.",
-        opts->netplay_remember ? "yes" : "no" };
+        "; remember_login: true | false -- the login screen's REMEMBER LOGIN INFO switch.",
+        opts->netplay_remember ? "true" : "false" };
     SETTING(n) = (IniEntry){ "netplay", "record",
         "; record: stream every live match to a recorder, which keeps it and compares the\n"
         "; two players' frames to catch a desync: \"server\" (the default: the matchmaker\n"
@@ -471,11 +475,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; save/netplay either way). false: nothing leaves this machine.",
         opts->reports ? "true" : "false" };
     SETTING(n) = (IniEntry){ "netplay", "balance",
-        "; balance: yes | no -- online, when one player is predicting the other's input two\n"
+        "; balance: true | false -- online, when one player is predicting the other's input two\n"
         "; frames or more deeper than the other is, that player waits a little. Timing only,\n"
         "; never the match. It works only when BOTH players have it on\n"
         "; (docs/NETPLAY_BALANCE.md).\n",
-        opts->netplay_balance ? "yes" : "no" };
+        opts->netplay_balance ? "true" : "false" };
     SETTING(n) = (IniEntry){ "netplay", "prediction",
         "; prediction: true | false -- keep what each player SAW of an online match in its\n"
         "; replay: how many of the other player's inputs were guesses on each frame, the\n"
@@ -554,6 +558,13 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     SETTING(n) = (IniEntry){ "arcade", "key_p2_credit", NULL, opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6" };
     SETTING(n) = (IniEntry){ "arcade", "key_p2_start", NULL, opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2" };
     SETTING(n) = (IniEntry){ "arcade", "key_service", NULL, opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2" };
+#ifdef SWOS_TEST_RULES
+    SETTING(n) = (IniEntry){ "testing", "no_injuries_cards",
+        "; no_injuries_cards: true | false -- FOR TESTING A CAREER: nobody is booked, sent off,\n"
+        "; injured or suspended, so VIEW RESULT runs through a season without stopping.\n"
+        "; Offline only: an online match always plays the real rules.",
+        opts->no_injuries_cards ? "true" : "false" };
+#endif
     SETTING(n) = (IniEntry){ "general","language",   "; language: en | de | fr | es | it | nl", opts->language[0] ? opts->language : "en" };
     SETTING(n) = (IniEntry){ "general","currency",   "; currency: pound | dollar | euro", opts->currency[0] ? opts->currency : "pound" };
     if (n >= SETTINGS_MAX)

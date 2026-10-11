@@ -608,6 +608,14 @@ void NetplayLobby_End(void)
     s_lobby.state = LOBBY_CLOSED;
 }
 
+/* An online session is open: from here until NetplayLobby_End everything that goes
+ * into a match -- the squads, who may be picked -- is the online match's
+ * (test_rules.c: the testers' rule is off for all of it, not only the frames). */
+int32_t NetplayLobby_IsOpen(void)
+{
+    return s_lobby.state != LOBBY_CLOSED;
+}
+
 int32_t NetplayLobby_Rematch(const char *notice)
 {
     char addr[32];

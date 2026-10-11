@@ -19,11 +19,7 @@ void ClearCareerMatchPlayerStatusBucket(void);
 /* --- Status checks --- */
 uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);
 uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
-/* Whether THIS FILE lets an injury or suspension keep a player out -- 0 when it was
- * compiled with SWOS_TEST_NO_INJURIES_CARDS. The netplay handshake asks it, alongside
- * TackleFoul_BookingsEnabled (tackle_foul.h says why from here). */
-int32_t  CareerStatus_InjuriesEnabled(void);
-/* DISPLAY-only: real status even under SWOS_TEST_NO_INJURIES_CARDS (see career_status.c). */
+/* DISPLAY-only: the real status even under the testers' rule (test_rules.h; see career_status.c). */
 uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode);
 
 /* --- Player count utilities --- */

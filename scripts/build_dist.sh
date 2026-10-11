@@ -66,15 +66,13 @@
 #
 # TESTER BUILD BY DEFAULT
 #
-# SWOS_TEST_NO_INJURIES_CARDS=1 is ON unless you pass --release. It suppresses
-# in-match yellow/red cards and post-match random injuries so a tester can hit
-# VIEW RESULT through a whole season without substitution menus or booking
-# prompts — without it, testing takes far longer. Pass --release for a public
-# build (stock injuries + cards). Keep it consistent across ALL platforms in a
-# given drop: a macOS build with the flag next to a Windows build without it
-# produces bug reports for differences that aren't bugs (e.g. subbing an
-# injured player scores as a DOWNGRADE under the flag — see the Makefile's
-# "KNOWN DISPLAY SIDE-EFFECTS" note).
+# SWOS_TEST_RULES=1 is ON unless you pass --release. It compiles in the testers'
+# setting `[testing] no_injuries_cards` (SWOS.ini, OFF by default, offline only --
+# include/test_rules.h): with it a tester can hit VIEW RESULT through a whole season
+# without substitution menus or booking prompts. Injuries and cards themselves are
+# no longer a build matter: every build plays the real rules online. Pass --release
+# for a public build, where the setting is compiled out. Keep it consistent across
+# ALL platforms in a given drop.
 #
 # THREE THINGS THIS SCRIPT EXISTS TO GET RIGHT
 #
@@ -86,7 +84,7 @@
 #    SWOS_SAVE_FORMAT_JSON_VERIFY=0 unless you ask for --verify.
 #
 # 2. Makefile.amiga has no SWOS_* knobs, so the m68k target would silently miss
-#    SWOS_TEST_NO_INJURIES_CARDS. We pass it through its EXTRA_CFLAGS escape
+#    SWOS_TEST_RULES. We pass it through its EXTRA_CFLAGS escape
 #    hatch, and its objects live in obj/ (not build/) so `rm -rf build` alone
 #    leaves it stale and reports "Nothing to be done for 'all'".
 #
@@ -285,8 +283,8 @@ Options:
       --only  LIST    comma-separated targets to build (default: all)
       --skip  LIST    comma-separated targets to skip
       --verify        build WITH SWOS_SAVE_FORMAT_JSON_VERIFY=1 (debug only)
-      --release       PUBLIC build: stock injuries + cards (default is a tester
-                      build with SWOS_TEST_NO_INJURIES_CARDS=1)
+      --release       PUBLIC build: the testers' no-injuries setting compiled out
+                      (default is a tester build, SWOS_TEST_RULES=1)
       --no-clean      don't wipe object dirs first (only safe if flags unchanged)
       --no-zip        build but don't package (no zips, no installer)
       --no-full       skip SWOS-full.zip (binaries-only SWOS.zip still written)
@@ -338,14 +336,17 @@ done
 
 MAKE_FLAGS="SWOS_SAVE_FORMAT_JSON_VERIFY=$VERIFY"
 EXTRA_DEFS=""
+# A TESTER drop is built with SWOS_TEST_RULES: the `[testing] no_injuries_cards` setting
+# exists (off by default, offline only -- include/test_rules.h). --release compiles the
+# rule out. Injuries and cards themselves are no longer a build matter.
 if [ "$NOINJ" = 1 ]; then
-    MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_NO_INJURIES_CARDS=1"
+    MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_RULES=1"
     # Neither Makefile.amiga nor Makefile.switch has SWOS_* knobs of its own;
     # EXTRA_CFLAGS is the documented escape hatch on both, so the m68k and NX
-    # binaries match the SDL ones. Getting this wrong ships one platform in a
-    # drop with injuries and the rest without, and testers file the difference
-    # as a bug (.claude/CLAUDE.md).
-    EXTRA_DEFS="-DSWOS_TEST_NO_INJURIES_CARDS=1"
+    # binaries are tester builds like the SDL ones (.claude/CLAUDE.md).
+    EXTRA_DEFS="-DSWOS_TEST_RULES=1"
+else
+    MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_RULES=0"
 fi
 
 wanted() {   # wanted <target> -> 0 if it should be built
@@ -551,8 +552,8 @@ if wanted switch; then
     else
         banner "switch NX-NXFP2-a64 -> bin/SWOS.nss + dist/SWOS.nsp"
         # EXTRA_CFLAGS rides through WSLENV -> cmd -> Makefile.switch. Without
-        # it the console build would be the only one in the drop missing
-        # SWOS_TEST_NO_INJURIES_CARDS.
+        # it the console build would be the only one in the drop that is not
+        # a tester build (SWOS_TEST_RULES).
         if EXTRA_CFLAGS="$EXTRA_DEFS" scripts/build_switch.sh package; then
             record switch "OK"; echo "-- OK: switch"
         else
@@ -712,7 +713,7 @@ banner "SUMMARY"
 printf '  save-format verify : %s\n' \
     "$( [ "$VERIFY" = 1 ] && echo 'ON  (debug — every save round-trips)' || echo 'off' )"
 printf '  injuries + cards   : %s\n' \
-    "$( [ "$NOINJ" = 1 ] && echo 'OFF (tester build — SWOS_TEST_NO_INJURIES_CARDS=1)' || echo 'on  (release build)' )"
+    "$( [ "$NOINJ" = 1 ] && echo 'on; testers can switch them off OFFLINE in SWOS.ini (tester build — SWOS_TEST_RULES=1)' || echo 'on  (release build: the setting is compiled out)' )"
 echo ""
 RC=0
 for t in $ALL_TARGETS; do

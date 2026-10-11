@@ -39,8 +39,6 @@
 #include "display.h"        /* _screen_width, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH */
 #include "relay_proto.h"
 #include "netplay_netem.h"     /* SWOS_NETEM_LINK: the emulated network in front of the link too */
-#include "tackle_foul.h"        /* TackleFoul_BookingsEnabled */
-#include "career_status.h"      /* CareerStatus_InjuriesEnabled */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -218,15 +216,15 @@ static uint32_t now_ms(void)
  * line and SWOS.ini in main.c. The screen width travels too, but no longer has to match:
  * the two agree one simulation draw width from both (P2PLink_AgreedSimWidth). */
 /* The rules a match is played by, one bit each: what the player chose (the gameplay
- * style, arcade mode, the fire-hold lockout) and what the BUILD decided
- * (SWOS_TEST_NO_INJURIES_CARDS). Two peers that differ in any bit play different
- * matches from the same inputs.
+ * style, arcade mode, the fire-hold lockout). Two peers that differ in any bit play
+ * different matches from the same inputs.
  *
- * The build's bits come from the objects that implement them, not from a -D here: a
- * binary once carried a stale tackle_foul.o compiled without the flag, so it booked
- * players while every other file said it could not -- and a live match against a clean
- * build desynced at the first booking (2026-09-19). Asked this way, a mixed build
- * reports what it will actually do. */
+ * P2P_RULE_NO_BOOKINGS / P2P_RULE_NO_INJURIES are never set any more: they said a build
+ * was compiled without cards and injuries (SWOS_TEST_NO_INJURIES_CARDS, the tester
+ * builds until 2026-10-11). That is a setting now and never applies online
+ * (include/test_rules.h), so every build sends 0 -- which is also what makes this build
+ * refuse an old tester build, whose match really would be a different one. The bits
+ * stay defined for the recordings those builds made (srp_resim.c). */
 uint8_t P2PLink_GameplayFlags(void)
 {
     extern int _gDosGameplay;               /* dos_mode.h */
@@ -242,9 +240,7 @@ uint8_t P2PLink_GameplayFlags(void)
     return (uint8_t)((_gDosGameplay ? P2P_RULE_DOS : 0) |
                      (_gDosView ? P2P_RULE_DOS_VIEW : 0) | P2P_RULE_VIEW_KNOWN | P2P_RULE_ONE_TICK |
                      (_gArcadeMode ? P2P_RULE_ARCADE : 0) |
-                     (_gOriginalFireHoldLockout ? P2P_RULE_FIRE_LOCKOUT : 0) |
-                     (TackleFoul_BookingsEnabled() ? 0 : P2P_RULE_NO_BOOKINGS) |
-                     (CareerStatus_InjuriesEnabled() ? 0 : P2P_RULE_NO_INJURIES));
+                     (_gOriginalFireHoldLockout ? P2P_RULE_FIRE_LOCKOUT : 0));
 }
 
 static void setup_local(Setup *s)

@@ -68,7 +68,7 @@ fail every session; all three are fixed in `scripts/harness_lib.py` +
 
 ```bash
 # 1. BUILD FRESH and confirm it actually built (a stale binary = garbage struct reads).
-make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 SWOS_TEST_NO_INJURIES_CARDS=1 -j"$(nproc)"
+make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 -j"$(nproc)"
 echo "exit=$?"; ls -l bin/SWOS.x86_64        # exit must be 0; mtime must be NEWER than your src edits
 find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST be empty
 ```
@@ -700,7 +700,8 @@ exercises the same `_InitCareer` path a human triggers.
 > An unattended season run needs a binary built with **both** of these, or it
 > will stick or corrupt state:
 >
-> - **`SWOS_TEST_NO_INJURIES_CARDS=1`** — disables injuries/suspensions/cards so
+> - **`SWOS_TEST_NO_INJURIES_CARDS=1`** (in the game's ENVIRONMENT since 2026-10-11, or
+>   `[testing] no_injuries_cards = true` in SWOS.ini; no longer a make flag) — disables injuries/suspensions/cards so
 >   no player ever goes **red**. Without it, a carded/injured player turns the
 >   squad row red and the game **locks PLAY MATCH / VIEW RESULT until you swap
 >   that player out**. The driver does not do squad swaps, so it gets **stuck on
@@ -714,7 +715,7 @@ exercises the same `_InitCareer` path a human triggers.
 >   keeps playing, so it must not be a VERIFY build. (Verify saves separately:
 >   load each file in a VERIFY build, or use `decode_save.py`.)
 >
-> Build it: `make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 SWOS_TEST_NO_INJURIES_CARDS=1`
+> Build it: `make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0`
 > Confirm: `nm bin/SWOS.x86_64 | grep -c verify_roundtrip` → `0`.
 >
 > **Cold-boot setup** (fresh daemon): `break MenuInputInjectPoint`, `run`, then let

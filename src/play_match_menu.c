@@ -1251,7 +1251,7 @@ void DrawPlayerEntries(MenuEntry *a5) {
     int16_t d1 = (int16_t)fIdx;
 
     /* Injured check — DISPLAY decision, so it must use the honest status.
-     * IsPlayerInjured carries the SWOS_TEST_NO_INJURIES_CARDS beta override
+     * IsPlayerInjured carries the testers'-rule (test_rules.h) override
      * (returns 0 for everyone), which is a GAMEPLAY-availability override; using
      * it here made an injured/suspended player's row keep its normal colour
      * while SetSquadMenuEntryStatusSprite — which reads pf->cardsInjuries

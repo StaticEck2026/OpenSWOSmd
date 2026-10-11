@@ -21,7 +21,7 @@
 # this script drives a real Mac instead, and defaults to the SAME flags
 # build_dist.sh uses so a drop is uniform across platforms:
 #
-#   SWOS_TEST_NO_INJURIES_CARDS=1   (tester build; --release turns it off)
+#   SWOS_TEST_RULES=1               (tester build; --release turns it off)
 #   SWOS_SAVE_FORMAT_JSON_VERIFY=0  (the Makefile's `?= 0` is inside the WASM
 #                                    branch, so this defaults ON otherwise)
 #
@@ -58,8 +58,8 @@ usage() {
 
 Options:
   -j, --jobs N     parallel make jobs (default: the Mac's core count)
-      --release    PUBLIC build: stock injuries + cards (default is a tester
-                   build with SWOS_TEST_NO_INJURIES_CARDS=1)
+      --release    PUBLIC build: the testers' no-injuries setting compiled out
+                   (default is a tester build, SWOS_TEST_RULES=1)
       --no-pull    don't git pull on the Mac first
   -h, --help       this text
 
@@ -82,7 +82,7 @@ while [ $# -gt 0 ]; do
 done
 
 MAKE_FLAGS="SWOS_SAVE_FORMAT_JSON_VERIFY=0"
-[ "$NOINJ" = 1 ] && MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_NO_INJURIES_CARDS=1"
+if [ "$NOINJ" = 1 ]; then MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_RULES=1"; else MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_RULES=0"; fi
 
 banner() { echo ""; echo "======================================================================"; echo "== $*"; echo "======================================================================"; }
 
@@ -102,7 +102,7 @@ banner "build on $MAC_HOST:$MAC_PATH"
 # ssh does NOT preserve argv boundaries: it concatenates its arguments into a
 # single command string that the REMOTE shell re-splits. So "$MAKE_FLAGS" (two
 # words) would arrive as two arguments and shift everything after it — which is
-# how `-j` once received "SWOS_TEST_NO_INJURIES_CARDS=1". printf %q quotes each
+# how `-j` once received a make variable ("SWOS_TEST_NO_INJURIES_CARDS=1", as it was). printf %q quotes each
 # argument for re-input to the remote bash. The tilde in MAC_PATH survives as a
 # literal (%q escapes it, the remote parser strips the backslash) and is expanded
 # by the `eval cd` below.
@@ -172,10 +172,10 @@ scp -q "$MAC_HOST:$MAC_PATH/dist/$MAC_ZIP_BIN" "dist/$MAC_ZIP_BIN" || { echo "--
 banner "SUMMARY"
 printf '  built from commit  : %s\n' "$(sed -n 's/.*BUILT_COMMIT=//p' "$LOG" | head -1)"
 printf '  injuries + cards   : %s\n' \
-    "$( [ "$NOINJ" = 1 ] && echo 'OFF (tester build — SWOS_TEST_NO_INJURIES_CARDS=1)' || echo 'on  (release build)' )"
+    "$( [ "$NOINJ" = 1 ] && echo 'on; testers can switch them off OFFLINE in SWOS.ini (tester build — SWOS_TEST_RULES=1)' || echo 'on  (release build: the setting is compiled out)' )"
 printf '  save-format verify : off\n'
-printf '  flag in build      : %s compile lines with -DSWOS_TEST_NO_INJURIES_CARDS=1\n' \
-    "$(grep -c -- '-DSWOS_TEST_NO_INJURIES_CARDS=1' "$LOG")"
+printf '  flag in build      : %s compile lines with -DSWOS_TEST_RULES=1\n' \
+    "$(grep -c -- '-DSWOS_TEST_RULES=1' "$LOG")"
 printf '  slices             : %s\n' "$(grep -m1 '^== lipo:' "$LOG" | sed 's/^== lipo: //')"
 printf '  symlinks preserved : %s (0 would mean SDL2.framework is broken)\n' \
     "$(sed -n 's/.*SYMLINKS_IN_ZIP=//p' "$LOG" | head -1)"

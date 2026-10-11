@@ -1781,7 +1781,7 @@ no_event_or_done:
     static int8_t s_navLog = -1;
     if (s_navLog < 0) {
         const char *v = getenv("SWOS_MENU_NAV_LOG");
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
+#ifdef SWOS_TEST_RULES      /* a tester build (include/test_rules.h) */
         s_navLog = v ? (v[0] != '0') : 1;
 #else
         s_navLog = v ? (v[0] != '0') : 0;

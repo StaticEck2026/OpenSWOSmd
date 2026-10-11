@@ -120,7 +120,7 @@ switch the true figure on without retuning the pacing: the peers swing five fram
 balance itself is in the fork (`lib/ggpo/prediction_balance.h`, `GGPO_PREDICTION_BALANCE`): the
 peers exchange their average prediction depth in the quality report and the one 1.5 frames or
 more deeper is told to wait a quarter of the gap (`NETPLAY_EVENT_BALANCE`) -- never a gap of
-one frame, which cannot be closed without adding prediction. `[netplay] balance = yes`, OFF by
+one frame, which cannot be closed without adding prediction. `[netplay] balance = true`, OFF by
 default, both players; `SWOS_LIVE_BALANCE=1` for a test. A change to either: several runs a
 link of the doc's matrix, never one.
 "Ghosting" (players running through each other online) has its own doc, docs/NETPLAY_GHOSTING.md:
@@ -357,16 +357,22 @@ scripts/build_installer.sh
 scripts/build_installer.sh --stage-only    # inspect dist/windows first
 ```
 
-**Tester builds set `SWOS_TEST_NO_INJURIES_CARDS=1` by default** — that is the
-owner's standing preference (without it a tester can't hit VIEW RESULT through a
-season: substitution menus and booking prompts every match). `--release` turns it
-off for a public build. Keep the flag **identical across every platform in one
-drop**: a macOS build with it next to a Windows build without it generates bug
-reports for non-bugs (under the flag, subbing an injured player scores as a
-DOWNGRADE — see the Makefile's "KNOWN DISPLAY SIDE-EFFECTS" block). Netplay now
-enforces it: two builds that differ in it refuse each other at the handshake
-("YOUR BUILDS PLAY BY DIFFERENT RULES"), and a test build's version line says
-"test build: no injuries or cards".
+**No injuries, no cards is a SETTING, off by default, offline only**
+(`[testing] no_injuries_cards = true` in `SWOS.ini`, or `SWOS_TEST_NO_INJURIES_CARDS=1` in
+the environment for one run; `include/test_rules.h`). With it a tester can hit VIEW RESULT
+through a season: no substitution menus, no booking prompts. An online match ALWAYS plays
+the real rules, whatever either file says, and so do the rigs (replay corpus, rollback,
+netplay tests); `--srp-resim` plays a recording by the rule it was recorded under.
+Until 2026-10-11 it was a compile-time flag of the same name, on in every tester drop: a
+tester's binary was a different game, took the rule online, and a build with it could not
+play one without. Those old tester builds are refused at the handshake ("YOUR BUILDS PLAY
+BY DIFFERENT RULES").
+**`SWOS_TEST_RULES`** is what the compiler still decides: on by default and in every
+tester drop (the setting exists; match reports and the menu-nav log default on; the
+version line says "tester build"), off with `make SWOS_TEST_RULES=0` /
+`build_dist.sh --release`, which compiles the rule OUT for a public release. Keep it
+identical across every platform in one drop. With the rule on, subbing an injured player
+scores as a DOWNGRADE — see the Makefile's "KNOWN DISPLAY SIDE-EFFECTS" block.
 
 Three traps it exists to handle — **don't hand-roll a release without them**:
 
@@ -379,10 +385,9 @@ Three traps it exists to handle — **don't hand-roll a release without them**:
   leaves it stale and the build reports "Nothing to be done for 'all'". The
   script also runs `make -f Makefile.amiga clean`.
 - **`Makefile.amiga` has no `SWOS_*` knobs**, so the m68k target would silently
-  miss `SWOS_TEST_NO_INJURIES_CARDS`; the script passes it through that
-  makefile's `EXTRA_CFLAGS` escape hatch. Confirm it landed by checking
-  `obj/career_status.s` — under the flag `IsPlayerInjured` is just
-  `clr.w %d0; rts`.
+  miss `SWOS_TEST_RULES`; the script passes it through that makefile's
+  `EXTRA_CFLAGS` escape hatch. (The Amiga reads no SWOS.ini, so the testers' rule
+  cannot be switched on there: it always plays the real rules.)
 
 `bin/SWOS.exe` is a **Cygwin** binary (imports `cygwin1.dll`; testers need that
 plus `SDL2.dll`). The Makefile selects the Windows target from the *host shell*

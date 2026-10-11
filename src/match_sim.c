@@ -18,6 +18,7 @@
  */
 
 #include "match_sim.h"
+#include "test_rules.h"
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>          /* MatchSim_LogSkillRoll */
 #include <stdlib.h>         /* getenv: SWOS_SKILL_DEBUG */
@@ -413,13 +414,10 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTable) {
     if (_trainingGame) return;
     if (team->team.teamControls == 1) return;
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    /* Beta-test mode: never assign post-match injuries / cards so the
-     * tester can VIEW RESULT through a season without substitution
-     * prompts. */
-    (void)remapTable;
-    return;
-#endif
+    /* The testers' rule (test_rules.h): never assign post-match injuries / cards, so
+     * the tester can VIEW RESULT through a season without substitution prompts. */
+    if (TestRules_NoInjuriesCards())
+        return;
 
     /* Get number of available players */
     uint32_t result = GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
@@ -586,13 +584,11 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 __attribute__((used, externally_visible))
 void InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     if (team->team.teamControls == 1) return;
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    /* Beta-test mode: never assign post-match status buckets so the
-     * tester can VIEW RESULT through a season without IsPlayerInjured
-     * flagging anyone unavailable. */
-    (void)remapTable;
-    return;
-#endif
+    /* The testers' rule (test_rules.h): never assign post-match status buckets, so
+     * the tester can VIEW RESULT through a season without IsPlayerInjured flagging
+     * anyone unavailable. */
+    if (TestRules_NoInjuriesCards())
+        return;
 
     uint32_t result = GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 */

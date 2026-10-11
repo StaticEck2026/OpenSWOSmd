@@ -81,6 +81,7 @@ typedef enum {
 void               NetplayLobby_Begin(int32_t localPlayer, const char *localName);
 void               NetplayLobby_Poll(void);
 void               NetplayLobby_End(void);
+int32_t            NetplayLobby_IsOpen(void);    /* from Begin to End: an online session */
 
 LobbyState         NetplayLobby_State(void);
 int32_t            NetplayLobby_LocalPlayer(void);

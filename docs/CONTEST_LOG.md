@@ -17,7 +17,8 @@ scripts/contest_report.py <file>.SRP --views                 # where a player's 
 ```
 
 The binary must be the build the recording was made on, or one with the same rules and
-state layout: a tester recording needs `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1`. A
+state layout (a recording made by an old no-injuries tester build is replayed by that
+rule: any build with `SWOS_TEST_RULES`, the default). A
 recording the game refuses or that stops matching is listed as skipped, with the reason.
 The CSVs are kept in `build/contest/` and reused until the recording or the binary changes.
 

@@ -19,6 +19,7 @@
 #include "game_utils.h"
 #include "game_types.h"
 #include "frontend.h"
+#include "test_rules.h"
 #include "display.h"            /* AGA: which Amiga display this build is */
 #include "menu_system.h"
 #include "online_menus.h"   /* MULTIPLAYER opens SWOS 2020's online flow */
@@ -1566,7 +1567,7 @@ void SquadAfterDrawCommon(void *entryPtr)
     PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
 
     /* Check if injured — DISPLAY decision (row goes red), so use the honest
-     * status rather than IsPlayerInjured, whose SWOS_TEST_NO_INJURIES_CARDS
+     * status rather than IsPlayerInjured, whose testers'-rule (test_rules.h)
      * beta override is a GAMEPLAY-availability override only. See the same
      * split in play_match_menu.c DrawPlayerEntries / edit_tactics.c. */
     uint16_t injured = IsPlayerInjuredForDisplay((PlayerFile *)player, (int16_t)_squadRowMode);
@@ -2483,6 +2484,9 @@ void CommonMenuExit(void)
 {
     uint8_t *nameStr;
     uint8_t *fmtStr;
+
+    /* Back at the main menu: whatever was online is over (include/test_rules.h). */
+    TestRules_Online(0);
 
     /* Here, not in SWOSMainMenuInit: coming back from a sub-menu shows the main menu
      * again without its onInit, and the two buttons came back with it (seen on the

@@ -148,7 +148,7 @@ scripts/build_macos.sh      # the two macOS archives, over ssh to the Mac mini
 **Never from a `-dirty` tree** — the build stamp in every binary is how a tester
 report is tied back to a commit. Commit first, then build. `build_dist.sh`
 handles its own `clean` (both makefiles) and the tester flags
-(`SWOS_TEST_NO_INJURIES_CARDS=1`, `SWOS_SAVE_FORMAT_JSON_VERIFY=0`); do not
+(`SWOS_TEST_RULES=1`, `SWOS_SAVE_FORMAT_JSON_VERIFY=0`); do not
 hand-roll it. See CLAUDE.md, "Release builds".
 
 **Then write the changelog entry.** Every published build has one in

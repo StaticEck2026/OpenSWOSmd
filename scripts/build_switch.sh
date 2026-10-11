@@ -55,7 +55,7 @@ echo
 # override set here.
 # EXTRA_CFLAGS reaches Makefile.switch the same way: named in WSLENV or cmd
 # never sees it. scripts/build_dist.sh sets it to keep the console build's
-# SWOS_TEST_NO_INJURIES_CARDS in step with every other target in a drop.
+# SWOS_TEST_RULES in step with every other target in a drop.
 EXTRA_CFLAGS="${EXTRA_CFLAGS:-}"
 export NINTENDO_SDK_ROOT SDL_SWITCH_ROOT EXTRA_CFLAGS
 export WSLENV="${WSLENV:+$WSLENV:}NINTENDO_SDK_ROOT:SDL_SWITCH_ROOT:EXTRA_CFLAGS"

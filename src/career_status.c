@@ -29,6 +29,7 @@
  */
 
 #include "career_status.h"
+#include "test_rules.h"
 #include "comp_identity.h"
 #include "diy_competition.h"
 #include "endian_helpers.h"
@@ -562,8 +563,8 @@ check_bucket:
 
 __attribute__((used, externally_visible))
 uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    /* Beta-test mode: nobody is ever unavailable for SELECTION/GAMEPLAY,
+    if (TestRules_NoInjuriesCards()) {
+    /* The testers' rule (test_rules.h): nobody is ever unavailable for SELECTION/GAMEPLAY,
      * regardless of what's persisted in cardsInjuries. Catches any injury/
      * card/bucket source the per-write-site gates may have missed (loaded
      * saves with pre-existing injury bits, edit-tactics writes, etc.).
@@ -571,26 +572,15 @@ uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
      * suppress the squad-screen DISPLAY (the red suspended/injured name), or
      * the name stops matching the drawn "3"/injury indicator. DISPLAY callers
      * use IsPlayerInjuredForDisplay() which keeps the honest status. */
-    (void)playerFile; (void)mode;
-    return 0;
-#else
+        return 0;
+    }
     return player_injury_status(playerFile, mode);
-#endif
 }
 
 /* DISPLAY-only status query: reports the REAL persisted injury/suspension even
- * under SWOS_TEST_NO_INJURIES_CARDS, so the edit-tactics squad screen colours a
+ * under the testers' rule (test_rules.h), so the edit-tactics squad screen colours a
  * suspended/injured player's name red to match its drawn indicator. On non-beta
  * builds this is identical to IsPlayerInjured (both just call the core). */
-int32_t CareerStatus_InjuriesEnabled(void)
-{
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    return 0;
-#else
-    return 1;
-#endif
-}
-
 __attribute__((used, externally_visible))
 uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode) {
     return player_injury_status(playerFile, mode);
@@ -667,7 +657,7 @@ uint16_t GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraC
  * until he is substituted — correct, original SWOS behaviour.
  *
  * That makes this a GAMEPLAY-availability query, so it must honour the same
- * SWOS_TEST_NO_INJURIES_CARDS override as IsPlayerInjured(). Without it the
+ * testers' rule (test_rules.h) override as IsPlayerInjured(). Without it the
  * beta flag only half-applied: IsPlayerInjured said "nobody is unavailable"
  * while these counters still read cardsInjuries directly, so a tester with a
  * pre-existing injury in a loaded save got NO start button at all and was
@@ -676,10 +666,8 @@ uint16_t GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraC
  * DISPLAY queries and route through IsPlayerInjuredForDisplay().
  * ================================================================ */
 static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    (void)pf; (void)excludeCardsFlag;
-    return 0;
-#else
+    if (TestRules_NoInjuriesCards())
+        return 0;
     uint8_t ci = pf->cardsInjuries;
 
     /* Check status bucket bits (5-7) */
@@ -706,7 +694,6 @@ static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
         return 1;  /* has card → disabled */
 
     return 0;
-#endif
 }
 
 /* ================================================================

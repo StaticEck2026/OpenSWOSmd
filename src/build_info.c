@@ -75,10 +75,11 @@ const char *Build_Platform(void)
     return SWOS_PLATFORM;
 }
 
-/* A tester's build plays by other rules than a release (no bookings, no injuries), and
- * a report from one is read differently -- so the version line says which it is. */
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-#define SWOS_BUILD_RULES ", test build: no injuries or cards"
+/* A tester's build can switch the testers' rule on (no bookings, no injuries, offline:
+ * include/test_rules.h) and a report from one is read differently -- so the version
+ * line says which it is. Whether the rule is ON is in SWOS.log, where it is set. */
+#ifdef SWOS_TEST_RULES
+#define SWOS_BUILD_RULES ", tester build"
 #else
 #define SWOS_BUILD_RULES ""
 #endif

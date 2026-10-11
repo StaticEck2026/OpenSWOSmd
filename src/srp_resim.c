@@ -35,6 +35,7 @@
 #include "match_sim.h"          /* InitTeams */
 #include "netplay_match.h"
 #include "netplay_setup.h"
+#include "test_rules.h"
 #include "p2p_link.h"           /* P2PLink_GameplayFlags, P2P_RULE_* */
 #include "replay_v2.h"
 #include "sim_state.h"
@@ -132,10 +133,33 @@ void SrpResim_Run(void)
                "(this build %016llx)\n", (unsigned long long)SimState_LayoutHash());
         exit(1);
     }
-    if ((s_rec.rules & P2P_RULES_BUILD) != (here & P2P_RULES_BUILD) || (s_rec.rules & P2P_RULE_ARCADE)) {
+    if (s_rec.rules & P2P_RULE_ARCADE) {
         printf("[resim] REFUSED: recorded by a build that plays by other rules (0x%02X here)\n",
                (unsigned)here);
         exit(1);
+    }
+    /* The rule the match was PLAYED under. A tester build before 2026-10-11 was compiled
+     * without cards and injuries and said so in two bits; that is the testers' rule
+     * (include/test_rules.h), put in force here for the replay. One bit without the
+     * other was a mixed build -- the binary that desynced a live match -- and cannot be
+     * replayed by anything. */
+    {
+        uint8_t rule = (uint8_t)(s_rec.rules & P2P_RULES_BUILD);
+        if (rule != 0 && rule != P2P_RULES_BUILD) {
+            printf("[resim] REFUSED: recorded by a mixed build (rules 0x%02X: cards and "
+                   "injuries disagree)\n", (unsigned)s_rec.rules);
+            exit(1);
+        }
+#ifndef SWOS_TEST_RULES
+        if (rule) {
+            printf("[resim] REFUSED: recorded without cards and injuries, and this build "
+                   "has that rule compiled out (make SWOS_TEST_RULES=1)\n");
+            exit(1);
+        }
+#endif
+        TestRules_Force(rule ? 1 : 0);
+        if (rule)
+            printf("[resim] recorded by a no-injuries tester build: replayed by that rule\n");
     }
     if (NetplaySetup_Apply(s_rec.setup, s_rec.setupLen) != 0) {
         printf("[resim] REFUSED: the recording's match setup does not apply here\n");

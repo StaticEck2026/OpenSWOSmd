@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "tackle_foul.h"
+#include "test_rules.h"
 #include "dos_sound.h"
 #include "contest_log.h"    /* how long a slide leaves a player down (ContestLog_Down) */
 
@@ -283,16 +284,6 @@ set_tackled:
     SetPlayerAnimationTable((AnimTable *)&_playerTackledAnimTable, player);
 }
 
-/* See tackle_foul.h: what THIS object was compiled to do, for the netplay handshake. */
-int32_t TackleFoul_BookingsEnabled(void)
-{
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    return 0;
-#else
-    return 1;
-#endif
-}
-
 /* ========================================================================
  * TryBookingThePlayer
  * Returns 0 if card was given, 1 if not eligible.
@@ -306,11 +297,8 @@ TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
     uint16_t offset;
     TeamStatisticsData *stats;
 
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    (void)player; (void)team; (void)pi; (void)cards;
-    (void)ordinal; (void)offset; (void)stats;
-    return 1;  /* Beta-test mode: never book — eligibility=no */
-#endif
+    if (TestRules_NoInjuriesCards())
+        return 1;  /* the testers' rule (test_rules.h): never book — eligibility=no */
 
     if (_plgD3Param != 0) {
         /* Highlight mode */
@@ -402,11 +390,8 @@ TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
     uint16_t offset;
     TeamStatisticsData *stats;
 
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    (void)player; (void)team; (void)pi; (void)cards;
-    (void)ordinal; (void)offset; (void)stats;
-    return 1;  /* Beta-test mode: never send off — eligibility=no */
-#endif
+    if (TestRules_NoInjuriesCards())
+        return 1;  /* the testers' rule (test_rules.h): never send off — eligibility=no */
 
     /* Need at least one human controller */
     if (team->playerNumber == 0 &&

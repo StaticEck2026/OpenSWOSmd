@@ -369,18 +369,24 @@ endif
 
 # Toggling a -D flag below rebuilds every object that the flag reaches -- see
 # BUILD_FLAGS_STAMP further down. It used not to: make compares TIMESTAMPS, so
-# `make X86_64=1` after `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1` relinked
+# `make X86_64=1` after `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1` (as it was) relinked
 # the old objects, and a binary could carry the flag in some files and not in
 # others -- which desynced a live match (2026-09-19, see there).
 #
-# Beta-testing convenience: build with `make SWOS_TEST_NO_INJURIES_CARDS=1`
-# to suppress in-match yellow/red cards and post-match random injuries.
-# Lets the tester hit VIEW RESULT uninterruptedly through a season — no
-# substitution menus, no booking prompts. Intentionally compile-time only
-# so production builds never accidentally ship with it on.
+# The testers' rule -- no cards, no injuries, OFFLINE only -- is a SWOS.ini setting,
+# `[testing] no_injuries_cards = true`, off by default (include/test_rules.h). It lets a
+# tester hit VIEW RESULT uninterruptedly through a season: no substitution menus, no
+# booking prompts. SWOS_TEST_RULES=1 (the default) compiles the setting in;
+# `make SWOS_TEST_RULES=0` compiles the rule OUT, for a public release nobody should be
+# able to switch it on in (scripts/build_dist.sh --release). It also marks a tester
+# build for the defaults that differ (match reports on, the menu navigation log).
 #
-# KNOWN DISPLAY SIDE-EFFECTS under this flag (do NOT re-investigate as port
-# bugs — they vanish in a production build). IsPlayerInjured() returns 0 for
+# Until 2026-10-11 this was SWOS_TEST_NO_INJURIES_CARDS, compile-time: a tester's binary
+# was a different game from a release, took the rule into online matches, and a binary
+# built partly with it desynced one.
+#
+# KNOWN DISPLAY SIDE-EFFECTS with the rule ON (do NOT re-investigate as port
+# bugs — they vanish with the setting off). IsPlayerInjured() returns 0 for
 # everyone, so any player carrying a PRE-EXISTING injury/suspension in a loaded
 # save is "healthy" to every gameplay query while the row indicator — which
 # reads pf->cardsInjuries directly — still shows the "3":
@@ -399,8 +405,9 @@ endif
 #     the exact friction the flag exists to remove. isPlayerDisabled now honours
 #     the override too, so this one is handled. (Stock builds are unaffected:
 #     an injured starter still hides the button, per SWOS2.s loc_14872A.)
-ifdef SWOS_TEST_NO_INJURIES_CARDS
-DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
+SWOS_TEST_RULES ?= 1
+ifeq ($(SWOS_TEST_RULES),1)
+DEBUG_FLAGS += -DSWOS_TEST_RULES=1
 endif
 
 # Build with the PRISTINE Amiga data for the four formations this port

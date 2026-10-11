@@ -57,8 +57,8 @@ typedef enum {
 #define P2P_RULE_DOS            0x01    /* DOS gameplay */
 #define P2P_RULE_ARCADE         0x02    /* arcade mode */
 #define P2P_RULE_FIRE_LOCKOUT   0x04    /* the original's fire-hold lockout */
-#define P2P_RULE_NO_BOOKINGS    0x08    /* SWOS_TEST_NO_INJURIES_CARDS, as tackle_foul.c was built */
-#define P2P_RULE_NO_INJURIES    0x10    /* SWOS_TEST_NO_INJURIES_CARDS, as career_status.c was built */
+#define P2P_RULE_NO_BOOKINGS    0x08    /* never sent since 2026-10-11: a tester build compiled without cards */
+#define P2P_RULE_NO_INJURIES    0x10    /* ... and without injuries. In old recordings (srp_resim.c) */
 #define P2P_RULE_DOS_VIEW       0x20    /* the DOS view: the simulation camera sees 320x200 */
 #define P2P_RULE_VIEW_KNOWN     0x40    /* this byte says the view (a .SRP from before it did not) */
 #define P2P_RULE_ONE_TICK       0x80    /* one clock tick a frame (a .SRP without it: two -- NetplayMatch_OwnsClock) */

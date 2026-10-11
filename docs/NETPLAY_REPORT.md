@@ -79,7 +79,7 @@ recording of the same match.
 ## Consent
 
 **MULTIPLAYER SETTINGS → SEND MATCH REPORTS** (`[netplay] reports` in `SWOS.ini`). ON by
-default in tester builds (`SWOS_TEST_NO_INJURIES_CARDS`), OFF in a public release.
+default in tester builds (`SWOS_TEST_RULES`), OFF in a public release.
 
 OFF means nothing about that player leaves their machine: their half tells the other
 player only that they have it off (`REPORT_HALF_OFF`), they upload nothing, and their own

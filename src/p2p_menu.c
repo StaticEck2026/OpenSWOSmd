@@ -15,6 +15,7 @@
  * SWOS 2020's own online menus are imported separately and are a different thing
  * entirely -- a login, a lobby and a matchmaking server (src/online_menus.c).
  */
+#include "test_rules.h"
 #include "p2p_menu.h"
 
 #ifdef SWOS_SDL_BUILD
@@ -347,6 +348,7 @@ void P2PMenu_Show(void)
         fprintf(stderr, "[p2p-menu] cannot show %s\n", P2P_MENU_NAME);
         return;
     }
+    TestRules_Online(1);        /* test_rules.h: the testers' rule stops at this door */
     ShowMenu(menu);
 }
 

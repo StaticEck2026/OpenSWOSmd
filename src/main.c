@@ -30,6 +30,7 @@
 #include <unistd.h>          /* readlink, chdir */
 #endif
 
+#include "test_rules.h"
 #include "platform_sdl.h"
 #include "swos_settings.h"
 #include "swos_io.h"            /* swos_save_dir_init() — macOS-writable save dir */
@@ -445,7 +446,8 @@ int main(int argc, char **argv)
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
     opts.netplay_balance = 0;     /* [netplay] balance: off unless asked for (docs/NETPLAY_BALANCE.md) */
     opts.prediction = 1;          /* default: a live match's replay keeps what each player saw */
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    opts.no_injuries_cards = 0;   /* [testing] no_injuries_cards: the real rules unless asked (test_rules.h) */
+#ifdef SWOS_TEST_RULES
     opts.reports = 1;             /* a tester build: match reports come back to us */
 #else
     opts.reports = 0;             /* a public release: the player opts in (SEND MATCH REPORTS) */
@@ -1008,6 +1010,17 @@ int main(int argc, char **argv)
     MatchReport_SetEnabled(opts.reports);
     { extern void ReplayRec_SetPredictionKept(int32_t on); ReplayRec_SetPredictionKept(opts.prediction); }
     { extern void NetplayMatch_SetBalance(int32_t on); NetplayMatch_SetBalance(opts.netplay_balance); }
+    /* The testers' rule, for offline play (include/test_rules.h). Said in the log: a
+     * report from a career played without injuries is read differently. */
+    TestRules_SetSetting(opts.no_injuries_cards);
+    {   /* ... or from the environment, for one run (the harness drives careers with it;
+         * the name is the old compile-time flag's, which the docs and scripts still use) */
+        const char *e = getenv("SWOS_TEST_NO_INJURIES_CARDS");
+        if (e && e[0])
+            TestRules_SetSetting(e[0] != '0');
+    }
+    if (TestRules_Setting())
+        fprintf(stderr, "[testing] no_injuries_cards = true: offline matches book and injure nobody\n");
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;

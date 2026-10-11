@@ -18,6 +18,7 @@
  * and password and toggles its options; LOGIN goes to matchmaking in SWOS 2020's
  * own "server not connected" state, from where SETTINGS and RANKINGS open.
  */
+#include "test_rules.h"
 #include "online_menus.h"
 #include "mm_client.h"         /* the matchmaking server (docs/NETPLAY.md section 7) */
 #include "p2p_menu.h"          /* OpenSWOS's own JSON-only menu */
@@ -139,6 +140,7 @@ void OnlineMenus_Show(const char *name)
         fprintf(stderr, "[online-menus] cannot show %s\n", name);
         return;
     }
+    TestRules_Online(1);        /* test_rules.h: the testers' rule stops at this door */
     ShowMenu(menu);
 }
 
