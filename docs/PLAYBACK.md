@@ -92,6 +92,11 @@ player's input, corrected a few frames later. When a recording has it, the page 
   and whether the balance was ON (it takes both players), off, or not recorded (a match
   from before 2026-10-09, or a server not yet updated); the line under the bar names a
   wait on the frame shown.
+- **What each game READ**, a second line under the buttons (2026-10-11): per player, the
+  controls that player's own game read on the frame shown (arrows, FIRE, BENCH, or
+  "nothing"), how many milliseconds after its previous read (orange when over 30), and the
+  frame the match played that input on -- the frame read plus the input delay. The same
+  `READ` data as `scripts/srp_inputs.py`, one frame at a time.
 - **The overlay** on the picture, for the views chosen (**V** / the *view* button: both,
   player 2, player 1, off). Every object a player saw somewhere else gets a line from where
   it really was (a red dot) to where that player's screen showed it (a box in that player's

@@ -39,6 +39,8 @@
     .balw { color: #30d0ff; } .tsw { color: #6080ff; }
     .pred[hidden] { display: none; }
     #lag { font: 12px/1.4 monospace; color: var(--dim); }
+    #read { font: 12px/1.4 monospace; color: var(--dim); min-height: 1.4em; padding: 2px 0 0; }
+    #read .late { color: #ffb040; }
     .p1 { color: #ffe600; } .p2 { color: #ffffff; } .bad { color: #ff4040; } .off { color: #ff9a30; }
     .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     button { background: #242424; color: var(--fg); border: 1px solid #3a3a3a; border-radius: 4px;
@@ -83,6 +85,7 @@
       <span id="lag"></span>
       <span id="help2" class="help">[ ] rollbacks &middot; S screen &middot; V view</span>
     </div>
+    <div id="read" title="What each player's own game READ from its controls on this frame, how long after its previous read, and the frame that input was played on (read + the input delay). Orange: a frame that came more than 30 ms after the one before."></div>
   </div>
 
   <script type="text/javascript">
@@ -200,15 +203,23 @@
       function wrong(b) { return b !== 0xFF && (b & 0xC0) !== 0; }
       // READ (docs/REPLAY_FORMAT_V2.md): per frame per player, which wait that player's game
       // was taking -- 1 a prediction balance wait, 2 a time sync wait; 0xFF no data.
-      var waits = null;
+      var waits = null, readCtl = null, readMs = null, readDelay = 0;
       function loadRead(n) {
         var balEl = document.getElementById('bal');
         if (typeof api.readInfo !== 'function' || typeof api.readAt !== 'function') return;
         var info = api.readInfo();
         if (info < 0) { balEl.textContent = 'balance: not recorded'; return; }
         waits = new Uint8Array(2 * n);
+        readCtl = new Int16Array(2 * n);      // -1: that player's frame was not recorded
+        readMs = new Uint8Array(2 * n);
+        readDelay = info & 0xFF;
         for (var f = 0; f < n; f++)
-          for (var p = 0; p < 2; p++) { var v = api.readAt(f, p + 1); waits[2 * f + p] = v < 0 ? 0xFF : (v >> 16) & 0xFF; }
+          for (var p = 0; p < 2; p++) {
+            var v = api.readAt(f, p + 1);
+            waits[2 * f + p] = v < 0 ? 0xFF : (v >> 16) & 0xFF;
+            readCtl[2 * f + p] = v < 0 ? -1 : v & 0xFF;
+            readMs[2 * f + p] = v < 0 ? 0 : (v >> 8) & 0xFF;
+          }
         var on = (info >> 8) & 3;
         balEl.innerHTML = 'input delay ' + (info & 0xFF) + ' &middot; balance: ' +
           (on === 3 ? '<span class="balw">ON</span>' :
@@ -297,6 +308,31 @@
         }
         return out.join(' &middot; ');
       }
+      // READ: the controls each player's game read on this frame (MATCH_* bits, match_step.h),
+      // how long after its previous read, and where the match played them.
+      function controlsText(c) {
+        var d = (c & 1 ? '\u2191' : '') + (c & 2 ? '\u2193' : '') + (c & 4 ? '\u2190' : '') + (c & 8 ? '\u2192' : '');
+        var out = [];
+        if (d) out.push(d);
+        if (c & 0x20) out.push('FIRE');
+        if (c & 0x40) out.push('BENCH');
+        return out.length ? out.join(' ') : 'nothing';
+      }
+      function readText(f) {
+        if (!readCtl) return '';
+        var out = [], n = readCtl.length / 2;
+        for (var p = 0; p < 2; p++) {
+          var c = readCtl[2 * f + p], cls = 'p' + (p + 1);
+          if (c < 0) { out.push('<span class="' + cls + '">' + esc(nameOf(p)) + ' read \u2013</span>'); continue; }
+          var ms = readMs[2 * f + p], t = esc(nameOf(p)) + ' read ' + controlsText(c);
+          var gap = f === 0 ? '' : ', ' + (ms === 255 ? '255+' : ms) + ' ms after the last';
+          if (ms > 30 && f > 0) gap = '<span class="late">' + gap + '</span>';
+          out.push('<span class="' + cls + '">' + t + '</span>' + gap);
+        }
+        var at = f + readDelay;
+        return out.join(' &middot; ') + ' &middot; played on frame ' + (at < n ? at : at + ' (after the end)') +
+               ' (delay ' + readDelay + ')';
+      }
       // Whose screen the picture is: 0 the match as finally played, 1 / 2 that player's --
       // every man and the ball drawn where that player's game drew them (SEEN).
       function screenName(m) { return m ? esc(nameOf(m - 1)) + "'s screen" : 'the match'; }
@@ -362,6 +398,7 @@
           frameEl.textContent = 'frame ' + f + ' / ' + (n - 1) + '  ' + clock(f, rate);
           if (pred) {
             lagEl.innerHTML = lagText(f);
+            document.getElementById('read').innerHTML = readText(f);
             document.getElementById('playhead').style.left = (n > 1 ? f / (n - 1) * 100 : 0) + '%';
           }
         }
