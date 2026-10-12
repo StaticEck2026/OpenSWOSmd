@@ -1402,6 +1402,36 @@ RECORD=1 DESYNC_FRAME=150 scripts/relay_test.sh      # the recorder must name fr
 bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP  # play a recorded match again
 ```
 
+**A match that does not end properly is still kept** (2026-10-12). 8 of the first 153
+recordings had no inputs, four of them full matches cut at the final whistle -- where
+players close the game. Three nets, each for a different way of going:
+
+- *The window is closed* (or the game is told to quit): a live match is left through
+  `liveEnd`, like ESC -- "YOU CLOSED THE GAME". It used to leave from inside the frame, and
+  on a re-simulated frame that was `fail()`: `exit(2)`, nothing saved, nothing sent
+  (`game_loop.c`, `netplay_match.c`).
+- *The game dies* (crash, kill, power, the connection): the recorder keeps the frames that
+  came WHOLE -- drawn, with their input and hash -- and drops the few after them, taking
+  whichever player's stream got further (`Recorder.cpp` `Usable`/`Whole`). The game now
+  sends each frame's hash ahead of the frame, so that is nearly all of them. A stream that
+  ended properly is untouched: its file is still the host's own, byte for byte.
+- *The player's own file*: at half time and at the final whistle, once every frame up to
+  it is confirmed, the match so far is written to `LATEST.SRP` (`ReplayRec_Checkpoint`), so
+  a game that dies after either has the match to that whistle. The final whistle is about
+  8 seconds before the match ends by itself. The file is built on a thread from a copy:
+  built in the frame it stalled that player for 155 ms, the other ran on past the end, and
+  the host's file had three frames the recorder's did not. The real end writes over it.
+
+A match that FINISHED is also cut to its last frame now (`liveEnd`, `recordConfirmed`): a
+player whose game ran ahead at the end had saved the frames it played past it ("the match
+ended after 25556 of 25559 frames", a recording of 2026-10-08).
+
+Try it: play `RECORD=1 RELAY=0 FRAMES=6000 MATCHES=1 scripts/relay_test.sh` and send the
+host's game SIGTERM (a window close) or SIGKILL mid-match: every `.SRP` that results --
+each player's and the recorder's -- must `--srp-resim` with every frame as recorded. A
+whole match is `FRAMES=0 WAIT=600` (the test then complains about the match clock's five
+extra ticks at a natural end, which is older than this and not about recordings).
+
 ### Status
 
 Working and tested end to end against a local server:

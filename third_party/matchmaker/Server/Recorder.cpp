@@ -493,6 +493,23 @@ void Recorder::OnReplayScore(Connection& c, const uint8_t* p, uint32_t len)
     s.haveScore = true;
 }
 
+// How many of a player's frames came WHOLE: drawn, with their input and their hash.
+uint32_t Recorder::Usable(const Side& s)
+{
+    if (!s.replay || !s.resume || s.inputsBroken)
+        return 0;
+    size_t n = s.offsets.size();
+    n = std::min(n, s.inputs.size() / SRP_INPUT_BYTES);
+    n = std::min(n, s.hashes.size());
+    return (uint32_t)n;
+}
+// Every frame it drew can be played again.
+bool Recorder::Whole(const Side& s)
+{
+    return !s.offsets.empty() && Usable(s) == s.offsets.size() &&
+           s.inputs.size() == s.offsets.size() * SRP_INPUT_BYTES;
+}
+
 // The .SRP, from player 1's stream when it has one (the host, the top team), else
 // player 2's. `last` = the match is over: the final score goes into META.
 void Recorder::WriteReplay(Match& m, bool last)
@@ -522,10 +539,59 @@ void Recorder::WriteReplay(Match& m, bool last)
     c.chapterCount = (uint32_t)s->chapters.size();
     c.tickRate = s->tickRate;
     c.quirks = s->quirks;
+    // A stream that was CUT -- the game closed, crashed or lost its connection, so no END
+    // came -- has frames whose input or hash never arrived: the hashes travel in batches
+    // and the last one was still in the game. Written as it stood, the whole match lost
+    // its inputs for the sake of the last half second (8 of the first 153 recordings,
+    // four of them full matches cut at the final whistle). So when the match is over and
+    // this side is not whole, keep the frames that ARE whole -- drawn, with input and
+    // hash -- and drop the few after them: a match that can be played again to within a
+    // second of where it stopped. A whole stream is untouched, so its file is still the
+    // host's own, byte for byte.
+    if (last && !Whole(*s))
+    {
+        Side* o = s == &m.side[0] ? &m.side[1] : &m.side[0];
+        if (o->replay && !o->offsets.empty() && (Whole(*o) || Usable(*o) > Usable(*s)))
+        {
+            s = o;                          // the other player's stream got further
+            meta = s->meta;
+            if (s->haveScore && meta.size() >= SRP_META_SCORE_OFF + 4)
+            {
+                Record_Put16(meta.data() + SRP_META_SCORE_OFF, s->score[0]);
+                Record_Put16(meta.data() + SRP_META_SCORE_OFF + 2, s->score[1]);
+            }
+            c.meta = meta.data();
+            c.metaLen = (uint32_t)meta.size();
+            c.frms = s->frms.data();
+            c.frmsLen = (uint32_t)s->frms.size();
+            c.offsets = s->offsets.data();
+            c.frameCount = (uint32_t)s->offsets.size();
+            c.audio = s->audio.data();
+            c.audioCount = (uint32_t)s->audio.size();
+            c.chapters = s->chapters.data();
+            c.chapterCount = (uint32_t)s->chapters.size();
+            c.tickRate = s->tickRate;
+            c.quirks = s->quirks;
+        }
+        uint32_t keep = Usable(*s);
+        if (keep > 0 && keep < c.frameCount)
+        {
+            std::cout << Tag() << Hex64(m.id) << " player " << (s == &m.side[0] ? 1 : 2)
+                      << "'s stream was cut: keeping the " << keep << " frames that came whole of "
+                      << c.frameCount << "\n";
+            c.frmsLen = s->offsets[keep];
+            c.frameCount = keep;
+            while (c.audioCount > 0 && s->audio[c.audioCount - 1].frame >= keep)
+                c.audioCount--;
+            while (c.chapterCount > 0 && s->chapters[c.chapterCount - 1].frame >= keep)
+                c.chapterCount--;
+        }
+    }
     // Resumable when every frame has its input and its hash -- as the player's game
     // decides it (replay_v2.c write_recording), so the two files still agree.
     std::vector<uint32_t> hashes;
-    if (s->resume && !s->inputsBroken && s->inputs.size() == (size_t)c.frameCount * SRP_INPUT_BYTES &&
+    if (s->resume && !s->inputsBroken && s->inputs.size() >= (size_t)c.frameCount * SRP_INPUT_BYTES &&
+        (last ? true : s->inputs.size() == (size_t)c.frameCount * SRP_INPUT_BYTES) &&
         s->hashes.size() >= c.frameCount)
     {
         hashes.resize(c.frameCount);

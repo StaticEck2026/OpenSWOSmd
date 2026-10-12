@@ -508,6 +508,11 @@ void MatchRecord_Replay(uint32_t confirmed)
     /* Recorded AND confirmed: every rollback the confirmed inputs called for has been
      * played (the GGPO-X fork's ConfirmedFrame), so these frames are final. */
     last = confirmed < c.frameCount - 1 ? confirmed : c.frameCount - 1;
+    /* The hashes first, however few: a frame the recorder holds without its hash cannot be
+     * played again, and a game that dies here would leave up to RECORD_BATCH of them --
+     * the recorder then keeps only the frames that came whole (Recorder.cpp Usable). */
+    if (s_rec.replayNext <= last && s_rec.batchCount > 0)
+        flush_batch();
     while (s_rec.replayNext <= last && s_rec.sock >= 0) {
         uint32_t to = s_rec.replayNext + 255 < last ? s_rec.replayNext + 255 : last;
         uint32_t from = s_rec.replayNext;

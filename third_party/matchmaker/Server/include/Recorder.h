@@ -114,6 +114,8 @@ private:
     void OnReplayRead(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayScore(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayResume(Connection& c, const uint8_t* p, uint32_t len);
+    static uint32_t Usable(const Side& s);
+    static bool Whole(const Side& s);
     void WriteReplay(Match& m, bool last);
     // Who played whom, beside the .SRP (<name>.json) and all of them in index.json: what
     // the playback page lists (docs/PLAYBACK.md, "Who played whom").

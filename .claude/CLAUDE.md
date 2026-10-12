@@ -92,7 +92,9 @@ agree one simulation width), and shows the ping. `--netplay-selftest` runs it ov
 loopback. A live match through the lobby, and a rematch after it, is `scripts/netplay_lobby_test.sh`
 (two instances through the real menus); run it after touching the lobby, the link, or how a live
 match starts or ends. A live match must never `exit()` or leave the frame loop: it ends through
-`liveEnd` and goes back to the lobby.
+`liveEnd` and goes back to the lobby. Closing the window is one of the ways it ends ("YOU CLOSED THE
+GAME"), half time and the final whistle each save the match so far to `LATEST.SRP` (on a thread), and the recorder keeps the whole
+frames of a stream that was cut (docs/NETPLAY.md §7, "A match that does not end properly").
 The matchmaking server can also play a match THROUGH itself (`--relay`, docs/NETPLAY.md §7
 "The relay"): for testing, the browser build and NATs that will not punch — players stay peer
 to peer. `--netem <profile|cycle>` puts the game's own emulator (`src/netem_core.c`, shared) in

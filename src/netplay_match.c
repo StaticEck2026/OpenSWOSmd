@@ -98,6 +98,8 @@ static struct {
     uint32_t         saves, loads;
     uint32_t         unidentified;        /* checksums that met a pointer with no identity */
     int32_t          lastConfirmed;       /* p2p */
+    int32_t          resultFrame;         /* live: the frame a whistle went at, until it is confirmed; -1 */
+    int32_t          checkpointed;        /* live: the match so far was saved at 1 half time, 2 the final whistle */
     uint32_t         lastProgressMs;      /* p2p: when a frame was last played or confirmed */
     int32_t          endFrame;            /* p2p: the frame the match ends at, once final; -1 */
     uint32_t         endScanFrom;         /* p2p: every frame below this is final, not over */
@@ -876,6 +878,7 @@ int32_t NetplayMatch_Start(void)
     _gFrameStepInput = 1;      /* input a frame at a time (game_loop.h) */
     s_np.stateSize = SimState_Size(SIM_TIER_ALL);
     s_np.endFrame = -1;
+    s_np.resultFrame = -1;
     s_np.lastConfirmed = -1;
     Ghost_Begin(s_np.player);
     if (!s_np.timeoutMs)
@@ -1007,6 +1010,9 @@ static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
  * ConfirmedFrame), so these hashes are the frames as finally played. */
 static void recordConfirmed(int32_t confirmed)
 {
+    /* Nothing past the end of the match, once it is known (liveEnd says why). */
+    if (s_np.endFrame >= 0 && confirmed > s_np.endFrame - 1)
+        confirmed = s_np.endFrame - 1;
     while ((int64_t)s_np.recordNext <= (int64_t)confirmed && s_np.recordNext < s_np.traceLen) {
         MatchRecord_Frame(s_np.recordNext, s_np.traceSim[s_np.recordNext]);
         s_np.recordNext++;
@@ -1543,6 +1549,14 @@ static void liveEnd(int32_t outcome, const char *why)
                s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames);
     }
     fflush(stdout);
+    /* A match that FINISHED is its frames up to the end and no more. A player whose game
+     * ran ahead of the other's at the end played frames past it on a guess; they were in
+     * this player's file and not the recorder's ("the match ended after 25556 of 25559
+     * frames", a recording of 2026-10-08), and the two files differed. */
+    if (outcome == NETPLAY_LIVE_FINISHED && s_np.endFrame >= 0) {
+        extern void ReplayRec_SetFrame(uint32_t frame);
+        ReplayRec_SetFrame((uint32_t)s_np.endFrame);
+    }
     recordConfirmed(s_np.lastConfirmed);
     MatchRecord_End(outcome == NETPLAY_LIVE_FINISHED,
                     s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames,
@@ -1967,6 +1981,16 @@ prepared:
             liveEnd(NETPLAY_LIVE_ENDED_EARLY, "YOU LEFT THE MATCH");
             return GAME_FRAME_MATCH_OVER;
         }
+        /* The window was closed (or the game was asked to quit): the same way out, so
+         * the match is saved and the recorder and the other player are told before the
+         * game goes. GameLoop_Frame leaves this to us in a live match (game_loop.c). */
+        {
+            extern uint16_t _quitToDos;
+            if (_quitToDos) {
+                liveEnd(NETPLAY_LIVE_ENDED_EARLY, "YOU CLOSED THE GAME");
+                return GAME_FRAME_MATCH_OVER;
+            }
+        }
     }
     if (s_np.live)
         logStats(now, 0);
@@ -1989,6 +2013,26 @@ prepared:
     }
     if (s_np.live)
         recordConfirmed(s_np.lastConfirmed);
+    /* Half time, and the final whistle: once every frame up to it is confirmed, save the
+     * match so far (replay_v2.c ReplayRec_Checkpoint -- on a thread: built here it stalled
+     * this player for 155 ms). A game that goes without ending the match -- crashed,
+     * killed, the power -- had saved nothing; now it has the match to the last whistle.
+     * (The final one is only half a second before the match ends by itself: the half-time
+     * one is the net that matters. Closing the window saves everything -- liveEnd.) */
+    if (s_np.live) {
+        extern uint16_t _gameState;
+        int32_t whistle = _gameState == ST_FIRST_HALF_ENDED ? 1 : _gameState == ST_GAME_ENDED ? 2 : 0;
+        if (whistle > s_np.checkpointed && s_np.resultFrame < 0)
+            s_np.resultFrame = frame;
+        if (s_np.resultFrame >= 0 && s_np.lastConfirmed >= s_np.resultFrame) {
+            extern void ReplayRec_Checkpoint(void);
+            s_np.checkpointed = whistle > s_np.checkpointed ? whistle : s_np.checkpointed + 1;
+            fprintf(stderr, "[netplay] frame %d: %s is confirmed; saving the match so far\n", frame,
+                    s_np.checkpointed == 1 ? "half time" : "the final whistle");
+            ReplayRec_Checkpoint();
+            s_np.resultFrame = -1;
+        }
+    }
     if (now - s_np.lastProgressMs > (uint32_t)s_np.timeoutMs) {
         if (!s_np.live)
             fail("nothing played or confirmed for %d s (%s, frame %d, confirmed %d)",

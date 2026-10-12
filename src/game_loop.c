@@ -134,6 +134,10 @@ extern void ShowResult(void);
 extern void DrawAnimatedPatterns(void);
 extern void BenchCheckControls(void);
 extern void DrawBenchAndSubsMenu(void);
+#ifdef SWOS_NETPLAY
+extern int32_t NetplayMatch_IsLive(void);     /* netplay_match.c */
+extern int32_t NetplayMatch_IsP2P(void);
+#endif
 extern void UpdateAndDrawStatistics(void);
 extern void AllowStatistics(void);
 extern void StatisticsOff(void);
@@ -746,7 +750,17 @@ GameFrameResult GameLoop_Frame(void)
     BenchCheckControls();
     UpdateAndDrawStatistics();
 
-    if (_quitToDos != 0)
+    /* The window was closed. Not out of a LIVE match from here: this frame may be one
+     * GGPO is re-simulating, and "a re-simulated frame left the match loop" was an
+     * exit(2) -- the game gone with nothing saved and nothing sent, which is what closing
+     * the window at the final whistle did (2026-10-12: a 7-1 neither player's game ended).
+     * A live match is left through liveEnd, at the top of its next frame
+     * (netplay_match.c), which saves it and tells the recorder and the other player. */
+    if (_quitToDos != 0
+#ifdef SWOS_NETPLAY
+        && !(NetplayMatch_IsLive() && NetplayMatch_IsP2P())   /* two players, not a resim */
+#endif
+        )
         return GAME_FRAME_QUIT;
 
     /* Post-frame: save coordinates end marker */

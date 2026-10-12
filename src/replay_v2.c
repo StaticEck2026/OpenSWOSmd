@@ -18,6 +18,7 @@
 #ifdef SWOS_SDL_BUILD
 
 #include "replay_v2.h"
+#include <SDL.h>            /* the checkpoint's thread */
 #include "dos_sound.h"
 #include "audio_sfx_filter.h"
 #include "build_info.h"
@@ -388,8 +389,11 @@ void ReplayRec_SetHash(uint32_t frame, uint64_t hash)
         s_resume.known = frame + 1;
 }
 
+static void ckpt_join(void);    /* ReplayRec_Checkpoint's thread, below */
+
 void ReplayRec_MatchStart(void)
 {
+    ckpt_join();
     ReplayRec_MatchEnd();       /* a match that never reached its end still gets written */
 
     /* This match's setup, if the lobby gave one; a previous match's is gone either way. */
@@ -877,8 +881,161 @@ static int32_t write_recording(void)
     return rc;
 }
 
+/* A copy of the match SO FAR, written while it is still being played: the final whistle
+ * is where players close the game, and until 2026-10-12 a game that went without ending
+ * the match -- closed, crashed, the power -- had saved nothing: LATEST.SRP was still the
+ * match before. netplay_match.c calls this once, when the final whistle has gone and every
+ * frame up to it is confirmed. Only the frames that are final go in (their input and hash
+ * known), so the file plays again exactly; the real end writes over it, with the other
+ * player's half of PRED/SEEN and the score.
+ *
+ * The file is built on a thread, from a COPY of everything it needs. Building it in the
+ * frame took 155 ms on a 20,000-frame match: that player's game stood still for eight
+ * frames while the other's ran on -- past the end of the match, when it happened there,
+ * so the host's file had three frames the recorder's did not. Nothing here touches the
+ * match or the recording being kept. */
+typedef struct {
+    SrpContent    c;
+    SrpPrediction own;
+    char          names[2][64];
+    char          path[512];
+    void         *parts[12];
+    int32_t       nParts;
+} Checkpoint;
+
+static SDL_Thread *s_ckptThread;
+static SDL_atomic_t s_ckptDone;      /* that thread has finished: joining it costs nothing */
+
+static void *ckpt_dup(Checkpoint *k, const void *p, size_t n)
+{
+    void *q;
+    if (!p || !n || k->nParts >= (int32_t)(sizeof k->parts / sizeof k->parts[0]))
+        return NULL;
+    q = malloc(n);
+    if (q) {
+        memcpy(q, p, n);
+        k->parts[k->nParts++] = q;
+    }
+    return q;
+}
+
+static void ckpt_free(Checkpoint *k)
+{
+    int32_t i;
+    for (i = 0; i < k->nParts; i++)
+        free(k->parts[i]);
+    free(k);
+}
+
+static int ckpt_run(void *arg)
+{
+    Checkpoint *k = (Checkpoint *)arg;
+    uint32_t total = 0;
+    uint8_t *file = Srp_Build(&k->c, &total);
+    if (file) {
+        if (write_file(k->path, file, total) == 0)
+            fprintf(stderr, "[replay] the match so far is saved (%u frames, %u bytes): closing "
+                            "the game now loses nothing\n", k->c.frameCount, total);
+        free(file);
+    }
+    ckpt_free(k);
+    SDL_AtomicSet(&s_ckptDone, 1);
+    return 0;
+}
+
+/* Before the recording is written for good, or a new one starts: the copy first. */
+static void ckpt_join(void)
+{
+    if (s_ckptThread) {
+        SDL_WaitThread(s_ckptThread, NULL);
+        s_ckptThread = NULL;
+    }
+}
+
+void ReplayRec_Checkpoint(void)
+{
+    SrpContent c;
+    Checkpoint *k;
+    const SrpPrediction *own;
+    uint32_t keep;
+
+    if (!s_rec.on || !s_rec.meta || s_rec.frameCount == 0)
+        return;
+    /* The copy before this one (half time's, at the final whistle): done long ago, so
+     * this join is free. Still writing -- two whistles a breath apart -- and this one is
+     * skipped rather than waited for: a wait is the stall the thread exists to avoid. */
+    if (s_ckptThread) {
+        if (!SDL_AtomicGet(&s_ckptDone))
+            return;
+        ckpt_join();
+    }
+    content(&c);
+    keep = c.frameCount;
+    if (c.setup && s_resume.known < keep)
+        keep = s_resume.known;
+    if (keep == 0)
+        return;
+    k = (Checkpoint *)calloc(1, sizeof *k);
+    if (!k)
+        return;
+    k->c = c;
+    k->c.frameCount = keep;
+    k->c.frmsLen = keep < c.frameCount ? c.offsets[keep] : c.frmsLen;
+    while (k->c.audioCount > 0 && c.audio[k->c.audioCount - 1].frame >= keep)
+        k->c.audioCount--;
+    while (k->c.chapterCount > 0 && c.chapters[k->c.chapterCount - 1].frame >= keep)
+        k->c.chapterCount--;
+    k->c.meta = (const uint8_t *)ckpt_dup(k, c.meta, c.metaLen);
+    k->c.frms = (const uint8_t *)ckpt_dup(k, c.frms, k->c.frmsLen);
+    k->c.offsets = (const uint32_t *)ckpt_dup(k, c.offsets, (size_t)keep * sizeof(uint32_t));
+    k->c.audio = (const SrpAudioEvent *)ckpt_dup(k, c.audio, (size_t)k->c.audioCount * sizeof *c.audio);
+    k->c.chapters = (const SrpChapter *)ckpt_dup(k, c.chapters, (size_t)k->c.chapterCount * sizeof *c.chapters);
+    if (!k->c.meta || !k->c.frms || !k->c.offsets || (k->c.audioCount && !k->c.audio) ||
+        (k->c.chapterCount && !k->c.chapters)) {
+        ckpt_free(k);
+        return;
+    }
+    /* The score so far, in the copy only. */
+    BE_WRITE_U16((uint8_t *)k->c.meta + META_SCORE_OFF, _statsTeam1Goals);
+    BE_WRITE_U16((uint8_t *)k->c.meta + META_SCORE_OFF + 2, _statsTeam2Goals);
+    if (c.setup) {
+        k->c.setup = (const uint8_t *)ckpt_dup(k, c.setup, c.setupLen);
+        k->c.kickoff = (const uint8_t *)ckpt_dup(k, c.kickoff, c.kickoffLen);
+        k->c.inputs = (const uint8_t *)ckpt_dup(k, c.inputs, (size_t)keep * SRP_INPUT_BYTES);
+        k->c.hashes = (const uint32_t *)ckpt_dup(k, c.hashes, (size_t)keep * sizeof(uint32_t));
+        if (!k->c.setup || !k->c.kickoff || !k->c.inputs || !k->c.hashes)
+            k->c.setup = k->c.kickoff = NULL, k->c.inputs = NULL, k->c.hashes = NULL;   /* watchable, then */
+    }
+    if (c.players[0] || c.players[1]) {
+        snprintf(k->names[0], sizeof k->names[0], "%s", c.players[0] ? c.players[0] : "");
+        snprintf(k->names[1], sizeof k->names[1], "%s", c.players[1] ? c.players[1] : "");
+        k->c.players[0] = k->names[0];
+        k->c.players[1] = k->names[1];
+    }
+    own = pred_own(keep);
+    if (own) {
+        k->own = *own;
+        k->own.pred = (const uint8_t *)ckpt_dup(k, own->pred, own->predFrames);
+        k->own.seen = (const uint8_t *)ckpt_dup(k, own->seen, own->seenLen);
+        k->own.read = own->read ? (const uint8_t *)ckpt_dup(k, own->read, (size_t)own->readFrames * SRP_READ_BYTES)
+                                : NULL;
+        if (!k->own.seen)
+            k->own.seenLen = 0;
+        if (!k->own.read)
+            k->own.readFrames = 0;
+        if (k->own.pred)
+            k->c.prediction[s_pred.player - 1] = &k->own;
+    }
+    snprintf(k->path, sizeof k->path, "%s", s_rec.path ? s_rec.path : REPLAY_V2_LATEST);
+    SDL_AtomicSet(&s_ckptDone, 0);
+    s_ckptThread = SDL_CreateThread(ckpt_run, "srp-checkpoint", k);
+    if (!s_ckptThread)
+        ckpt_free(k);
+}
+
 void ReplayRec_MatchEnd(void)
 {
+    ckpt_join();                /* the copy of the match so far, if it is still being written */
     if (!s_rec.on)
         return;
     s_rec.on = 0;
