@@ -439,7 +439,7 @@ They are packed into the **Mac's** `dist/` too, not its `bin/` — the Mac is a
 checkout of this same repo and follows the same split.
 
 Defaults match `build_dist.sh` so a drop is uniform. Overrides: `MAC_HOST`
-(default `bbaker@192.168.1.30`), `MAC_PATH` (`~/Programming/OpenSWOS`),
+(default `bbaker@192.168.1.200`), `MAC_PATH` (`~/Programming/OpenSWOS`),
 `MAC_ZIP`.
 
 - It `git pull --ff-only`s and **prints the commit it built**, because a stale

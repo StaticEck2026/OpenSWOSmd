@@ -43,7 +43,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
-MAC_HOST="${MAC_HOST:-bbaker@192.168.1.30}"
+MAC_HOST="${MAC_HOST:-bbaker@192.168.1.200}"
 MAC_PATH="${MAC_PATH:-~/Programming/OpenSWOS}"
 MAC_ZIP="${MAC_ZIP:-SWOS-macOS-app.zip}"
 MAC_ZIP_BIN="${MAC_ZIP_BIN:-SWOS-macOS.zip}"

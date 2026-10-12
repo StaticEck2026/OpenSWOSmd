@@ -50,17 +50,17 @@ round=0
 
 caught() {
     [ -n "$(ls /mnt/c/Temp/swhunt/ 2>/dev/null)" ] && return 0
-    [ -n "$(ssh bbaker@192.168.1.30 'ls /tmp/swhunt/ 2>/dev/null' 2>/dev/null)" ] && return 0
-    [ -n "$MAC_LEDGER" ] && ssh bbaker@192.168.1.30 "grep -q '\"kind\":\"desync\"' $MAC_LEDGER" 2>/dev/null && return 0
+    [ -n "$(ssh bbaker@192.168.1.200 'ls /tmp/swhunt/ 2>/dev/null' 2>/dev/null)" ] && return 0
+    [ -n "$MAC_LEDGER" ] && ssh bbaker@192.168.1.200 "grep -q '\"kind\":\"desync\"' $MAC_LEDGER" 2>/dev/null && return 0
     return 1
 }
 
 collect() {   # round
-    ssh bbaker@192.168.1.30 'cat /tmp/mac_hunt.log' > "$OUT/round$1-mac.log" 2>/dev/null
+    ssh bbaker@192.168.1.200 'cat /tmp/mac_hunt.log' > "$OUT/round$1-mac.log" 2>/dev/null
     tr -d '\r' < /mnt/c/Temp/win_hunt.log > "$OUT/round$1-win.log" 2>/dev/null
 }
 
-ssh bbaker@192.168.1.30 'rm -rf /tmp/swhunt; mkdir -p /tmp/swhunt' >/dev/null 2>&1
+ssh bbaker@192.168.1.200 'rm -rf /tmp/swhunt; mkdir -p /tmp/swhunt' >/dev/null 2>&1
 rm -rf /mnt/c/Temp/swhunt; mkdir -p /mnt/c/Temp/swhunt
 
 while [ "$(date +%s)" -lt "$END" ] && { [ "$MAX_ROUNDS" = 0 ] || [ "$round" -lt "$MAX_ROUNDS" ]; }; do
@@ -99,10 +99,10 @@ while [ "$(date +%s)" -lt "$END" ] && { [ "$MAX_ROUNDS" = 0 ] || [ "$round" -lt 
     pkill -INT -f 'build/matchmaker/swos-matchmaker' 2>/dev/null; sleep 1
     ( cd "$ROOT" && nohup build/matchmaker/swos-matchmaker 19602 "${mmargs[@]}" > "$OUT/mm-round$round.log" 2>&1 & ); sleep 2
     cmd.exe /c "taskkill /F /IM SWOS.exe" >/dev/null 2>&1
-    ssh bbaker@192.168.1.30 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
+    ssh bbaker@192.168.1.200 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
     sleep 2
 
-    ssh bbaker@192.168.1.30 "cd ~/Programming/OpenSWOS/bin && rm -f /tmp/mac_hunt.log && nohup env \
+    ssh bbaker@192.168.1.200 "cd ~/Programming/OpenSWOS/bin && rm -f /tmp/mac_hunt.log && nohup env \
       SWOS_MM_HOST=172.249.109.62 SWOS_MM_AUTO=host SWOS_P2P_LOG=1 \
       SWOS_LOBBY_TEAM=$hteam SWOS_LOBBY_READY=1 SWOS_LOBBY_START=1 \
       SWOS_LIVE_FRAMES=2000 SWOS_LIVE_HASH_EVERY=1 SWOS_LIVE_DESYNC_DUMP=/tmp/swhunt \
@@ -137,9 +137,9 @@ BAT
             echo "!! DESYNC CAPTURED in round $round at $(date +%T)"
             sleep 5
             cmd.exe /c "taskkill /F /IM SWOS.exe" >/dev/null 2>&1
-            ssh bbaker@192.168.1.30 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
+            ssh bbaker@192.168.1.200 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
             collect "$round"
-            scp -q 'bbaker@192.168.1.30:/tmp/swhunt/*' "$OUT/" 2>/dev/null
+            scp -q 'bbaker@192.168.1.200:/tmp/swhunt/*' "$OUT/" 2>/dev/null
             cp /mnt/c/Temp/swhunt/* "$OUT/" 2>/dev/null
             ls -la "$OUT"/desync-* 2>/dev/null
             pkill -f 'build/matchmaker/swos-matchmaker' 2>/dev/null
@@ -148,7 +148,7 @@ BAT
     done
 
     cmd.exe /c "taskkill /F /IM SWOS.exe" >/dev/null 2>&1
-    ssh bbaker@192.168.1.30 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
+    ssh bbaker@192.168.1.200 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
     collect "$round"
     n=$(grep -ac 'p2p match:' "$OUT/round$round-win.log" 2>/dev/null)
     if [ "${n:-0}" -eq 0 ]; then
