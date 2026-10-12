@@ -135,7 +135,15 @@ beside 'location /recordings/' yourself to see why."
 # The page and the game as nginx serves them, through the site's own name.
 check_playback() {
     local host code
-    host=$(sudo grep -Rhs "server_name" /etc/nginx/sites-enabled/ 2>/dev/null | grep -v "_;" | head -1 | awk '{print $2}' | tr -d ';')
+    # The site's name: a server_name DIRECTIVE, from the config that serves /recordings/
+    # when there is one. Any line mentioning "server_name" used to do -- a comment's
+    # second word is "server_name" itself, and the check then asked for
+    # https://server_name/..., got nginx's 404 and reported a player that was live as
+    # not live (2026-10-12).
+    local conf
+    conf=$(sudo grep -Rls "location /recordings/" /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -1)
+    host=$(sudo grep -hs -E '^[[:space:]]*server_name[[:space:]]' ${conf:+"$conf"} /etc/nginx/sites-enabled/* 2>/dev/null |
+           awk '{ for (i = 2; i <= NF; i++) { gsub(";", "", $i); if ($i != "" && $i != "_" && $i != "localhost") { print $i; exit } } }')
     host=${host:-localhost}
     code=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" --resolve "${host}:443:127.0.0.1" \
            "https://${host}/playback/SWOS.wasm" 2>/dev/null || true)
