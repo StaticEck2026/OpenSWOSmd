@@ -64,7 +64,7 @@ WEBDIR="${WEBDIR:-dist/web}"
 # A Mac player reaches this machine's server over the LAN, and UDP 19602 is the port
 # open here (docs/NETPLAY.md); a local pair can use any.
 case "$PAIR" in *mac*) PORT="${PORT:-19602}" ;; *) PORT="${PORT:-19613}" ;; esac
-MAC_HOST="${MAC_HOST:-bbaker@192.168.1.30}"
+MAC_HOST="${MAC_HOST:-bbaker@192.168.1.200}"
 MAC_PATH="${MAC_PATH:-Programming/OpenSWOS}"
 MAC_BIN="${MAC_BIN:-SWOS.macos}"
 MAC_CHROME="${MAC_CHROME:-/tmp/swos-chrome/chrome-headless-shell-mac-arm64/chrome-headless-shell}"
