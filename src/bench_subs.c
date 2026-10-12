@@ -1180,11 +1180,18 @@ markPlayersMenuHandler(void)
                     int16_t k;
                     int16_t ordTmp;
 
-                    /* swap 110 bytes of sprite data */
+                    /* Swap the two sprites WHOLE. The original swaps 110 bytes, which is
+                     * the whole Sprite on the Amiga; on a 64-bit build its two pointers
+                     * make it 118, and 110 stopped short of the last four fields: cards,
+                     * injuryLevel, tacklingTimer and sentAway stayed with the SLOT while
+                     * the player moved. Swapping places with a sent-off player brought
+                     * him back on, and left the man who had taken his place standing
+                     * there "sent away" (ReportBot 0037); a booking or an injury changed
+                     * owner the same way. */
                     {
                         uint8_t *s1 = (uint8_t *)spr1;
                         uint8_t *s2 = (uint8_t *)spr2;
-                        for (k = 109; k >= 0; k--) {
+                        for (k = (int16_t)sizeof(Sprite) - 1; k >= 0; k--) {
                             uint8_t tmp = s1[k];
                             s1[k] = s2[k];
                             s2[k] = tmp;
@@ -3098,13 +3105,15 @@ void MarkPlayersMenuHandler(void)
         p2[i] = tmp;
     }
 
-    /* Swap Sprite data (110 bytes, preserving playerOrdinal) */
+    /* Swap Sprite data, preserving playerOrdinal: the WHOLE sprite, not the Amiga's 110
+     * bytes -- on 64-bit that left cards, injuryLevel, tacklingTimer and sentAway behind
+     * (markPlayersMenuHandler says what that did). */
     TeamGeneralInfo *benchTm = (TeamGeneralInfo *)_benchTeam;
     Sprite *sprite1 = benchTm->spritesTable[player2];
     Sprite *sprite2 = benchTm->spritesTable[player1];
     uint8_t *s1 = (uint8_t *)sprite1;
     uint8_t *s2 = (uint8_t *)sprite2;
-    for (int16_t i = 0; i < 110; i++) {
+    for (int16_t i = 0; i < (int16_t)sizeof(Sprite); i++) {
         uint8_t tmp = s1[i];
         s1[i] = s2[i];
         s2[i] = tmp;

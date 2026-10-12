@@ -107,7 +107,9 @@ typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
 typedef char _sprite_size_check[(sizeof(Sprite) == 118) ? 1 : -1];
 #endif
 
-#define SPRITE_SIZE 110
+/* Never a literal: 110 on the Amiga and 32-bit builds, 118 on 64-bit. Two swaps in
+ * bench_subs.c copied "110 bytes" and left the last four fields behind (ReportBot 0037). */
+#define SPRITE_SIZE ((int32_t)sizeof(Sprite))
 
 /* ==================================================================
  * AnimTable — animation frame table variants
