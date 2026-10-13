@@ -206,6 +206,13 @@ void InputTextDeleteCharAtCursor(uint8_t *pos)
     } while (*(p - 1) != 0);
 }
 
+/* A text field is being typed into: a redefined key is a letter here, not a control
+ * (input_sdl.c). */
+volatile uint16_t _gTextInputActive;
+
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+static uint16_t inputTextBody(uint16_t maxLenPlus1, uint8_t *entryRaw);
+
 /* ============================================================
  * InputText
  * Interactive text editor using the menu system.
@@ -213,8 +220,17 @@ void InputTextDeleteCharAtCursor(uint8_t *pos)
  * entryRaw: pointer to MenuEntry (passed as uint8_t* from asm)
  * Returns: 0 = committed (enter/fire), 1 = cancelled (escape)
  * ============================================================ */
-__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+__attribute__((used, externally_visible))
 uint16_t InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
+{
+    uint16_t r;
+    _gTextInputActive = 1;
+    r = inputTextBody(maxLenPlus1, entryRaw);
+    _gTextInputActive = 0;
+    return r;
+}
+
+static uint16_t inputTextBody(uint16_t maxLenPlus1, uint8_t *entryRaw)
 {
     MenuEntry *entry = (MenuEntry *)entryRaw;
 

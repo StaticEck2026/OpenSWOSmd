@@ -347,7 +347,8 @@ extern char _aStats[];                        extern char _aStatistics[];       
 extern char _aViewSquad[];                    extern char _aBank[];                         extern char _aH[];
 extern char _aA_2[];                          extern char _aSemiFinal[];                    extern char _aFinal_4[];
 extern char _aMenuMusic[];                    extern char _aGameplay[];                     extern char _aAmigaStyle[];
-extern char _aDosStyle[];                     extern char _aGoals[];                        extern char _aForm[];
+extern char _aDosStyle[];                     extern char _aControls[];                     extern char _aRedefineKeys[];
+extern char _aGoals[];                           extern char _aForm[];
 extern char _aLge[];                          extern char _aCups[];                         extern char _aCup_3[];
 extern char _aTot[];                          extern char _aOwnGoals[];                     extern char _aLoad[];
 extern char _aSave[];                         extern char _aSaveExit[];                     extern char _aFilename[];
@@ -1398,6 +1399,8 @@ const StringSymbol _stringSymbols[] = {
     { "_aGameplay", (void *)_aGameplay },
     { "_aAmigaStyle", (void *)_aAmigaStyle },
     { "_aDosStyle", (void *)_aDosStyle },
+    { "_aControls", (void *)_aControls },
+    { "_aRedefineKeys", (void *)_aRedefineKeys },
     { "_aGoals", (void *)_aGoals },
     { "_aForm", (void *)_aForm },
     { "_aLge", (void *)_aLge },

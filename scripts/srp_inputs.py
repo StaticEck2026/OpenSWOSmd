@@ -22,6 +22,8 @@ import zlib
 UNKNOWN = 0xFF
 STRIDE = 3          # a player's bytes a frame: controls, ms, wait flags
 BALANCE, TIMESYNC = 1, 2
+FIRE_EVENT, FIRE_LATCHED = 4, 8     # SRP_READ_FIRE_*: a press arrived / kept by the latch
+FIRE = 0x20                         # MATCH_FIRE in the controls byte
 
 
 def chunks(path):
@@ -80,7 +82,8 @@ def check(path, show_frames, csv):
             for p in range(2):
                 t = at(f, p)
                 waits = '' if unknown(t) else '+'.join(
-                    x for x, bit in (('balance', BALANCE), ('timesync', TIMESYNC)) if t[2] & bit)
+                    x for x, bit in (('balance', BALANCE), ('timesync', TIMESYNC),
+                                     ('press', FIRE_EVENT), ('latched', FIRE_LATCHED)) if t[2] & bit)
                 row += ['' if unknown(t) else '%d' % t[0], '' if unknown(t) else '%d' % t[1], waits,
                         '%d' % inpt[f * 4 + p * 2]]
             print(','.join(row))
@@ -90,7 +93,7 @@ def check(path, show_frames, csv):
           % (n, delay, 'ON for both' if all(on) else 'off' if not any(on) else
              'off (only %s had it on, and it takes both)' % who[0 if on[0] else 1]))
     for p in range(2):
-        known = wrong = balance = timesync = 0
+        known = wrong = balance = timesync = presses = latched = unread = 0
         ms = []
         misses = []
         for f in range(n):
@@ -101,6 +104,9 @@ def check(path, show_frames, csv):
             known += 1
             balance += bool(t[2] & BALANCE)
             timesync += bool(t[2] & TIMESYNC)
+            presses += bool(t[2] & FIRE_EVENT)
+            latched += bool(t[2] & FIRE_LATCHED)
+            unread += bool(t[2] & FIRE_EVENT) and not r & FIRE
             if f > 0:
                 ms.append(dt)
             if f + delay < n and inpt[(f + delay) * 4 + p * 2] != r:
@@ -121,6 +127,12 @@ def check(path, show_frames, csv):
                  'every one' if not wrong else 'all but %d' % wrong, pace))
         print('  %-12s slowed by a time sync wait on %d frames, by a balance wait on %d'
               % ('', timesync, balance))
+        # Builds before 2026-10-13 wrote no press flags: no presses at all means "not known".
+        if presses:
+            print('  %-12s %d fire presses arrived; %d were taps over between two reads and kept by '
+                  'the latch; %d came and went unread (latch off)' % ('', presses, latched, unread))
+        else:
+            print('  %-12s no fire presses recorded (a build before 2026-10-13, or none made)' % '')
         if wrong:
             bad_files = 1
             for f, r, a in (misses if show_frames else misses[:5]):

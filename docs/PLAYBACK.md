@@ -96,7 +96,11 @@ player's input, corrected a few frames later. When a recording has it, the page 
   controls that player's own game read on the frame shown (arrows, FIRE, BENCH, or
   "nothing"), how many milliseconds after its previous read (orange when over 30), and the
   frame the match played that input on -- the frame read plus the input delay. The same
-  `READ` data as `scripts/srp_inputs.py`, one frame at a time.
+  `READ` data as `scripts/srp_inputs.py`, one frame at a time. Since 2026-10-13 it also
+  says what the fire button did since the read before: *pressed now*, *a tap, kept by the
+  latch* (down and up again between two reads, `[input] latch_presses`), or *a fire press
+  came and went unread* (the same with the latch off) -- so "I pressed and nothing
+  happened" has an answer: the press reached the game, or it did not.
 - **The overlay** on the picture, for the views chosen (**V** / the *view* button: both,
   player 2, player 1, off). Every object a player saw somewhere else gets a line from where
   it really was (a red dot) to where that player's screen showed it (a box in that player's

@@ -21,7 +21,8 @@
 #include "test_rules.h"
 #include "online_menus.h"
 #include "mm_client.h"         /* the matchmaking server (docs/NETPLAY.md section 7) */
-#include "p2p_menu.h"          /* OpenSWOS's own JSON-only menu */
+#include "p2p_menu.h"
+#include "controls_menu.h"          /* OpenSWOS's own JSON-only menu */
 #include "swos2020_menus.h"
 #include "menu_load_json.h"
 #include "menu_symbols.h"
@@ -2297,6 +2298,7 @@ void OnlineMenus_ShowStartMenu(void)
         s_autoLogin[0] = '\0';
     }
     P2PMenu_Init();             /* --menu=p2p/p2pMenu wants its handlers too */
+    ControlsMenu_Init();
     if (!strcmp(name, SWOS2020_MENU(creditsMenu)))
         OnlineMenus_ShowCredits();  /* with its photos' palette, as the button opens it */
     else if (!strcmp(name, SWOS2020_MENU(selectMyCustomTeams)))
@@ -2345,6 +2347,16 @@ int32_t OnlineMenus_SelfTest(void)
         if (bad) {
             failed++;
             printf("  FAIL %-26s %s\n", "p2pMenu", bad < 0 ? "did not load" : "mismatch (see log)");
+        }
+    }
+    ControlsMenu_Init();
+    {
+        int bad = MenuJson_VerifyDynamic(CONTROLS_MENU_NAME, CONTROLS_MENU_ENTRIES);
+        menus++;
+        entries += CONTROLS_MENU_ENTRIES;
+        if (bad) {
+            failed++;
+            printf("  FAIL %-26s %s\n", "controlsMenu", bad < 0 ? "did not load" : "mismatch (see log)");
         }
     }
 

@@ -55,6 +55,7 @@ extern void ChangeAutoSaveHighlights(void);
 extern void ChangeGameLength(void);
 extern void ChangeMenuMusic(void);
 extern void ChangeGameplayStyle(void);
+extern void ShowControlsMenu(void);
 extern void ChangeNationality(void);
 extern void ChangePitchType(void);
 extern void ChangeSex(void);
@@ -493,6 +494,8 @@ extern char _aMatch[];
 extern char _aMemoFromTheClu[];
 extern char _aMenuMusic[];
 extern char _aGameplay[];
+extern char _aControls[];
+extern char _aRedefineKeys[];
 extern char _aMultiplayer[];
 extern char _aCredits[];
 extern char _aName[];
@@ -2782,7 +2785,7 @@ Menu_DIYCup _diyCupMenu = {
     MENU_MARK_END_MENU
 };
 Menu_Options _optionsMenu = {
-    { OptionsMenuBeforeDraw, 0, 0, 15 },
+    { OptionsMenuBeforeDraw, 0, 0, 17 },
     MENU_MARK_BYTE_COORDS,
     {
         { 92, 0, 120, 15 },
@@ -2883,15 +2886,29 @@ Menu_Options _optionsMenu = {
     },
     {
         { -102, 136, -116, 11 },
-        { MENU_CMD_NAV, -1, -1, 12, 15 },
+        { MENU_CMD_NAV, -1, -1, 12, 16 },
         { MENU_CMD_COLORS, 0xD },
         { MENU_CMD_STRING_TABLE, 0x0, _gameplayStyleStrTable },
         { MENU_CMD_ONSELECT_FIRE, ChangeGameplayStyle },
         MENU_CMD_END
     },
+    {
+        { 10, 148, -116, 11 },
+        { MENU_CMD_COLORS, 0x9 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aControls },
+        MENU_CMD_END
+    },
+    {
+        { -102, 148, -116, 11 },
+        { MENU_CMD_NAV, -1, -1, 14, 17 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_TEXT_PTR, 0x0, _aRedefineKeys },
+        { MENU_CMD_ONSELECT_FIRE, ShowControlsMenu },
+        MENU_CMD_END
+    },
     { MENU_MARK_START_MENU, 0, 0 },
     { 102, -71, 100, 15 },
-    { MENU_CMD_NAV, -1, -1, 14, -1 },
+    { MENU_CMD_NAV, -1, -1, 16, -1 },
     { MENU_CMD_COLORS, 0xC },
     { MENU_CMD_TEXT_PTR, 0x0, _aExit },
     { MENU_CMD_INPUT_FUNC, 0x30, ExitOptions },

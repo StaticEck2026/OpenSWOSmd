@@ -2127,6 +2127,12 @@ prepared:
             liveEnd(NETPLAY_LIVE_ENDED_EARLY, "A NETWORK ERROR ENDED THE MATCH");
             return GAME_FRAME_MATCH_OVER;
         }
+        /* This pass's read is thrown away and the frame read again: a press it took
+         * goes back (input_sdl.c, the press latch). */
+        if (s_np.live && !s_np.chaseInput && !s_inputSource && !s_np.randomInput) {
+            extern void InputSDL_UnreadMatchControls(void);
+            InputSDL_UnreadMatchControls();
+        }
         s_np.predictionWaits++;
         s_np.stalledPending = 1;
         waitForPeer();
@@ -2134,8 +2140,15 @@ prepared:
     }
     /* READ: what was read for this frame and when, now that GGPO has taken it. */
     if (s_np.mode == NETPLAY_MATCH_P2P && frame >= 0)
+    {
+        /* ... and what the fire button did since the read before (SRP_READ_FIRE_*): only
+         * when the controls really were this machine's. */
+        extern uint8_t InputSDL_LastFireEvidence(void);
+        uint8_t evidence = (s_np.live && !s_np.chaseInput && !s_inputSource && !s_np.randomInput)
+                               ? InputSDL_LastFireEvidence() : 0;
         Ghost_Read(frame, local[0], SDL_GetTicks(), s_np.delay,
-                   s_np.paceFramesLeft > 0 ? s_np.paceKind : 0, s_balanceOn);
+                   (uint8_t)((s_np.paceFramesLeft > 0 ? s_np.paceKind : 0) | evidence), s_balanceOn);
+    }
     rc = Netplay_SyncInput(s_np.session, synced, &disconnect);
     if (rc != NETPLAY_OK) {
         if (!s_np.live)

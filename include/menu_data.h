@@ -1117,6 +1117,10 @@ typedef struct Menu_Options
    * --dos-gameplay. Added after menuMusic so the row order matches the JSON. */
   MenuEntry_Byte_Colors_TextPtr labelGameplayStyle;
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect gameplayStyle;
+  /* CONTROLS: opens the CONTROLS menu (src/controls_menu.c), the player's own keys.
+   * SDL only -- OptionsMenuBeforeDraw hides the row on the Amiga. */
+  MenuEntry_Byte_Colors_TextPtr labelControls;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect controls;
   MenuMark_StartMenu startMenuExit;
   MenuCoords8 exit_rc;
   MenuCmd_Nav exit_nav;

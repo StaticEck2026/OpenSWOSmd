@@ -169,6 +169,15 @@ static int handler(void *user, const char *section,
         if (eqi(name, "stick_deadzone")) {
             int n = atoi(value);
             if (n >= 5 && n <= 90) opts->stick_deadzone = n;
+        } else if (eqi(name, "latch_presses")) {
+            int b;
+            if (parse_bool(value, &b)) opts->latch_presses = b;
+        } else {
+            static const char *const keys[5] = { "key_up", "key_down", "key_left", "key_right", "key_fire" };
+            int i;
+            for (i = 0; i < 5; i++)
+                if (eqi(name, keys[i]))
+                    snprintf(opts->key_bind[i], sizeof opts->key_bind[i], "%s", value);
         }
     } else if (eqi(section, "replays")) {
         int b;
@@ -421,6 +430,25 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; feels twitchy; lower it for a lighter touch. Past it, the stick gives whichever\n"
         "; of the eight directions it points nearest to. The D-pad is not affected.",
         vbuf[7] };
+    SETTING(n) = (IniEntry){ "input", "latch_presses",
+        "; latch_presses: true | false. The match reads the fire button once a frame.\n"
+        "; true (the default): a press that was down and up again between two reads\n"
+        "; still counts as pressed for one frame, so a very short tap is never lost.\n"
+        "; false: only what is held at the moment of the read counts, as before.",
+        opts->latch_presses ? "true" : "false" };
+    SETTING(n) = (IniEntry){ "input", "key_up",
+        "; key_up, key_down, key_left, key_right, key_fire: your own keys, BESIDE the\n"
+        "; built-in ones (the cursor keys; either CTRL or ENTER to fire), which keep\n"
+        "; working. A key's name as SDL writes it: W, A, S, D, Space, Left Shift,\n"
+        "; Right Ctrl, Keypad 8 ... Empty: none. A key named here is a control and\n"
+        "; nothing else: it no longer does what it did in the game (W called the bench,\n"
+        "; S the statistics), except in a text field. Use these rather than an external\n"
+        "; key remapper, which feeds the game key presses of its own timing.",
+        opts->key_bind[0] };
+    SETTING(n) = (IniEntry){ "input", "key_down",  NULL, opts->key_bind[1] };
+    SETTING(n) = (IniEntry){ "input", "key_left",  NULL, opts->key_bind[2] };
+    SETTING(n) = (IniEntry){ "input", "key_right", NULL, opts->key_bind[3] };
+    SETTING(n) = (IniEntry){ "input", "key_fire",  NULL, opts->key_bind[4] };
     SETTING(n) = (IniEntry){ "gameplay", "fire_hold_lockout",
         "; fire_hold_lockout: true | false — true restores a BUG IN THE ORIGINAL\n"
         "; AMIGA GAME: an OPPONENT's tackle wipes your held fire button's shot charge,\n"

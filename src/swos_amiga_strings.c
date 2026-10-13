@@ -465,6 +465,9 @@ char _aMenuMusic[] = "MENU MUSIC";
 char _aGameplay[] = "GAMEPLAY";
 char _aAmigaStyle[] = "AMIGA";
 char _aDosStyle[] = "DOS";
+/* OPTIONS -> CONTROLS: the player's own keys (SDL; src/controls_menu.c). */
+char _aControls[] = "CONTROLS";
+char _aRedefineKeys[] = "REDEFINE KEYS";
 char _aGoals[] = "GOALS";
 char _aForm[] = "FORM";
 char _aLge[] = "LGE";

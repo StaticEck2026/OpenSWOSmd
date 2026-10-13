@@ -91,6 +91,11 @@ extern "C" {
 #define SRP_READ_BYTES      3
 #define SRP_READ_BALANCE    0x01u   /* slowed by a prediction balance wait (docs/NETPLAY_BALANCE.md) */
 #define SRP_READ_TIMESYNC   0x02u   /* slowed by a time sync wait */
+/* What the fire button did between this read and the one before (input_sdl.c, 2026-10-13):
+ * the match reads the button's LEVEL once a frame, so these say what the level cannot.
+ * Absent (0) in recordings made before, which is also "no press arrived". */
+#define SRP_READ_FIRE_EVENT   0x04u /* a fire key or button went DOWN since the last read */
+#define SRP_READ_FIRE_LATCHED 0x08u /* ... and was up again already: read as pressed by the latch */
 #define SRP_READ_UNKNOWN    0xFFu   /* all three bytes: this player's half never reached the file */
 
 /* One player's half of PRED, SEEN and READ, as that player's game knows it: a byte for

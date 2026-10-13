@@ -3,7 +3,7 @@
  "onInit": "OptionsMenuBeforeDraw",
  "onReturn": null,
  "onDraw": null,
- "defaultEntry": 15,
+ "defaultEntry": 17,
  "items": [
   {
    "kind": "coords_mode",
@@ -388,7 +388,7 @@
      "left": -1,
      "right": -1,
      "up": 12,
-     "down": 15
+     "down": 16
     },
     {
      "op": "colors",
@@ -403,6 +403,59 @@
     {
      "op": "onselect_fire",
      "func": "ChangeGameplayStyle"
+    }
+   ]
+  },
+  {
+   "kind": "entry",
+   "coords": {
+    "x": 10,
+    "y": 148,
+    "w": -116,
+    "h": 11
+   },
+   "commands": [
+    {
+     "op": "colors",
+     "frame_color": 0,
+     "background_color": 9
+    },
+    {
+     "op": "text",
+     "flags": "0x0",
+     "str": "_aControls"
+    }
+   ]
+  },
+  {
+   "kind": "entry",
+   "coords": {
+    "x": -102,
+    "y": 148,
+    "w": -116,
+    "h": 11
+   },
+   "commands": [
+    {
+     "op": "nav",
+     "left": -1,
+     "right": -1,
+     "up": 14,
+     "down": 17
+    },
+    {
+     "op": "colors",
+     "frame_color": 0,
+     "background_color": 13
+    },
+    {
+     "op": "text",
+     "flags": "0x0",
+     "str": "_aRedefineKeys"
+    },
+    {
+     "op": "onselect_fire",
+     "func": "ShowControlsMenu"
     }
    ]
   },
@@ -424,7 +477,7 @@
      "op": "nav",
      "left": -1,
      "right": -1,
-     "up": 14,
+     "up": 16,
      "down": -1
     },
     {

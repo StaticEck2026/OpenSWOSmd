@@ -236,7 +236,132 @@ static void kbd_arrow(SDL_Keycode k, int down)
 #define KBD_FIRE_RCTRL  0x1
 #define KBD_FIRE_LCTRL  0x2
 #define KBD_FIRE_RETURN 0x4
+#define KBD_FIRE_BOUND  0x8     /* the player's own fire key ([input] key_fire) */
 static int s_kbd_fire_keys;
+
+/* ---- The player's own keys: [input] key_up / key_down / key_left / key_right / key_fire ----
+ *
+ * By SCANCODE -- the physical key, whatever the layout or the shift state -- and IN
+ * ADDITION to the built-in ones (the cursor keys; either CTRL or ENTER to fire), which
+ * keep working, so a menu can always be driven. A bound key is a control and nothing
+ * else: it does not reach the game's key buffer, so W can steer without calling the
+ * bench and S without opening the statistics. The one exception is a text field
+ * (_gTextInputActive), where a letter is a letter.
+ *
+ * Why it exists: a tester steered with WASD and fired with LEFT SHIFT through an external
+ * key remapper, and reported fire presses that the game never read (ReportBot 0041). A
+ * remapper feeds the game synthetic key events of its own timing; bound here, the game
+ * reads the keyboard itself. */
+enum { BIND_UP, BIND_DOWN, BIND_LEFT, BIND_RIGHT, BIND_FIRE, BIND_COUNT };
+static SDL_Scancode s_bind[BIND_COUNT];        /* SDL_SCANCODE_UNKNOWN: not bound */
+static const char *const k_bindName[BIND_COUNT] = { "key_up", "key_down", "key_left", "key_right", "key_fire" };
+extern volatile uint16_t _gTextInputActive;    /* input_text.c */
+
+/* `which`: 0 up, 1 down, 2 left, 3 right, 4 fire. `name`: an SDL scancode name ("W",
+ * "Left Shift", "Space"), or "" for none. Returns 0, or 1 for a name SDL does not know. */
+int InputSDL_SetKeyBinding(int which, const char *name)
+{
+    SDL_Scancode sc = SDL_SCANCODE_UNKNOWN;
+    if (which < 0 || which >= BIND_COUNT)
+        return 1;
+    if (name && name[0]) {
+        sc = SDL_GetScancodeFromName(name);
+        if (sc == SDL_SCANCODE_UNKNOWN) {
+            fprintf(stderr, "[input] %s = \"%s\": no such key (use SDL's names: W, Left Shift, Space ...)\n",
+                    k_bindName[which], name);
+            return 1;
+        }
+    }
+    s_bind[which] = sc;
+    if (sc != SDL_SCANCODE_UNKNOWN)
+        fprintf(stderr, "[input] %s = %s\n", k_bindName[which], SDL_GetScancodeName(sc));
+    return 0;
+}
+
+/* The bound key's name, "" when not bound: for SWOS.ini and the redefine screen. */
+const char *InputSDL_KeyBindingName(int which)
+{
+    if (which < 0 || which >= BIND_COUNT || s_bind[which] == SDL_SCANCODE_UNKNOWN)
+        return "";
+    return SDL_GetScancodeName(s_bind[which]);
+}
+
+static int bound_action(SDL_Scancode sc)
+{
+    int i;
+    if (sc == SDL_SCANCODE_UNKNOWN || _gTextInputActive)
+        return -1;
+    for (i = 0; i < BIND_COUNT; i++)
+        if (s_bind[i] == sc)
+            return i;
+    return -1;
+}
+
+/* ---- A press is never lost between two reads: [input] latch_presses ----
+ *
+ * The match reads fire as a LEVEL, once a frame: down or up at that moment. A press whose
+ * key-down and key-up both arrive between two reads -- a very short tap, or events the
+ * system delivered late and together -- was on and off again before anything looked, and
+ * was lost whole. With the latch (on by default) a key-down that arrived since the last
+ * read makes that read "pressed" even if the key is already up. It changes nothing
+ * unless a press would otherwise have vanished.
+ *
+ * Either way the read says what happened (SRP_READ_FIRE_EVENT / _LATCHED, kept in a live
+ * match's recording): "I pressed and nothing happened" can then be answered from the
+ * recording -- the press reached the game, or it never did. */
+static int s_latch_on = 1;
+static int s_fire_event;            /* a fire key went down since the last read */
+static int s_fire_event_pad;        /* ... or a fire button of player 1's game controller */
+static uint8_t s_fire_evidence;     /* SRP_READ_FIRE_* of the last InputSDL_LocalMatchControls */
+
+void InputSDL_SetPressLatch(int on) { s_latch_on = on != 0; }
+int InputSDL_PressLatch(void) { return s_latch_on; }
+
+/* The CONTROLS menu asks for a key (controls_menu.c): the next key to go down is kept
+ * here, by scancode, and does nothing else. */
+static int s_capture;
+static SDL_Scancode s_captured;
+
+void InputSDL_CaptureKey(int on)
+{
+    s_capture = on != 0;
+    s_captured = SDL_SCANCODE_UNKNOWN;
+}
+
+int32_t InputSDL_CapturedKey(void)
+{
+    return (int32_t)s_captured;
+}
+uint8_t InputSDL_LastFireEvidence(void) { return s_fire_evidence; }
+
+/* The last InputSDL_LocalMatchControls was thrown away -- GGPO would not take an input
+ * this pass, and the frame will be read again. Its press is handed back, or a tap during
+ * a stall would be spent on a read nobody used. */
+void InputSDL_UnreadMatchControls(void)
+{
+    if (s_fire_evidence & 0x04)
+        s_fire_event = 1;       /* key or pad: the next read is the same player's either way */
+    s_fire_evidence = 0;
+}
+
+/* The fire level as the game should read it, and what to say about it. `withPad`: the
+ * pad is this player's too (not when two share one machine as keyboard against pad). */
+static int sample_fire(int level, int withPad, uint8_t *evidence)
+{
+    uint8_t bits = 0;
+    if (s_fire_event || (withPad && s_fire_event_pad)) {
+        bits |= 0x04;                           /* SRP_READ_FIRE_EVENT */
+        if (!level && s_latch_on) {
+            level = 1;
+            bits |= 0x08;                       /* SRP_READ_FIRE_LATCHED */
+        }
+    }
+    s_fire_event = 0;
+    s_fire_event_pad = 0;
+    if (evidence)
+        *evidence = bits;
+    return level;
+}
 /* SDL-only "skip auto-advance pause" input. Pressing SPACE (kb) or the
  * second button on a controller sets pauseSkipRequested so dwell loops
  * (e.g. season-end menu chains, future auto-advance pauses) can bail
@@ -481,6 +606,28 @@ void InputSDL_HandleEvent(const SDL_Event *e)
 {
     switch (e->type) {
     case SDL_KEYDOWN: {
+        /* The CONTROLS menu is waiting for a key: this is it. */
+        if (s_capture) {
+            if (e->key.repeat == 0 && e->key.keysym.scancode != SDL_SCANCODE_UNKNOWN) {
+                s_captured = e->key.keysym.scancode;
+                s_capture = 0;
+            }
+            break;
+        }
+        /* One of the player's own keys ([input] key_*): a control, and nothing else. */
+        int act = bound_action(e->key.keysym.scancode);
+        if (act >= 0) {
+            static const SDL_Keycode arrow[4] = { SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT };
+            if (act == BIND_FIRE) {
+                if (e->key.repeat == 0)
+                    s_fire_event = 1;
+                s_kbd_fire_keys |= KBD_FIRE_BOUND;
+                s_kbd_fire = 1;
+            } else if (e->key.repeat == 0) {
+                kbd_arrow(arrow[act], 1);
+            }
+            break;
+        }
         int a = sdl_to_amiga(e->key.keysym.sym);
         /* Arrow keys drive joy1Dat directly (s_kbd_up/down/left/right
          * below) so we DON'T also push their Amiga scancodes into
@@ -548,9 +695,24 @@ void InputSDL_HandleEvent(const SDL_Event *e)
             if (e->key.repeat == 0)
                 kbd_arrow(e->key.keysym.sym, 1);
             break;
-        case SDLK_RCTRL:  s_kbd_fire_keys |= KBD_FIRE_RCTRL;  s_kbd_fire = 1; break;
-        case SDLK_LCTRL:  s_kbd_fire_keys |= KBD_FIRE_LCTRL;  s_kbd_fire = 1; break;
-        case SDLK_RETURN: s_kbd_fire_keys |= KBD_FIRE_RETURN; s_kbd_fire = 1; break;
+        case SDLK_RCTRL:
+            s_kbd_fire_keys |= KBD_FIRE_RCTRL;
+            s_kbd_fire = 1;
+            if (e->key.repeat == 0)
+                s_fire_event = 1;
+            break;
+        case SDLK_LCTRL:
+            s_kbd_fire_keys |= KBD_FIRE_LCTRL;
+            s_kbd_fire = 1;
+            if (e->key.repeat == 0)
+                s_fire_event = 1;
+            break;
+        case SDLK_RETURN:
+            s_kbd_fire_keys |= KBD_FIRE_RETURN;
+            s_kbd_fire = 1;
+            if (e->key.repeat == 0)
+                s_fire_event = 1;
+            break;
         case SDLK_SPACE:
             /* In a live match SPACE is SWOS's highlight-capture key
              * (game_loop.c MainKeysCheck case 0x20 — sets
@@ -584,6 +746,24 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         }
     } break;
     case SDL_KEYUP: {
+        /* Released whatever a text field says: a key held when one opened must not stick. */
+        {
+            int i, act = -1;
+            for (i = 0; i < BIND_COUNT; i++)
+                if (s_bind[i] != SDL_SCANCODE_UNKNOWN && s_bind[i] == e->key.keysym.scancode)
+                    act = i;
+            if (act >= 0) {
+                static const SDL_Keycode arrow[4] = { SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT };
+                if (act == BIND_FIRE) {
+                    s_kbd_fire_keys &= ~KBD_FIRE_BOUND;
+                    s_kbd_fire = (s_kbd_fire_keys != 0);
+                } else {
+                    kbd_arrow(arrow[act], 0);
+                }
+                if (!_gTextInputActive)
+                    break;
+            }
+        }
         int a = sdl_to_amiga(e->key.keysym.sym);
         int is_alt = (e->key.keysym.sym == SDLK_LALT ||
                       e->key.keysym.sym == SDLK_RALT);
@@ -605,6 +785,11 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         }
     } break;
     case SDL_CONTROLLERBUTTONDOWN: {
+        /* A fire button of player 1's pad went down (the latch and the recording's
+         * evidence, above). A plain joystick has no such event and is read as before. */
+        if ((e->cbutton.button == SDL_CONTROLLER_BUTTON_A || e->cbutton.button == SDL_CONTROLLER_BUTTON_B) &&
+            s_player_dev[0] >= 0 && s_dev_gc[s_player_dev[0]] && s_dev_id[s_player_dev[0]] == e->cbutton.which)
+            s_fire_event_pad = 1;
         /* Only for pads SDL has a GameController mapping for — the raw
          * joystick path has no button NAMES to key off, so a gameport adapter
          * keeps working exactly as before and simply has no key buttons. */
@@ -873,6 +1058,7 @@ void InputSDL_ClearKeyState(void)
     s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
     s_kbd_held_up = s_kbd_held_down = s_kbd_held_left = s_kbd_held_right = 0;
     s_kbd_fire_keys = 0;
+    s_fire_event = s_fire_event_pad = 0;    /* a press from before is not one in what comes next */
     s_kbd_skip = 0;
     _pauseSkipRequested = 0;
     /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
@@ -936,6 +1122,7 @@ uint8_t InputSDL_LocalMatchControls(void)
     uint8_t bits = 0;
 
     read_pad_state(0, &up, &down, &left, &right, &fire, &skip);
+    fire = sample_fire(fire, 1, &s_fire_evidence);
 
     if (up)    bits |= 0x01;    /* MATCH_UP    */
     if (down)  bits |= 0x02;    /* MATCH_DOWN  */
@@ -948,6 +1135,116 @@ uint8_t InputSDL_LocalMatchControls(void)
     if (_gDosGameplay && pad_secondary(0))
         bits |= 0x40;          /* MATCH_BENCH */
     return bits;
+}
+
+/* --input-selftest: the player's own keys and the press latch, driven with made-up key
+ * events -- no window, no device. Returns the number of failures. */
+static void selftest_key(SDL_Scancode sc, SDL_Keycode sym, int down)
+{
+    SDL_Event e;
+    memset(&e, 0, sizeof e);
+    e.type = down ? SDL_KEYDOWN : SDL_KEYUP;
+    e.key.state = down ? SDL_PRESSED : SDL_RELEASED;
+    e.key.keysym.scancode = sc;
+    e.key.keysym.sym = sym;
+    InputSDL_HandleEvent(&e);
+}
+
+int InputSDL_SelfTest(void)
+{
+    int fails = 0, i;
+    uint8_t c;
+    int32_t keys;
+#define EXPECT(cond, what) do { if (!(cond)) { fails++; fprintf(stderr, "[input-selftest] FAIL: %s\n", what); } } while (0)
+
+    for (i = 0; i < BIND_COUNT; i++)
+        InputSDL_SetKeyBinding(i, "");
+    InputSDL_ClearKeyState();
+
+    /* A tap that is down and up again between two reads. */
+    InputSDL_SetPressLatch(1);
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 1);
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 0);
+    c = InputSDL_LocalMatchControls();
+    EXPECT((c & 0x20) && InputSDL_LastFireEvidence() == 0x0C, "latch on: a short tap reads as fire, EVENT+LATCHED");
+    c = InputSDL_LocalMatchControls();
+    EXPECT(!(c & 0x20) && InputSDL_LastFireEvidence() == 0, "latch on: the tap lasts one read");
+
+    /* A read that was thrown away gives the tap back to the next one. */
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 1);
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 0);
+    (void)InputSDL_LocalMatchControls();
+    InputSDL_UnreadMatchControls();
+    c = InputSDL_LocalMatchControls();
+    EXPECT((c & 0x20) && InputSDL_LastFireEvidence() == 0x0C, "a refused read does not spend the tap");
+    c = InputSDL_LocalMatchControls();
+    EXPECT(!(c & 0x20), "and it is still one read long");
+
+    InputSDL_SetPressLatch(0);
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 1);
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 0);
+    c = InputSDL_LocalMatchControls();
+    EXPECT(!(c & 0x20) && InputSDL_LastFireEvidence() == 0x04, "latch off: the tap is lost, but EVENT says it arrived");
+    InputSDL_SetPressLatch(1);
+
+    /* A held press: the latch adds nothing to it. */
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 1);
+    c = InputSDL_LocalMatchControls();
+    EXPECT((c & 0x20) && InputSDL_LastFireEvidence() == 0x04, "held: fire, EVENT on the first read");
+    c = InputSDL_LocalMatchControls();
+    EXPECT((c & 0x20) && InputSDL_LastFireEvidence() == 0, "held: fire, nothing new on the second");
+    selftest_key(SDL_SCANCODE_RCTRL, SDLK_RCTRL, 0);
+    c = InputSDL_LocalMatchControls();
+    EXPECT(!(c & 0x20) && InputSDL_LastFireEvidence() == 0, "released: no fire, no extra frame from the latch");
+
+    /* Not bound: W is a game key and steers nothing. */
+    keys = _keyCount;
+    selftest_key(SDL_SCANCODE_W, SDLK_w, 1);
+    selftest_key(SDL_SCANCODE_W, SDLK_w, 0);
+    EXPECT(_keyCount != keys, "unbound W reaches the game's key buffer");
+    EXPECT(!(InputSDL_LocalMatchControls() & 0x0F), "unbound W steers nothing");
+    InputSDL_ClearKeyState();
+
+    /* Bound: WASD + LEFT SHIFT. */
+    EXPECT(InputSDL_SetKeyBinding(BIND_UP, "W") == 0 && InputSDL_SetKeyBinding(BIND_DOWN, "S") == 0 &&
+           InputSDL_SetKeyBinding(BIND_LEFT, "A") == 0 && InputSDL_SetKeyBinding(BIND_RIGHT, "D") == 0 &&
+           InputSDL_SetKeyBinding(BIND_FIRE, "Left Shift") == 0, "W A S D and Left Shift are names SDL knows");
+    EXPECT(InputSDL_SetKeyBinding(BIND_FIRE, "No Such Key") == 1, "an unknown name is refused");
+    EXPECT(strcmp(InputSDL_KeyBindingName(BIND_FIRE), "Left Shift") == 0, "a refused name leaves the binding alone");
+    keys = _keyCount;
+    selftest_key(SDL_SCANCODE_S, SDLK_s, 1);
+    selftest_key(SDL_SCANCODE_A, SDLK_a, 1);
+    selftest_key(SDL_SCANCODE_LSHIFT, SDLK_LSHIFT, 1);
+    c = InputSDL_LocalMatchControls();
+    EXPECT((c & 0x2F) == (0x02 | 0x04 | 0x20), "bound S + A + Left Shift read as DOWN + LEFT + FIRE");
+    EXPECT(_keyCount == keys, "a bound key does not reach the game's key buffer");
+    selftest_key(SDL_SCANCODE_LSHIFT, SDLK_LSHIFT, 0);
+    selftest_key(SDL_SCANCODE_A, SDLK_a, 0);
+    selftest_key(SDL_SCANCODE_S, SDLK_s, 0);
+    EXPECT(!(InputSDL_LocalMatchControls() & 0x2F), "and are released");
+    /* The built-in keys still work beside them. */
+    selftest_key(SDL_SCANCODE_UP, SDLK_UP, 1);
+    selftest_key(SDL_SCANCODE_RETURN, SDLK_RETURN, 1);
+    EXPECT((InputSDL_LocalMatchControls() & 0x2F) == (0x01 | 0x20), "the cursor keys and ENTER still work");
+    selftest_key(SDL_SCANCODE_RETURN, SDLK_RETURN, 0);
+    selftest_key(SDL_SCANCODE_UP, SDLK_UP, 0);
+    InputSDL_ClearKeyState();
+
+    /* In a text field a bound key is a letter. */
+    _gTextInputActive = 1;
+    keys = _keyCount;
+    selftest_key(SDL_SCANCODE_W, SDLK_w, 1);
+    EXPECT(_keyCount != keys, "typing: a bound W is a letter");
+    EXPECT(!(InputSDL_LocalMatchControls() & 0x0F), "typing: and steers nothing");
+    selftest_key(SDL_SCANCODE_W, SDLK_w, 0);
+    _gTextInputActive = 0;
+
+    for (i = 0; i < BIND_COUNT; i++)
+        InputSDL_SetKeyBinding(i, "");
+    InputSDL_ClearKeyState();
+#undef EXPECT
+    fprintf(stderr, "[input-selftest] %s\n", fails ? "FAILED" : "ok");
+    return fails;
 }
 
 void InputSDL_PostFrame(void)
@@ -999,6 +1296,7 @@ void InputSDL_PostFrame(void)
     int skip = s_kbd_skip;
     if (!split)
         read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire, &skip);
+    p1_fire = sample_fire(p1_fire, !split, NULL);       /* a press is never lost between two reads */
 
     /* Player 2: pad 1 only -- or pad 0 when split. No keyboard binding — keeping the
      * keyboard single-player avoids hijacking arrow / fire keys when a P2 pad is

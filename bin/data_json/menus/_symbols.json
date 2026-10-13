@@ -374,7 +374,8 @@
     "ViewSquadOnSelect21",
     "ViewWorldMenu",
     "SetExitMenuFlag",
-    "locret_139AE2"
+    "locret_139AE2",
+    "ShowControlsMenu"
   ],
   "strings": [
     "_a343",
@@ -422,6 +423,7 @@
     "_aConsider",
     "_aContinue",
     "_aContinueCareer",
+    "_aControls",
     "_aCopy",
     "_aCredits",
     "_aCriteria",
@@ -506,6 +508,7 @@
     "_aPresetCompetit_0",
     "_aPts",
     "_aPutPlayerOnTra_0",
+    "_aRedefineKeys",
     "_aReject",
     "_aRejectOffer",
     "_aRemovePlayers",

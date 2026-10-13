@@ -860,13 +860,16 @@ All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
   `swos2020/selectUniformMenu` the same way (docs/UNIFORM.md), and the matchmaking menu's
   MY CUSTOM TEAM opens `swos2020/selectMyCustomTeams` (docs/CUSTOM_TEAMS.md); their handlers
   are in `src/uniform_menu.c` and `src/custom_team.c`, each with a symbol table of its own.
+  **OPTIONS -> CONTROLS** (entries 15 and 16, `ShowControlsMenu`; a structural row, hidden
+  on the Amiga by `OptionsMenuBeforeDraw`) opens OpenSWOS's own `united/controlsMenu`
+  (`src/controls_menu.c`, docs/CONTROLS.md): the player's own keys and the press latch.
 - `--menu-selftest` loads every JSON-only menu -- the imported ones (`SWOS2020_MENUS`),
   `p2p/rateMatchMenu` (HOW WAS THE MATCH?) and `p2p/p2pMenu` -- unpacks each into scratch
   memory and checks its entries' ordinals, rectangles, nav links and text against its
   JSON, then prints the handler count. Result when written (29 imported + p2pMenu):
   **30 menus, 1336 entries, 0 failed** on x86_64 and on the 32-bit build; it now checks
   32 menus.
-- SDL only: `menu_load_json.c`, `online_menus.c`, `p2p_menu.c` and `p2p_link.c` are in
+- SDL only: `menu_load_json.c`, `online_menus.c`, `p2p_menu.c`, `controls_menu.c` and `p2p_link.c` are in
   `SDL_ONLY_SRCS` (`Makefile.amiga`). The Amiga compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu`
   changes and has no JSON menus to load.
 

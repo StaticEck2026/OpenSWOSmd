@@ -130,6 +130,11 @@ typedef struct {
                                               * there; empty = a server on this machine. */
     int                    stick_deadzone;   /* [input] stick_deadzone: how far an analog stick must be
                                               * pushed, in percent of its travel, before it counts */
+    char                   key_bind[5][24];  /* [input] key_up/_down/_left/_right/_fire: the player's own
+                                              * keys, SDL scancode names, beside the built-in ones.
+                                              * Empty = none (input_sdl.c) */
+    int                    latch_presses;    /* [input] latch_presses: a fire press that came and went
+                                              * between two reads still counts (default on) */
     char                   netplay_name[33]; /* [netplay] name: the name typed on the MULTIPLAYER login
                                               * screen, kept while REMEMBER LOGIN INFO is on */
     int                    netplay_remember; /* [netplay] remember_login: that switch (default on) */

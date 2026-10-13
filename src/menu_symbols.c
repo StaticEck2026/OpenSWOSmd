@@ -38,6 +38,7 @@ extern void ChangeAutoReplays(void);
 extern void ChangeAutoSaveHighlights(void);
 extern void ChangeGameLength(void);
 extern void ChangeGameplayStyle(void);
+extern void ShowControlsMenu(void);
 extern void ChangeMenuMusic(void);
 extern void ChangeNationality(void);
 extern void ChangePitchType(void);
@@ -458,6 +459,8 @@ extern char _aFriendlyDiyGam[];
 extern char _aFriendly_1[];
 extern char _aFrom[];
 extern char _aGameplay[];
+extern char _aControls[];
+extern char _aRedefineKeys[];
 extern char _aGateReceipts[];
 extern char _aGeneralRunning[];
 extern char _aGiveFreeTransf[];
@@ -978,6 +981,7 @@ const MenuSymbol _menuSymbols[] = {
     { "SetExitMenuFlag", (void*)SetExitMenuFlag, SYM_FUNC },
     { "SetName", (void*)SetName, SYM_FUNC },
     { "SetSurname", (void*)SetSurname, SYM_FUNC },
+    { "ShowControlsMenu", (void*)ShowControlsMenu, SYM_FUNC },
     { "ShowPlayerMarket", (void*)ShowPlayerMarket, SYM_FUNC },
     { "ShowPlayerMarketInit", (void*)ShowPlayerMarketInit, SYM_FUNC },
     { "ShowStadiumInit", (void*)ShowStadiumInit, SYM_FUNC },
@@ -1088,6 +1092,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aConsider", (void*)_aConsider, SYM_STRING },
     { "_aContinue", (void*)_aContinue, SYM_STRING },
     { "_aContinueCareer", (void*)_aContinueCareer, SYM_STRING },
+    { "_aControls", (void*)_aControls, SYM_STRING },
     { "_aCopy", (void*)_aCopy, SYM_STRING },
     { "_aCredits", (void*)_aCredits, SYM_STRING },
     { "_aCriteria", (void*)_aCriteria, SYM_STRING },
@@ -1172,6 +1177,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aPresetCompetit_0", (void*)_aPresetCompetit_0, SYM_STRING },
     { "_aPts", (void*)_aPts, SYM_STRING },
     { "_aPutPlayerOnTra_0", (void*)_aPutPlayerOnTra_0, SYM_STRING },
+    { "_aRedefineKeys", (void*)_aRedefineKeys, SYM_STRING },
     { "_aReject", (void*)_aReject, SYM_STRING },
     { "_aRejectOffer", (void*)_aRejectOffer, SYM_STRING },
     { "_aRemovePlayers", (void*)_aRemovePlayers, SYM_STRING },

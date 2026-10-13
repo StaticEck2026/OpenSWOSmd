@@ -275,6 +275,7 @@ static void print_usage(const char *argv0)
         "  --menu-music=midi|mp3     With --music=pc: the menus play menu.xmi live on the\n"
         "                            emulated card (default) or a recording of it,\n"
         "                            sound_dos/menu.mp3 ([audio] menu_music).\n"
+        "  --input-selftest          Check the redefined keys and the press latch\n"
         "  --dos-music-selftest      Play the PC menu music through once without sound\n"
         "                            and report what it found. Exits.\n"
         "  --dos-sound-selftest      Check that every PC sound file is in sound_dos/\n"
@@ -437,6 +438,8 @@ int main(int argc, char **argv)
     opts.shade_step = 2;
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.stick_deadzone = 25;     /* percent: about what the old per-axis threshold was */
+    opts.latch_presses = 1;       /* a short fire press is never lost between two reads */
+    memset(opts.key_bind, 0, sizeof opts.key_bind);   /* no keys of the player's own */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.contest_own_ratings = 0; /* default: the original's roll, team-mate's rating and all */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
@@ -707,6 +710,9 @@ int main(int argc, char **argv)
         } else if ((v = match_kv(a, "commentary")) != NULL) {
             opts.commentary = strcmp(v, "auto") == 0 ? 2
                             : strcmp(v, "off") != 0 && strcmp(v, "0") != 0 && strcmp(v, "false") != 0;
+        } else if (strcmp(a, "--input-selftest") == 0) {
+            extern int InputSDL_SelfTest(void);
+            return InputSDL_SelfTest() ? 1 : 0;
         } else if (strcmp(a, "--dos-music-selftest") == 0) {
             return DosMusic_SelfTest() ? 1 : 0;
         } else if (strcmp(a, "--dos-sound-selftest") == 0) {
@@ -1029,6 +1035,14 @@ int main(int argc, char **argv)
     JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.hair_shading, opts.shade_step);
     KitArt_SetJaguar(opts.kit_art);
     { extern void InputSDL_SetStickDeadzone(int percent); InputSDL_SetStickDeadzone(opts.stick_deadzone); }
+    {
+        extern void InputSDL_SetPressLatch(int on);
+        extern int InputSDL_SetKeyBinding(int which, const char *name);
+        int i;
+        InputSDL_SetPressLatch(opts.latch_presses);
+        for (i = 0; i < 5; i++)
+            InputSDL_SetKeyBinding(i, opts.key_bind[i]);
+    }
     /* SWOS_SOUND_STYLE=pc, SWOS_COMMENTARY=on: for the test scripts, which pass no options. */
     { const char *e = getenv("SWOS_SOUND_STYLE");
       if (e) opts.sound_style = strcmp(e, "pc") == 0;

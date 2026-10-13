@@ -325,6 +325,12 @@
           var c = readCtl[2 * f + p], cls = 'p' + (p + 1);
           if (c < 0) { out.push('<span class="' + cls + '">' + esc(nameOf(p)) + ' read \u2013</span>'); continue; }
           var ms = readMs[2 * f + p], t = esc(nameOf(p)) + ' read ' + controlsText(c);
+          // What the fire button did since the read before (SRP_READ_FIRE_*, 2026-10-13):
+          // 4 a press arrived, 8 it was up again already and the latch read it as pressed.
+          var fv = waits ? waits[2 * f + p] : 0xFF;
+          if (fv !== 0xFF && (fv & 8)) t += ' (a tap, kept by the latch)';
+          else if (fv !== 0xFF && (fv & 4) && !(c & 0x20)) t += ' (a fire press came and went unread)';
+          else if (fv !== 0xFF && (fv & 4)) t += ' (pressed now)';
           var gap = f === 0 ? '' : ', ' + (ms === 255 ? '255+' : ms) + ' ms after the last';
           if (ms > 30 && f > 0) gap = '<span class="late">' + gap + '</span>';
           out.push('<span class="' + cls + '">' + t + '</span>' + gap);

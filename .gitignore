@@ -51,6 +51,9 @@ bin/data_json/menus/swos2020/*
 !bin/data_json/menus/p2p
 bin/data_json/menus/p2p/*
 !bin/data_json/menus/p2p/*.json
+!bin/data_json/menus/openswos
+bin/data_json/menus/openswos/*
+!bin/data_json/menus/openswos/*.json
 !bin/data_json/tactics
 bin/data_json/tactics/*
 !bin/data_json/tactics/*.json

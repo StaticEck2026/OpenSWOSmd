@@ -323,8 +323,15 @@ A player's three bytes for frame F: the **controls byte as read** when GGPO acce
 input for F (the byte `INPT` holds, `MatchStep_PackInput`'s first); the **milliseconds
 since that player's read for frame F-1** (255 = that or more; 0 on the first); and which
 **wait** that game was taking as it played the frame -- `0x01` a prediction balance wait,
-`0x02` a time sync wait (each stretches a run of frames a little; none holds one). All
-three `0xFF`: that half never reached the file.
+`0x02` a time sync wait (each stretches a run of frames a little; none holds one). The
+same byte says what the **fire button** did between this read and the one before
+(2026-10-13; `src/input_sdl.c`): `0x04` a fire key or button went DOWN, `0x08` it was up
+again by the time of the read and the press latch (`[input] latch_presses`) read it as
+pressed. The match reads fire as a level once a frame, so without these a tap shorter than
+a frame looks exactly like no press: `0x04` without FIRE in the controls byte is a press
+that reached the game and was lost (latch off); no `0x04` across a stretch a player says
+they were pressing in means the presses never reached the game. Older files have neither
+bit. All three `0xFF`: that half never reached the file.
 
 GGPO applies an input `delay` frames after it is read, so `INPT[F + delay]` is `READ[F]`
 for every frame, if the delay held; the second byte shows how evenly that game's frames

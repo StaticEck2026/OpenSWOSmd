@@ -2013,6 +2013,24 @@ __attribute__((used, externally_visible))
 void OptionsMenuBeforeDraw(void)
 {
     _showPrereleaseCounter = 0;
+#ifndef SWOS_SDL_BUILD
+    /* CONTROLS (entries 15 and 16) opens a JSON menu about the keyboard's keys, which the
+     * Amiga does not run: GAMEPLAY and EXIT step over the row. */
+    _menuEntries[15].isInvisible = 1;
+    _menuEntries[16].isInvisible = 1;
+    _menuEntries[14].downEntry = 17;
+    _menuEntries[17].upEntry = 14;
+#endif
+}
+
+/* OPTIONS -> CONTROLS: the player's own keys and the press latch (src/controls_menu.c). */
+__attribute__((used, externally_visible))
+void ShowControlsMenu(void)
+{
+#ifdef SWOS_SDL_BUILD
+    extern void ControlsMenu_Show(void);
+    ControlsMenu_Show();
+#endif
 }
 
 /* ChangePitchType: cycle pitchType 0→1→2→3→4→5→6→0xFFFE→0→... */
