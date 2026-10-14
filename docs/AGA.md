@@ -39,6 +39,31 @@ speedup) pending** — see [AMIGA_SPRITES.md](AMIGA_SPRITES.md).
 >
 > Not verified: real hardware, the OCS build after these changes, a replay that scrolls down.
 
+> **Status (2026-10-13): SWOS 2020's pitches play on AGA** (owner's FS-UAE test, from
+> Workbench), chosen on OPTIONS -> PITCHES (DOS / 2020; Amiga AGA only, for the session).
+> What made the room, all in chip RAM (1,877 KB -> 1,179 KB, then 1,641 KB with the bigger
+> pitch buffer):
+>
+> - **The title tune's samples and the sprite pool share one union**, `g_introChipRam`
+>   (`include/intro_chip_ram.h`) -- the original's own trick (`audioInstrumentBank` sat in front
+>   of `imageCmdWorkBuf` in SWOS2.s). The tune lives only inside `ShowLoaderIntroSequence`, whose
+>   every exit stops the sound; the sprites are unpacked after it returns. SDL keeps them apart
+>   (its arcade attract plays the tune over a replay). 288 KB: hero.ins unpacks IN PLACE to
+>   292,984 bytes and the RNC decoder may lift the packed data up to 255 bytes past the end.
+> - **The hardware sprite buffers** (`_bitPlaneNBase[Alt]` -- named bitplanes in SWOS2.s, but the
+>   copper's SPRITE pointers) are 2 KB each, not 12 KB; SWOS2.s gave them 900 bytes. Sprites 4-7
+>   are never drawn and all point at one empty sprite, `_emptySpriteDma`.
+> - **The pitch buffer is 544 KB** (`PITCHFILE_MAX_SIZE`): 2020 pitch 6 is 554,776 bytes.
+> - **The maps**: `scripts/make_pitch_aga.py` turns a PC pitch (`PITCHn.DAT` + `.BLK`) into an AGA
+>   map; `--check` proves it by reproducing the six shipped `SWCPICHn.MAP` byte for byte. The
+>   2020 ones are `grafs_aga/P2020_n.MAP`, UNPACKED: `LoadFileEx` stages a file in the 104,832-byte
+>   frontbuffer and three of them do not fit even packed, so `loadPitchMap2020` (`pitch.c`) reads
+>   them straight into the pitch buffer, and a missing file plays the DOS pitch. Colours need no
+>   conversion: 2020's art is drawn against the PC palette, which is the AGA palette.
+> - **Music on fast RAM above 16 MB** (an accelerator, Zorro III): `accessRelocate` (`audio.c`)
+>   masked each song track's ADDRESS to 24 bits, a WHDLoad patch of the original ("potential issue
+>   if A1 is in fast!!!"). It masks the table OFFSET now. Not yet tried on such a machine.
+
 AGA mode gives the game a 256-colour display (8 bitplanes) for backgrounds and
 the pitch, while keeping sprite/menu/charset banks at **4 bitplanes (16 colours)**.
 The depth is **mixed per bank** and auto-detected at load, so the same decode path

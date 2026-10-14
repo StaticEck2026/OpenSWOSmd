@@ -690,11 +690,13 @@ extern int _menu_draw_x_offset;
 
 /* ---- File info ---- */
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-/* Dedicated pitch-buffer size, smaller than the frontbuffer, to reclaim chip
- * RAM for the 2x block-B display buffers (see FRONTBUFFER_DISPLAY_ALLOC_BYTES).
- * AGA pitch maps are <=78KB (docs/AGA.md); 82KB gives ~4KB headroom. Both the
- * load-size check (pitch.c) and _pitchDatBuffer allocation use this. */
-#define PITCHFILE_MAX_SIZE          (82u * 1024u)
+/* Dedicated pitch buffer, in chip RAM (the blitter scrolls the pitch from it). The
+ * DOS pitches (SWCPICHn.MAP) are <=78 KB; SWOS 2020's (P2020_n.MAP, OPTIONS ->
+ * PITCHES) are 197-542 KB, the largest pitch 6 at 554,776 bytes. The room came from
+ * the title tune sharing its chip RAM with the sprite pool (include/intro_chip_ram.h).
+ * Both the load-size check (pitch.c) and _pitchDatBuffer allocation use this;
+ * scripts/make_pitch_aga.py checks the maps against it. */
+#define PITCHFILE_MAX_SIZE          (544u * 1024u)
 #else
 #define PITCHFILE_MAX_SIZE          FRONTBUFFER_SIZE_TOTAL_BYTES
 #endif

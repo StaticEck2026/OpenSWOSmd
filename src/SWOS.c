@@ -189,7 +189,7 @@ extern uint16_t _bootTemp5;
 extern uint16_t _bootTemp6;
 
 extern uint16_t _introMenuImageScript[];
-extern uint8_t _imageCmdWorkBuf[];
+#include "intro_chip_ram.h"     /* the sprite pool, shared with the title tune on the Amiga */
 extern uint8_t *_imageStreamCursor;
 extern uint8_t *_menuImageStreamBaseEnd;
 
@@ -339,7 +339,7 @@ skip_title_screens: ;
      * an empty filename fails. */
     extern void SwosSDL_InitImageScripts(void);
     SwosSDL_InitImageScripts();
-    ProcessImageCommandStream(_introMenuImageScript, _imageCmdWorkBuf);
+    ProcessImageCommandStream(_introMenuImageScript, g_introChipRam.spritePool);
     /* Map the font-extension glyphs (accented capitals, full ASCII, $) into the
      * char tables now that their sprites have been extracted by the script. */
     { extern void FontExt_ApplyConv(void); FontExt_ApplyConv(); }

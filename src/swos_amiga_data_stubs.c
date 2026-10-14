@@ -15,6 +15,7 @@
 
 #include <stddef.h>
 #include "swos_sections.h"
+#include "intro_chip_ram.h"
 
 /* AI_maxStoppageTime: real data in swos_amiga_data_imports.c */
 /* LoaderBootstrapBlobPI: real data in swos_data_bulk_imports.c */
@@ -286,17 +287,10 @@
 /* audioChannel2: real data in swos_data_bulk_imports.c */
 /* audioChannel3: real data in swos_data_bulk_imports.c */
 /* audioDbgFlagA: typed definition in swos_data_typed_stubs.c */
-/* HAND-TUNED: SWOS2.s declares only 0x16C bytes here, but the game
- * loads decompressed .ins audio banks (HERO.INS ~250 KB) into this
- * buffer using a "boundary spill" pattern. 256 KB was too tight
- * (decompression overflowed adjacent BSS and tripped a line-F);
- * 512 KB matches SDL.
- *
- * SWOS_CHIP_BSS: Paula audio DMA can only reach CHIP RAM (24-bit
- * address space); putting the instrument bank in fast RAM means
- * AUDxLC pointers index unreachable memory and Paula plays silence
- * or garbage. Mirrors the bitplane/frontbuffer CHIP placement. */
-SWOS_CHIP_BSS char _audioInstrumentBank[512 * 1024];
+/* audioInstrumentBank: the title tune's samples, g_introChipRam.titleTuneSamples
+ * (include/intro_chip_ram.h). SWOS2.s declares only 0x16C bytes here because the
+ * sprite pool after it was written over the samples once the intro was over; that
+ * sharing is a named union now. CHIP RAM: Paula's DMA reads samples from nowhere else. */
 /* audioState: real data in swos_data_bulk_imports.c */
 /* autoReplays: typed definition in swos_data_typed_stubs.c */
 /* autoReplaysStrTable: real data in swos_amiga_ptr_imports.c */
@@ -908,7 +902,8 @@ char _goalBase[0x4A38];
 /* homeMarketPlayers: real data in swos_data_bulk_imports.c */
 /* homeMarketRandomPickRetries: typed definition in swos_data_typed_stubs.c */
 /* homeMarketUpdateBacklog: typed definition in swos_data_typed_stubs.c */
-/* imageCmdWorkBuf: sprite-graphics write pool. On Amiga this is
+/* imageCmdWorkBuf: sprite-graphics write pool, g_introChipRam.spritePool
+ * (include/intro_chip_ram.h). On Amiga this is
  * $FFDC bytes followed by ~12 adjacent BSS labels that the sprite
  * allocator freely overflows into (menuInsBank, unnamed scratch,
  * tempTeamBuffer, teamFileBuffer, and more — totaling ~230 KB of
@@ -929,11 +924,7 @@ char _goalBase[0x4A38];
  * chip total. 1 MB CHIP allocation here breaks AmigaDOS boot ("not
  * enough memory"). If overflow recurs on Amiga, address it via
  * pool-write bounds checking, not a bigger buffer. */
-#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-SWOS_CHIP_BSS char _imageCmdWorkBuf[0x46000];  /* 4-plane pool + margin; see SWOS_SPRITE_4PLANE */
-#else
-SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
-#endif
+SWOS_CHIP_BSS IntroChipRam g_introChipRam;
 /* imageStreamBytesLeft: typed definition in swos_data_typed_stubs.c */
 /* imageStreamCursor: typed definition in swos_data_typed_stubs.c */
 /* importMenuSelectedTactics: real data in swos_amiga_data_imports.c */

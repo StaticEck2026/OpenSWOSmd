@@ -39,6 +39,7 @@ extern void ChangeAutoSaveHighlights(void);
 extern void ChangeGameLength(void);
 extern void ChangeGameplayStyle(void);
 extern void ShowControlsMenu(void);
+extern void ChangePitchStyle(void);
 extern void ChangeMenuMusic(void);
 extern void ChangeNationality(void);
 extern void ChangePitchType(void);
@@ -461,6 +462,7 @@ extern char _aFrom[];
 extern char _aGameplay[];
 extern char _aControls[];
 extern char _aRedefineKeys[];
+extern char _aPitches[];
 extern char _aGateReceipts[];
 extern char _aGeneralRunning[];
 extern char _aGiveFreeTransf[];
@@ -653,6 +655,7 @@ extern char* _flipStrTable[];
 extern char* _friendlyPitchTypeTable[];
 extern char* _gameLengthStrTable[];
 extern char* _gameplayStyleStrTable[];
+extern char* _pitchStyleStrTable[];
 extern char _managerNameBuffer[];
 extern char _managerSexBuffer[];
 extern char _managerSurnameBuffer[];
@@ -705,6 +708,7 @@ const MenuSymbol _menuSymbols[] = {
     { "ChangeGameplayStyle", (void*)ChangeGameplayStyle, SYM_FUNC },
     { "ChangeMenuMusic", (void*)ChangeMenuMusic, SYM_FUNC },
     { "ChangeNationality", (void*)ChangeNationality, SYM_FUNC },
+    { "ChangePitchStyle", (void*)ChangePitchStyle, SYM_FUNC },
     { "ChangePitchType", (void*)ChangePitchType, SYM_FUNC },
     { "ChangeSex", (void*)ChangeSex, SYM_FUNC },
     { "ChangeTeams", (void*)ChangeTeams, SYM_FUNC },
@@ -1164,6 +1168,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aOptions", (void*)_aOptions, SYM_STRING },
     { "_aOriginalCustom", (void*)_aOriginalCustom, SYM_STRING },
     { "_aOwnGoals", (void*)_aOwnGoals, SYM_STRING },
+    { "_aPitches", (void*)_aPitches, SYM_STRING },
     { "_aPl", (void*)_aPl, SYM_STRING },
     { "_aPlayEachTeam", (void*)_aPlayEachTeam, SYM_STRING },
     { "_aPlayMatch", (void*)_aPlayMatch, SYM_STRING },
@@ -1320,6 +1325,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_managerSurnameBuffer", (void*)_managerSurnameBuffer, SYM_BUFFER },
     { "_menuMusicStrTable", (void*)_menuMusicStrTable, SYM_TABLE },
     { "_offsetCoachOrPlayer", (void*)_offsetCoachOrPlayer, SYM_BUFFER },
+    { "_pitchStyleStrTable", (void*)_pitchStyleStrTable, SYM_TABLE },
     { "_pitchTypeOrSeasonTable", (void*)_pitchTypeOrSeasonTable, SYM_TABLE },
     { "_pitchTypeStrTable", (void*)_pitchTypeStrTable, SYM_TABLE },
     { "_positionFilterStringTable", (void*)_positionFilterStringTable, SYM_TABLE },

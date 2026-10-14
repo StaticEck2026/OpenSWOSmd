@@ -31,6 +31,12 @@ extern TeamGame _topTeamInGame;
 extern TeamGame _bottomTeamInGame;
 extern uint16_t _fansSidesSwapped;
 
+/* OPTIONS -> PITCHES: 0 the DOS pitches the AGA build has always drawn (SWCPICHn.MAP),
+ * 1 SWOS 2020's (P2020_n.MAP, made by scripts/make_pitch_aga.py). The AGA Amiga only:
+ * the row is hidden elsewhere (OptionsMenuBeforeDraw), and SDL picks its pitches by
+ * its graphics tier. For the session, like the menu's other rows on the Amiga. */
+uint16_t _pitchStyleOption;
+
 /* ---- External functions ---- */
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 extern void PanicHaltLoop(void) __attribute__((noreturn));
@@ -326,6 +332,40 @@ static uint16_t pitchTilePlanes(const uint32_t *pitchPtrs, uint32_t baseLow,
 }
 #endif /* SWOS_SDL_BUILD */
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* ================================================================
+ * loadPitchMap2020 -- OPTIONS -> PITCHES = 2020
+ *
+ * SWOS 2020's pitch as an AGA map, P2020_n.MAP: the DOS map's format, three to eight
+ * times the tiles. It is stored UNPACKED and read straight into the pitch buffer:
+ * LoadFileEx stages a file in the frontbuffer first (104,832 bytes), and these do
+ * not fit it even packed. Returns 0 when the file cannot be read, and the caller
+ * loads the DOS pitch instead -- the drop may simply not have the 2020 set.
+ * ================================================================ */
+extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
+                                          void *name, void *dest, uint32_t *outFileSize);
+#define PITCH_ASSET_OP_INIT_SOURCE0  2      /* ASSET_OP_INIT_SOURCE0 (asset_loader.c) */
+
+static int32_t loadPitchMap2020(uint16_t mapIndex)
+{
+    static const char *const files[6] = {
+        "grafs/p2020_1.map", "grafs/p2020_2.map", "grafs/p2020_3.map",
+        "grafs/p2020_4.map", "grafs/p2020_5.map", "grafs/p2020_6.map",
+    };
+    uint32_t fileSize = 0;
+
+    if (mapIndex >= 6 ||
+        CAssetSys_DispatchGetSize(PITCH_ASSET_OP_INIT_SOURCE0, 0, (void *)files[mapIndex],
+                                  _pitchDatBuffer, &fileSize) != 0)
+        return 0;
+    if (fileSize > PITCHFILE_MAX_SIZE) {    /* as LoadPitchMap: a map that does not fit */
+        _panicReasonCode = 3;
+        PanicHaltLoop();
+    }
+    return 1;
+}
+#endif
+
 /* ================================================================
  * LoadPitchMap  (SWOS2.s line 5557)
  *
@@ -346,6 +386,10 @@ void LoadPitchMap(uint16_t mapIndex)
         dos_load_pitch(mapIndex);
         return;
     }
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    if (_pitchStyleOption && loadPitchMap2020(mapIndex))
+        return;
 #endif
     uint8_t *filename = (uint8_t *)_swcPitchMapFiles[mapIndex];
     uint32_t fileSize = 0;

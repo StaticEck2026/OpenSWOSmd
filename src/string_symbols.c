@@ -348,6 +348,7 @@ extern char _aViewSquad[];                    extern char _aBank[];             
 extern char _aA_2[];                          extern char _aSemiFinal[];                    extern char _aFinal_4[];
 extern char _aMenuMusic[];                    extern char _aGameplay[];                     extern char _aAmigaStyle[];
 extern char _aDosStyle[];                     extern char _aControls[];                     extern char _aRedefineKeys[];
+extern char _aPitches[];                      extern char _a2020Style[];
 extern char _aGoals[];                           extern char _aForm[];
 extern char _aLge[];                          extern char _aCups[];                         extern char _aCup_3[];
 extern char _aTot[];                          extern char _aOwnGoals[];                     extern char _aLoad[];
@@ -1401,6 +1402,8 @@ const StringSymbol _stringSymbols[] = {
     { "_aDosStyle", (void *)_aDosStyle },
     { "_aControls", (void *)_aControls },
     { "_aRedefineKeys", (void *)_aRedefineKeys },
+    { "_aPitches", (void *)_aPitches },
+    { "_a2020Style", (void *)_a2020Style },
     { "_aGoals", (void *)_aGoals },
     { "_aForm", (void *)_aForm },
     { "_aLge", (void *)_aLge },

@@ -2013,14 +2013,36 @@ __attribute__((used, externally_visible))
 void OptionsMenuBeforeDraw(void)
 {
     _showPrereleaseCounter = 0;
-#ifndef SWOS_SDL_BUILD
-    /* CONTROLS (entries 15 and 16) opens a JSON menu about the keyboard's keys, which the
-     * Amiga does not run: GAMEPLAY and EXIT step over the row. */
+    /* One row, two meanings: CONTROLS (entries 15/16) opens a JSON menu about the
+     * keyboard's keys, which only SDL runs; PITCHES (17/18) picks the AGA Amiga's
+     * pitch set. Each target shows its own and steps GAMEPLAY (14) and EXIT (19) to
+     * it; the OCS Amiga has neither, and steps over the row. */
+#ifdef SWOS_SDL_BUILD
+    _menuEntries[17].isInvisible = 1;
+    _menuEntries[18].isInvisible = 1;
+#else
     _menuEntries[15].isInvisible = 1;
     _menuEntries[16].isInvisible = 1;
-    _menuEntries[14].downEntry = 17;
-    _menuEntries[17].upEntry = 14;
+#ifdef AGA
+    _menuEntries[14].downEntry = 18;
+    _menuEntries[19].upEntry = 18;
+#else
+    _menuEntries[17].isInvisible = 1;
+    _menuEntries[18].isInvisible = 1;
+    _menuEntries[14].downEntry = 19;
+    _menuEntries[19].upEntry = 14;
 #endif
+#endif
+}
+
+/* OPTIONS -> PITCHES: DOS / 2020 (pitch.c, _pitchStyleOption). The next match loads
+ * the set; nothing else depends on it. */
+__attribute__((used, externally_visible))
+void ChangePitchStyle(MenuEntry *entry)
+{
+    extern uint16_t _pitchStyleOption;
+    _pitchStyleOption ^= 1;
+    CallDrawMenuItem(entry);
 }
 
 /* OPTIONS -> CONTROLS: the player's own keys and the press latch (src/controls_menu.c). */

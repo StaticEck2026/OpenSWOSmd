@@ -21,7 +21,6 @@ extern void AudioSetChannelVolume(uint16_t mask, uint16_t vol);
  * file payload is smaller; RJP1_Load parses headers internally and
  * uses only what it needs. */
 #define HERO_SONG_BUFFER_BYTES   (4 * 1024)        /* diyFileBufferCopyBuf */
-#define HERO_INS_BANK_BYTES      (512 * 1024)      /* audioInstrumentBank */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -54,7 +53,7 @@ extern volatile uint16_t _keyCount;
 __attribute__((used, externally_visible))
 volatile uint8_t _skipLoaderIntro = 0;
 extern volatile uint16_t _currentKey;
-extern uint8_t _audioInstrumentBank[];
+#include "intro_chip_ram.h"     /* the title tune's samples, shared with the sprite pool on the Amiga */
 extern uint8_t _aSoundHeroSng[];
 extern uint8_t _aSoundHeroIns[];
 
@@ -98,7 +97,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
         if (DosMusic_Style() && AudioSDL_StreamStart("title", 0) == 0) {
         } else
         if (AudioSDL_StartSong(heroSongBuffer, HERO_SONG_BUFFER_BYTES,
-                               _audioInstrumentBank, HERO_INS_BANK_BYTES, 0) != 0) {
+                               g_introChipRam.titleTuneSamples, (int)sizeof g_introChipRam.titleTuneSamples, 0) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
              * don't hammer the player every vblank. */
         }
@@ -121,7 +120,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
     if (_audioBankLoaded == 0)
     {
         StopAllAudioChannels();
-        InitAudioState(heroSongBuffer, _audioInstrumentBank);
+        InitAudioState(heroSongBuffer, g_introChipRam.titleTuneSamples);
         _audioBankLoaded = 1;
     }
     AudioApplyPresetToChannels(0);
@@ -174,7 +173,7 @@ retry:
     _audioBankLoaded = 0;
     if (AssetEnsureReadyWithRetry(_aSoundHeroSng, heroSongBuffer) != 0)
         goto retry;
-    if (LoadRNCToBufferNoBlit(_aSoundHeroIns, _audioInstrumentBank) != 0)
+    if (LoadRNCToBufferNoBlit(_aSoundHeroIns, g_introChipRam.titleTuneSamples) != 0)
         goto retry;
 }
 

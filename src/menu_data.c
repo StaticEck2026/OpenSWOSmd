@@ -56,6 +56,7 @@ extern void ChangeGameLength(void);
 extern void ChangeMenuMusic(void);
 extern void ChangeGameplayStyle(void);
 extern void ShowControlsMenu(void);
+extern void ChangePitchStyle(void);
 extern void ChangeNationality(void);
 extern void ChangePitchType(void);
 extern void ChangeSex(void);
@@ -496,6 +497,7 @@ extern char _aMenuMusic[];
 extern char _aGameplay[];
 extern char _aControls[];
 extern char _aRedefineKeys[];
+extern char _aPitches[];
 extern char _aMultiplayer[];
 extern char _aCredits[];
 extern char _aName[];
@@ -656,6 +658,7 @@ extern char* _friendlyPitchTypeTable[];
 extern char* _gameLengthStrTable[];
 extern char* _menuMusicStrTable[];
 extern char* _gameplayStyleStrTable[];
+extern char* _pitchStyleStrTable[];
 extern char* _pitchTypeOrSeasonTable[];
 extern char* _pitchTypeStrTable[];
 extern char* _positionFilterStringTable[];
@@ -2785,7 +2788,7 @@ Menu_DIYCup _diyCupMenu = {
     MENU_MARK_END_MENU
 };
 Menu_Options _optionsMenu = {
-    { OptionsMenuBeforeDraw, 0, 0, 17 },
+    { OptionsMenuBeforeDraw, 0, 0, 19 },
     MENU_MARK_BYTE_COORDS,
     {
         { 92, 0, 120, 15 },
@@ -2900,10 +2903,24 @@ Menu_Options _optionsMenu = {
     },
     {
         { -102, 148, -116, 11 },
-        { MENU_CMD_NAV, -1, -1, 14, 17 },
+        { MENU_CMD_NAV, -1, -1, 14, 19 },
         { MENU_CMD_COLORS, 0xD },
         { MENU_CMD_TEXT_PTR, 0x0, _aRedefineKeys },
         { MENU_CMD_ONSELECT_FIRE, ShowControlsMenu },
+        MENU_CMD_END
+    },
+    {
+        { 10, 148, -116, 11 },
+        { MENU_CMD_COLORS, 0x9 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aPitches },
+        MENU_CMD_END
+    },
+    {
+        { -102, 148, -116, 11 },
+        { MENU_CMD_NAV, -1, -1, 14, 19 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_STRING_TABLE, 0x0, _pitchStyleStrTable },
+        { MENU_CMD_ONSELECT_FIRE, ChangePitchStyle },
         MENU_CMD_END
     },
     { MENU_MARK_START_MENU, 0, 0 },

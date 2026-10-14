@@ -468,6 +468,9 @@ char _aDosStyle[] = "DOS";
 /* OPTIONS -> CONTROLS: the player's own keys (SDL; src/controls_menu.c). */
 char _aControls[] = "CONTROLS";
 char _aRedefineKeys[] = "REDEFINE KEYS";
+/* OPTIONS -> PITCHES: DOS / 2020, which pitches the AGA Amiga draws (pitch.c). */
+char _aPitches[] = "PITCHES";
+char _a2020Style[] = "2020";
 char _aGoals[] = "GOALS";
 char _aForm[] = "FORM";
 char _aLge[] = "LGE";

@@ -1121,6 +1121,10 @@ typedef struct Menu_Options
    * SDL only -- OptionsMenuBeforeDraw hides the row on the Amiga. */
   MenuEntry_Byte_Colors_TextPtr labelControls;
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect controls;
+  /* PITCHES: DOS / 2020 -- the AGA Amiga's pitch set (pitch.c). Amiga AGA only, in
+   * the same row as CONTROLS, which is SDL only: OptionsMenuBeforeDraw shows one. */
+  MenuEntry_Byte_Colors_TextPtr labelPitchStyle;
+  MenuEntry_Byte_Nav_Colors_StringTable_OnSelect pitchStyle;
   MenuMark_StartMenu startMenuExit;
   MenuCoords8 exit_rc;
   MenuCmd_Nav exit_nav;

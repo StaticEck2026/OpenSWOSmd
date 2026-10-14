@@ -3,7 +3,7 @@
  "onInit": "OptionsMenuBeforeDraw",
  "onReturn": null,
  "onDraw": null,
- "defaultEntry": 17,
+ "defaultEntry": 19,
  "items": [
   {
    "kind": "coords_mode",
@@ -441,7 +441,7 @@
      "left": -1,
      "right": -1,
      "up": 14,
-     "down": 17
+     "down": 19
     },
     {
      "op": "colors",
@@ -456,6 +456,59 @@
     {
      "op": "onselect_fire",
      "func": "ShowControlsMenu"
+    }
+   ]
+  },
+  {
+   "kind": "entry",
+   "coords": {
+    "x": 10,
+    "y": 148,
+    "w": -116,
+    "h": 11
+   },
+   "commands": [
+    {
+     "op": "colors",
+     "frame_color": 0,
+     "background_color": 9
+    },
+    {
+     "op": "text",
+     "flags": "0x0",
+     "str": "_aPitches"
+    }
+   ]
+  },
+  {
+   "kind": "entry",
+   "coords": {
+    "x": -102,
+    "y": 148,
+    "w": -116,
+    "h": 11
+   },
+   "commands": [
+    {
+     "op": "nav",
+     "left": -1,
+     "right": -1,
+     "up": 14,
+     "down": 19
+    },
+    {
+     "op": "colors",
+     "frame_color": 0,
+     "background_color": 13
+    },
+    {
+     "op": "string_table",
+     "flags": "0x0",
+     "table": "_pitchStyleStrTable"
+    },
+    {
+     "op": "onselect_fire",
+     "func": "ChangePitchStyle"
     }
    ]
   },

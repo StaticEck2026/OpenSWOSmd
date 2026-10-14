@@ -41,40 +41,30 @@ uint8_t  _ciaa_pra = 0xFF;
  * Up/Right/Down/Left -> 2/1/3/0. */
 uint16_t _nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
 
-/* ---- Framebuffer / bitplane storage -------------------------------- *
- * On the real hardware the Amiga kept the bitplanes in chip RAM, with
- * the copper pointing at them via bplXpt. We allocate fixed-size
- * buffers that match FRONTBUFFER_SIZE_TOTAL_BYTES. */
-
-/* Size of one bitplane scanline = PLANE_STRIDE (44). There are
- * FRONTBUFFER_TOTAL_LINES (273) scanlines, for a grand total of
- * PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES = 12012 bytes per plane. */
-#define BITPLANE_BYTES (PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES)
-
-/* "Front" set (visible this frame) + "alt" set (drawn into).
- * On Amiga: must live in CHIP RAM because the copper/bitplane DMA can
- * only fetch from chip memory. SWOS_CHIP_BSS routes these into the
- * .BSSInChip.MEMF_CHIP section the linker maps to chip RAM. On SDL the
- * attribute is a no-op (regular BSS). */
-SWOS_CHIP_BSS uint8_t _bitPlane0Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane1Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane2Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane3Base[BITPLANE_BYTES];
+/* ---- Hardware sprite DMA data -------------------------------------- *
+ * Despite the names, the bitPlaneN buffers are not screen bitplanes: the copper
+ * points the hardware SPRITE channels at them (UpdatePlanePtrsAndBlitParams,
+ * COP_SPR_B0_OFF), and DrawSprites' HW band writes each sprite's control words and
+ * two words per line into them (renderSpriteBandPlanePair, sprites.c). SWOS2.s gave
+ * each $384 (900) bytes. They were 12,012 bytes each here -- sized as if they were
+ * bitplanes -- which was 192 KB of chip RAM for 16 of them; 2 KB each is more than
+ * twice what the original ever had room for.
+ *
+ * Front set (shown this frame) + alt set (drawn into). CHIP RAM: sprite DMA reads
+ * nowhere else. On SDL the attribute is a no-op. */
+#define SPRITE_DMA_BYTES 2048
+SWOS_CHIP_BSS uint8_t _bitPlane0Base[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane1Base[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane2Base[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane3Base[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane0BaseAlt[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane1BaseAlt[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane2BaseAlt[SPRITE_DMA_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane3BaseAlt[SPRITE_DMA_BYTES];
 #ifdef AGA
-SWOS_CHIP_BSS uint8_t bitPlane4Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane5Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane6Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane7Base[BITPLANE_BYTES];
-#endif
-SWOS_CHIP_BSS uint8_t _bitPlane0BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane1BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane2BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t _bitPlane3BaseAlt[BITPLANE_BYTES];
-#ifdef AGA
-SWOS_CHIP_BSS uint8_t bitPlane4BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane5BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane6BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane7BaseAlt[BITPLANE_BYTES];
+/* Sprites 4-7 are never drawn: their channels only ever point at an empty sprite
+ * (a zero control long), so all four, front and alt, share this one. */
+SWOS_CHIP_BSS uint8_t _emptySpriteDma[8];
 #endif
 
 /* Bitplane base "pointers" — the Amiga sets these to the address of

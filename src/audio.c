@@ -101,14 +101,21 @@ static void ensureChannelPtrs(void)
 }
 
 /* ================================================================
- * Access (inline equivalent of Resload.s:Access)
+ * Access (Resload.s:Access) -- a track's address from its table entry
  *
- * Relocates a pointer by adding bankSectionPtrs[5] and masking
- * to 24-bit Amiga address space.
+ * The entry is an offset into bank section 5. The unpatched game added the two
+ * (`adda.l AUDIOSTATE_BANKSECTIONPTRS+$14(a5),a1`, still in SWOS2.s as a comment).
+ * The WHDLoad install our Resload.s comes from masks to 24 bits to fix the
+ * highlights ("Fixes bug with Highlights play!") -- but it masks the SUM, and says
+ * itself "potential issue if A1 is in fast!!!": the song data is in fast RAM, and
+ * fast RAM above 16 MB (Zorro III, any accelerator) lost the top byte of every
+ * track's address, so the music played a drum or two and then nothing (2026-10-13,
+ * seen from Workbench, not when booted bare). Mask the OFFSET instead, then add:
+ * the same address wherever the base sits below 16 MB, and right above it.
  * ================================================================ */
 static uint8_t *accessRelocate(uint8_t *ptr)
 {
-    return (uint8_t *)(((uintptr_t)ptr + (uintptr_t)_audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
+    return _audioState.bankSectionPtrs[5] + ((uint32_t)(uintptr_t)ptr & 0x00FFFFFFu);
 }
 
 /* ================================================================
@@ -462,7 +469,7 @@ void AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
     noteOffset = noteId * 4;
     noteData = *(uint8_t **)(noteTable + noteOffset);
 
-    /* Access: relocate pointer (add bankSectionPtrs[5], mask to 24-bit) */
+    /* Access: the table entry is an offset into bank section 5 */
     noteData = accessRelocate(noteData);
 
     /* First byte of note data is the wave index */

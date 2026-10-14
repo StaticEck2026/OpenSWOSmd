@@ -862,6 +862,16 @@ struct __attribute__((packed)) {
     { (void *)_aAmigaStyle, (void *)_aDosStyle }
 };
 
+/* OPTIONS -> PITCHES: DOS / 2020, indexed by _pitchStyleOption (pitch.c). */
+extern char _a2020Style[];
+extern uint16_t _pitchStyleOption;
+struct __attribute__((packed)) {
+    void    *indexPtr; uint16_t base; void    *entries[2];
+} _pitchStyleStrTable = {
+    (&_pitchStyleOption), 0,
+    { (void *)_aDosStyle, (void *)_a2020Style }
+};
+
 #undef ON_OFF_TABLE
 #undef MONTHS
 /* ---- DIY Tournament string tables (SWOS2.s lines 75323..75554) ----
