@@ -206,6 +206,9 @@ uint8_t Platform_NearestColour(uint8_t r, uint8_t g, uint8_t b);
  * When the display itself paces (vsync at the game's rate) there is no deadline to move,
  * and it sleeps instead. */
 void Platform_DelayNextFrame(uint32_t us);
+/* How many frames late the frame limiter still catches up on (1 = drop any backlog
+ * past one frame, the default). A live match sets its prediction window. */
+void Platform_SetCatchUpFrames(int frames);
 
 /* A function Platform_VBlank calls every frame, whatever is on screen -- or NULL.
  * For a connection that must not go quiet while a modal menu owns the loop: the

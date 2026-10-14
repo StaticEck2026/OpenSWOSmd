@@ -35,6 +35,7 @@
 
 extern int      Platform_Present(void);
 extern void     Platform_DelayNextFrame(uint32_t us);
+extern void     Platform_SetCatchUpFrames(int frames);
 extern void     Platform_QuiesceTimerThread(void);
 extern void     Platform_ResumeTimerThread(void);
 extern void     _Int3TimerHandler(void);
@@ -1502,6 +1503,7 @@ static void logStats(uint32_t now, int32_t force)
 
 static void liveEnd(int32_t outcome, const char *why)
 {
+    Platform_SetCatchUpFrames(1);       /* off-line pacing again: drop a backlog */
     /* A match that ends EARLY has its frames written too, whatever ended it. The peer
      * that notices the desync first ends the match, and the other one then sees the
      * disconnect before its own desync event and would never write its half -- and half a
@@ -1884,6 +1886,10 @@ static int32_t p2pFrame(void)
         if (s_np.live) {
             s_np.prepared = 1;
             s_np.lastProgressMs = now;
+            /* A stall (the OS, a hitch) is caught up on, as far as the other game can be
+             * ahead, so the player who stalled pays for it and not the other one
+             * (Platform_SetCatchUpFrames). Back to 1 in liveEnd. */
+            Platform_SetCatchUpFrames(MAX_PREDICTION);
             resetControlHistory();      /* before GGPO saves frame 0 */
             /* And the clock, AGAIN, here. StartLive zeroed it, but the pre-match screens
              * run in between -- the stadium line-up and its waits -- and the SDL timer

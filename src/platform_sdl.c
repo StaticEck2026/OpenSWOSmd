@@ -256,6 +256,9 @@ static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame call
 
 static Uint64        s_perf_freq;
 static Uint64        s_next_frame_perf;  /* high-res counter for 50 Hz pacing */
+/* How many frames late the limiter will still catch up on, by running frames back to
+ * back, before it drops the rest (Platform_SetCatchUpFrames). */
+static int           s_catchup_frames = 1;
 static int           s_display_hz;       /* monitor refresh, 0 = unknown. See the pacing note in Platform_VBlank. */
 static double        k_frame_secs = 1.0 / 50.0;  /* refreshed per frame from the
                                                   * active game style (DOS 70 / Amiga 50) */
@@ -2217,6 +2220,18 @@ int Platform_VBlank(void)
 static double s_wasm_extra_ms;
 #endif
 
+/* Catch-up after a stall. Offline the limiter drops a backlog of more than one frame:
+ * a burst of frames after a hitch only looks worse. A LIVE match sets it to its
+ * prediction window (netplay_match.c) and back to 1 when it ends, on thd79's
+ * advice: there a game that stalled and then dropped the frames comes back BEHIND,
+ * and it is the OTHER player who pays -- held at the prediction limit through the
+ * stall, then slowed by time sync until the two are level. Catching up on as many
+ * frames as the other game can be ahead puts the cost on the player who stalled. */
+void Platform_SetCatchUpFrames(int frames)
+{
+    s_catchup_frames = frames < 1 ? 1 : frames;
+}
+
 void Platform_DelayNextFrame(uint32_t us)
 {
 #ifdef SWOS_WASM_BUILD
@@ -2307,7 +2322,10 @@ int Platform_Present(void)
         double sleep_ms = s_frame_deadline - now;
         if (sleep_ms < 1.0) {                 /* work overran the frame budget */
             sleep_ms = 1.0;                   /* still yield so the browser paints + polls input */
-            s_frame_deadline = now + period;  /* drop the backlog */
+            /* Drop the backlog -- beyond a live match's catch-up (Platform_SetCatchUpFrames),
+             * which runs back to back, as the native limiter does. */
+            if (now - s_frame_deadline > period * (s_catchup_frames - 1))
+                s_frame_deadline = now + period - period * (s_catchup_frames - 1);
         } else if (sleep_ms > period) {       /* first frame / clock jumped back */
             sleep_ms = period;
             s_frame_deadline = now + period;
@@ -2385,9 +2403,13 @@ int Platform_Present(void)
     s_next_frame_perf += (Uint64)((double)s_perf_freq * k_frame_secs);
     Uint64 now = SDL_GetPerformanceCounter();
 
-    if ((Sint64)(now - s_next_frame_perf) > (Sint64)((double)s_perf_freq * k_frame_secs)) {
-        /* More than a full frame behind — give up on catching up. */
-        s_next_frame_perf = now;
+    {
+    const Sint64 frame_perf = (Sint64)((double)s_perf_freq * k_frame_secs);
+    if ((Sint64)(now - s_next_frame_perf) > frame_perf * s_catchup_frames) {
+        /* Further behind than we catch up on (one frame, or a live match's prediction
+         * window: Platform_SetCatchUpFrames) — drop the rest, and run what is left
+         * back to back. */
+        s_next_frame_perf = now - (Uint64)(frame_perf * (s_catchup_frames - 1));
     } else {
         /* Sleep almost-to-deadline, leaving a 2 ms margin for the spin. */
         const Uint64 spin_margin = (Uint64)((double)s_perf_freq * 0.002);
@@ -2402,6 +2424,7 @@ int Platform_Present(void)
         while (SDL_GetPerformanceCounter() < s_next_frame_perf) {
             /* tight loop — SDL_GetPerformanceCounter is a CPU register read */
         }
+    }
     }
 
     return _quitToDos ? 1 : 0;
