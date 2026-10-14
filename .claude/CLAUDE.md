@@ -230,7 +230,7 @@ beside it.
 |---|---|---|
 | `dist/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
 | `dist/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
-| `dist/SWOS-Amiga.zip` | 2 MB | `SWOS2` + only the trees the m68k binary opens + an empty `save/` |
+| `dist/SWOS-Amiga.zip` | 2 MB | a SWOS drawer + icon: `SWOS2`, its Workbench script and icon, only the trees the m68k binary opens, `c`/`s`, an empty `save/` |
 | `dist/SWOS-Setup.exe` | 14 MB | Inno Setup installer — the Windows half of the full zip, for a tester who'd rather double-click |
 | `dist/SWOS.nsp` | 84 MB | the Switch package (`scripts/build_switch.sh`) |
 | `dist/SWOS-macOS*.zip` | 19 / 1.4 MB | from `scripts/build_macos.sh` — see below |
@@ -307,19 +307,24 @@ libraries on any platform, and the *runnable* ones each carry their own
 (`SWOS-Setup.exe`/`SWOS-full.zip` the Cygwin DLLs and now `lib/<arch>`,
 `SWOS-macOS-app.zip` its bundled `SDL2.framework`). `--no-full` skips the big one.
 
-The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`. The data list
+The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`, in a drawer (below). The data list
 was derived from the built binary, not guessed —
 `strings bin/SWOS2 | grep -oE '^(data|grafs|...)/'` shows it opens exactly those
 four plus `save/`, and never touches `grafs_dos`, `grafs_2020`, `grafs_arcade` or
 `data_json` (SDL-only asset tiers, ~50 MB the Amiga can't load). `save/` ships
 EMPTY: the binary writes there but won't create the directory.
 
-`bin/c` and `bin/s` are the **AmigaDOS boot files** and that strings rule cannot
-find them — the binary never opens them, AmigaDOS does. `s/startup-sequence`
-runs `SWOS2` and then `c/UAEquit` to close the emulator, so unpacking the drop
-onto the volume FS-UAE/WinUAE boots from is all a tester has to do. (The harness
-is different: it mounts `bin/` as **DH1:** and `cd`s in, so the same relative
-paths resolve without booting from it.)
+The zip is a **SWOS drawer** to drop onto a hard drive as it is: `SWOS.info` (the drawer's
+icon) and `SWOS/` at the top, everything else inside the drawer. Workbench starts it from
+`SWOS/SWOS`, a one-line **script** (`SWOS2`) whose Project icon runs `C:IconX` -- IconX
+EXECUTEs the file the icon belongs to, so that file must never be the binary ("EXECUTE:
+Invalid Directive"). Those files, the icons and their `.uaem` sidecars (the script flag a zip
+cannot carry) live in `packaging/amiga/`, which mirrors the layout. `bin/c` and `bin/s` (the
+**AmigaDOS boot files**: `s/startup-sequence` runs `SYS:SWOS2` then `c/UAEquit`) ship INSIDE
+the drawer, so mounting the drawer as an emulator's boot volume still runs the game -- never at
+the top, where a dropped-in `s/` would replace the drive's own startup-sequence. (The harness is
+different: it mounts `bin/` as **DH1:** and `cd`s in, so the same relative paths resolve without
+booting from it.)
 
 The **Windows installer** is the fourth artifact, built last because it is the
 only one that needs a tool on the Windows side. `scripts/build_installer.sh`

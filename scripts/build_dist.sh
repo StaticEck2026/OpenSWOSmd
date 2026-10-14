@@ -23,9 +23,9 @@
 #                       unzip and play. Excludes save/ (per-user dir, and 24 MB
 #                       of test careers here).
 #   dist/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
-#                       (data grafs grafs_aga sound) + the AmigaDOS boot files
-#                       (c s) + an empty save/. Unpack onto the volume
-#                       FS-UAE/WinUAE boots from and s/startup-sequence runs it.
+#                       (data grafs grafs_aga sound), as a SWOS drawer with its
+#                       icon: drop it onto a hard drive and double-click SWOS.
+#                       c/ s/ inside the drawer boot an emulator from it.
 #   dist/SWOS-Setup.exe the Inno Setup installer: the same content as
 #                       SWOS-full.zip minus the non-Windows binaries, for a
 #                       tester who would rather double-click than unzip.
@@ -250,13 +250,30 @@ LINUX_LIBDIR="${LINUX_LIBDIR:-/usr/lib}"
 # Copy the contents onto a volume FS-UAE/WinUAE mounts (the harness mounts bin/
 # as DH1: and cd's in, so the same relative paths resolve).
 #
-# c/ and s/ are the AmigaDOS BOOT infrastructure and are NOT discoverable by the
-# strings rule above — the binary never opens them, AmigaDOS does. s/startup-
-# sequence is the whole point: mount the drop as the boot volume and it runs
-# SWOS2 and then quits the emulator via c/UAEquit. Without them the drop is a
-# pile of files someone has to launch by hand.
+# The zip is laid out to be dropped as it is onto a hard drive (2026-10-13): a SWOS
+# drawer and its icon at the top, everything inside the drawer --
+#
+#   SWOS.info                  the drawer's icon
+#   SWOS/SWOS2                 the binary
+#   SWOS/SWOS + SWOS.info      what Workbench starts: double-click the icon
+#   SWOS/data grafs grafs_aga sound save
+#   SWOS/c SWOS/s              to boot an emulator straight from the drawer
+#
+# packaging/amiga mirrors that layout and holds what the strings rule above cannot
+# find, because AmigaDOS opens it, not the binary:
+#   - SWOS/SWOS is a one-line AmigaDOS SCRIPT, "SWOS2". Its icon is a Project whose
+#     default tool is C:IconX, and IconX EXECUTEs the file the icon belongs to -- so
+#     that file must be a script, never the binary (renaming SWOS2 to SWOS gives
+#     "EXECUTE: Invalid Directive"). IconX starts in the icon's drawer: no CD.
+#   - the two icons, and FS-UAE/WinUAE .uaem sidecars carrying the Amiga protection
+#     bits (the script flag) a zip cannot.
+# c/ and s/ go INSIDE the drawer, never at the top: dropped onto a hard drive, a top
+# level s/ would replace that drive's own S:startup-sequence. Inside the drawer they
+# do nothing until the drawer itself is mounted as the boot volume, when
+# s/startup-sequence runs SYS:SWOS2 and then c/UAEquit.
 AMIGA_DATA_DIRS="data grafs grafs_aga sound"
 AMIGA_BOOT_DIRS="c s"
+AMIGA_PKG_DIR="packaging/amiga"
 CYGWIN_BIN="${CYGWIN_BIN:-/mnt/c/cygwin64/bin}"
 
 JOBS="$(nproc 2>/dev/null || echo 4)"
@@ -647,29 +664,31 @@ fi
 
 # ---- package: Amiga dist (m68k binary + the trees it actually reads) ---------
 if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; then
-    banner "package -> $AMIGA_ZIP_PATH  (Amiga: SWOS2 + Amiga data)"
+    banner "package -> $AMIGA_ZIP_PATH  (Amiga: a SWOS drawer to drop onto a hard drive)"
     AMIGA_DIRS=""
     for d in $AMIGA_DATA_DIRS $AMIGA_BOOT_DIRS; do
-        [ -d "bin/$d" ] && AMIGA_DIRS="$AMIGA_DIRS $d"
+        if [ -d "bin/$d" ]; then AMIGA_DIRS="$AMIGA_DIRS $d"
+        else echo "!! bin/$d missing" >&2; fi
     done
-    for d in $AMIGA_BOOT_DIRS; do
-        [ -d "bin/$d" ] || echo "!! bin/$d missing — the drop will not self-boot" >&2
-    done
-    [ -f "bin/s/startup-sequence" ] ||
-        echo "!! bin/s/startup-sequence missing — the drop will not self-boot" >&2
+    [ -f "$AMIGA_PKG_DIR/SWOS/SWOS" ] && [ -f "$AMIGA_PKG_DIR/SWOS/SWOS.info" ] ||
+        echo "!! $AMIGA_PKG_DIR/SWOS/SWOS or its icon missing — the drop will not start from Workbench" >&2
     outdir "$AMIGA_ZIP_PATH"
     rm -f "$AMIGA_ZIP_PATH"
-    ( cd bin && zip -j -q "$ROOT/$AMIGA_ZIP_PATH" SWOS2 ) &&
-    ( cd bin && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" $AMIGA_DIRS -x '*/.DS_Store' ) && {
-        # Empty save/ — the binary writes there but won't mkdir it. Staged from a
-        # temp dir so bin/save's 24 MB of test careers cannot leak in.
-        AMIGA_TMP="$(mktemp -d)"
-        mkdir -p "$AMIGA_TMP/save"
-        ( cd "$AMIGA_TMP" && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" save )
-        rm -rf "$AMIGA_TMP"
-        echo "-- data:    $AMIGA_DIRS + empty save/"
+    # Staged, so the zip holds exactly the layout above. save/ is created EMPTY --
+    # the binary writes there but won't mkdir it -- and never copied from bin/save,
+    # whose 24 MB of test careers must not leak in.
+    AMIGA_TMP="$(mktemp -d)"
+    if cp -R "$AMIGA_PKG_DIR/." "$AMIGA_TMP/" &&
+       cp bin/SWOS2 "$AMIGA_TMP/SWOS/" &&
+       ( cd bin && cp -R $AMIGA_DIRS "$AMIGA_TMP/SWOS/" ) &&
+       mkdir -p "$AMIGA_TMP/SWOS/save" &&
+       ( cd "$AMIGA_TMP" && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" . -x '*/.DS_Store' ); then
+        echo "-- drawer:  SWOS/ + SWOS.info; inside it SWOS2, the Workbench script and icon,$AMIGA_DIRS, empty save/"
         echo "-- OK: $AMIGA_ZIP_PATH"
-    }
+    else
+        echo "-- FAIL: $AMIGA_ZIP_PATH" >&2
+    fi
+    rm -rf "$AMIGA_TMP"
 fi
 
 # ---- package: Windows installer (Inno Setup) --------------------------------

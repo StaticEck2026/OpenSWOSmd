@@ -86,6 +86,9 @@ bin/SWOS2.map
 
 # FS-UAE directory-filesystem metadata sidecars + emulator state.
 *.uaem
+# ... except the Amiga drop's own: they carry the script flag of the Workbench launcher
+!packaging/amiga/**/*.uaem
+!packaging/amiga/*.uaem
 uae/fs-uae/
 
 __pycache__/

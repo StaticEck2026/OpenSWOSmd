@@ -1,0 +1,89 @@
+
+ OPENSWOS for the Amiga
+ =========================
+
+ Sensible World of Soccer, rebuilt in C from the original Amiga game, so
+ that one source code runs on the Amiga, Windows, macOS, Linux, the web
+ and more. Same game, same feel: the aim is to play exactly as the
+ original Amiga release did.
+
+ Reverse engineered, ported to C and AGA version by Ben Baker (benbaker76),
+ ben@baker76.com
+
+ "Sensible World of Soccer" (C) 1994-97 Sensible Software.
+ OpenSWOS is a fan project and is not affiliated with Sensible Software
+ or its current rights holders.
+
+ Downloads, the other versions and the changelog:
+        https://baker76.com/swos.html
+
+
+ WHAT YOU NEED
+ -------------
+
+ - An AGA Amiga with a 68020 or better: an A1200 or A4000, or an
+   emulator set up as one (FS-UAE, WinUAE).
+ - A hard drive, and Workbench to start it from.
+
+
+ INSTALLING
+ ----------
+
+ Unpack the archive onto your hard drive as it is. You get a SWOS drawer
+ with its icon. Open the drawer and double-click SWOS.
+
+ Everything the game needs is inside the drawer, so it can live anywhere:
+ move it as a whole, never the files one by one.
+
+ Saved careers, seasons, tactics and highlights go in the "save" drawer.
+
+
+ BOOTING AN EMULATOR STRAIGHT INTO THE GAME
+ -----------------------------------------
+
+ Point the emulator's boot hard drive at the SWOS drawer itself. Its own
+ startup-sequence (in s) starts the game, and leaving the game closes the
+ emulator. The c and s drawers do nothing when you start the game from
+ Workbench.
+
+
+ WHAT IS IN THE DRAWER
+ ---------------------
+
+ SWOS          what the icon starts (a one-line script that runs SWOS2)
+ SWOS2         the game
+ data          teams, competitions and the rest of the game's data
+ grafs         graphics
+ grafs_aga     AGA graphics
+ sound         music and sound effects
+ save          your saved games
+ c, s          only for booting an emulator from the drawer (above)
+
+
+ PROBLEMS
+ --------
+
+ The version is shown at the bottom of the main menu. Please give it with
+ any report, so we know which build you were playing.
+
+ THIS PACKAGE COMES WITH NO WARRANTY OF ANY KIND. USE IT AT YOUR OWN RISK.
+
+
+ CREDITS
+ -------
+
+ Project Management             Playaveli
+ Engineering Lead               benbaker76
+ SWOS 2020 Feature Engineering  starwindz
+ SWOS Reverse Engineering       benbaker76 (Amiga) / zkz (DOS)
+ SWOS AGA                       benbaker76
+ SWOS Live (swos.eu)            Redhair
+ SWOS Multiplayer (GGPO-X)      thd79
+ SWOS Web Online Rankings       ElMichaJ
+ Custom Graphics                Francescomanetti82
+ Beta Testers                   crom1, ElMichaJ, EMPI, gatifun, petarku,
+                                Playaveli, Predicador, Redhair, segra,
+                                starwindz, thd79
+ Donators                       benbaker76, Playaveli, starwindz, Petarku,
+                                gatifun, burellapaolo, az0man0,
+                                Cartoplotus68, JoSon, aliko
