@@ -1125,6 +1125,46 @@ __attribute__((used, externally_visible))
 void ProcessSpriteBlitQueue(void)
 {
     volatile uint32_t *queue;
+#if !defined(SWOS_SDL_BUILD) && defined(AGA)
+    /* 2026-10-14 (AmigaScope: the undraw was ~10% of a stock A1200's frame, most of it
+     * per-blit overhead around one small blit a bob):
+     *  - blitter priority ON for the whole batch, not toggled around every wait: the CPU
+     *    only polls here, and the bitplanes and the copper still come first;
+     *  - the next entry is read BEFORE the wait, and the end of the queue needs no wait
+     *    at all -- the last blit runs on, and every later blitter user waits first;
+     *  - the modulos are written only when they change (they follow the bob's width). */
+    uint16_t lastMod = 0xFFFFu;
+
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    queue = (volatile uint32_t *)_spriteBlitQueue;
+    for (;;) {
+        uint32_t srcPtr = queue[0];
+        uint16_t *entry16 = (uint16_t *)queue;
+        uint16_t mod;
+        if ((int32_t)srcPtr < 0)
+            break;                              /* sentinel: end of queue */
+        mod = entry16[4];
+        (void)(_custom->dmaconr & (1u << 14));
+        while (_custom->dmaconr & (1u << 14)) {}
+        BLT_L(_custom->bltapt, srcPtr);
+        BLT_L(_custom->bltdpt, queue[1]);
+        if (mod != lastMod) {
+            BLT_W(_custom->bltamod, mod);
+            BLT_W(_custom->bltdmod, mod);       /* same mod for A and D */
+            lastMod = mod;
+        }
+        BLT_W(_custom->bltsize, entry16[5]);    /* kicks the blit */
+        queue = (volatile uint32_t *)((uint8_t *)queue + 12);
+    }
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+#else
+
 
     /* Enable blitter and wait idle */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
@@ -1164,6 +1204,7 @@ void ProcessSpriteBlitQueue(void)
         queue = (volatile uint32_t *)((uint8_t *)queue + 12);
     }
 
+#endif
     /* Reset queue: write sentinel at start */
     {
         uint32_t *queueBase = (uint32_t *)_spriteBlitQueue;

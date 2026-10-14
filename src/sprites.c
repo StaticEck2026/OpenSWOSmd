@@ -335,6 +335,9 @@ void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
      * 16-colour sprite; 8 for soccer_s). Was hard NUM_PLANES(8), which gathered planes
      * 4-7 from the NEXT sprite for a 4-plane sprite. Arrays sized to the max (8). */
     uint16_t sp = spriteNumPlanes((int16_t)spriteIndex);
+    /* A padded running frame (display.h, spriteIsPadded8) has 4 COLOUR planes: the
+     * other 4 are zeros and stay zeros, as a 4-plane frame drops any bit above 4. */
+    uint16_t cp = spriteIsPadded8((int16_t)spriteIndex) ? SPRITE_NUM_PLANES : sp;
     uint16_t wquads = (uint16_t)spr->wquads;
     uint16_t nlines = (uint16_t)spr->nlines;
     uint16_t planeRowBytes = wquads << 1;
@@ -347,28 +350,28 @@ void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
     uint16_t *dataBase = (uint16_t *)spr->sprData;
     uint16_t *planes[PITCH_NUM_PLANES];
     int16_t pl;
-    for (pl = 0; pl < (int16_t)sp; pl++)
+    for (pl = 0; pl < (int16_t)cp; pl++)
         planes[pl] = (uint16_t *)((uint8_t *)dataBase + pl * planeRowBytes);
 
     uint16_t skipTransparent = (*colorTable == 0);
     for (uint16_t line = 0; line < nlines; line++) {
         for (uint16_t quad = 0; quad < wquads; quad++) {
             uint16_t w[PITCH_NUM_PLANES];
-            for (pl = 0; pl < (int16_t)sp; pl++) w[pl] = *planes[pl];
+            for (pl = 0; pl < (int16_t)cp; pl++) w[pl] = *planes[pl];
             for (uint16_t pixel = 0; pixel < 16; pixel++) {
                 uint16_t colorIdx = 0;
-                for (pl = (int16_t)sp - 1; pl >= 0; pl--) {
+                for (pl = (int16_t)cp - 1; pl >= 0; pl--) {
                     colorIdx = (colorIdx << 1) | ((w[pl] >> 15) & 1);
                     w[pl] <<= 1;
                 }
                 if (skipTransparent && colorIdx == 0) continue;
                 uint16_t newColor = colorTable[colorIdx];
-                for (pl = 0; pl < (int16_t)sp; pl++)
+                for (pl = 0; pl < (int16_t)cp; pl++)
                     if (newColor & (1 << pl)) w[pl] |= 1;
             }
-            for (pl = 0; pl < (int16_t)sp; pl++) *planes[pl]++ = w[pl];
+            for (pl = 0; pl < (int16_t)cp; pl++) *planes[pl]++ = w[pl];
         }
-        for (pl = 0; pl < (int16_t)sp; pl++)
+        for (pl = 0; pl < (int16_t)cp; pl++)
             planes[pl] = (uint16_t *)((uint8_t *)planes[pl] + interplaneSkip);
     }
 #endif
@@ -1528,30 +1531,52 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint16_t clearCon0 = (a0->maskPtr != 0)
             ? (uint16_t)(BLTCON0_CLEAR_MASK | shiftVal)      /* ~mask & dest */
             : (uint16_t)(BLTCON0_USED_LF_00 | shiftVal);     /* no mask: zero-fill footprint */
+        if (sp == NUM_PLANES && a0->maskPtr != 0) {
+            /* ONE blit: a frame stored 8 planes deep with its mask repeated per plane
+             * (display.h, spriteIsPadded8). Source and destination are both a plane row
+             * at a time -- the sprite's rows at its stride, the playfield's at
+             * PLANE_STRIDE, which is exactly the 8-plane interleave -- so A?B:C over
+             * lines*8 rows is the eight per-plane blits below in one: planes 0-3 get the
+             * sprite, planes 4-7 (B is zero there) mask?0:background, as the clear blit. */
+            waitBlit();
+            BLT_W(_custom->bltcon0, bltcon0);
+            BLT_W(_custom->bltamod, (uint16_t)(srcStrideBytes - blitWidthBytes));
+            BLT_W(_custom->bltbmod, (uint16_t)(srcStrideBytes - blitWidthBytes));
+            BLT_W(_custom->bltcmod, (uint16_t)(PLANE_STRIDE - blitWidthBytes));
+            BLT_W(_custom->bltdmod, (uint16_t)(PLANE_STRIDE - blitWidthBytes));
+            BLT_L(_custom->bltapt, srcMask2);
+            BLT_L(_custom->bltbpt, srcData);
+            BLT_L(_custom->bltcpt, destAddr);
+            BLT_L(_custom->bltdpt, destAddr);
+            BLT_W(_custom->bltsize, (uint16_t)(((uint16_t)d3 << NUM_PLANES_SHIFT << 6) | d7));
+        } else
+        /* The blit mode and modulos are the same for every cookie-cut plane, and again for
+         * every clear plane: written once each, and only the pointers and the size per
+         * plane. A blitter register keeps its value, and nothing else touches the blitter
+         * while a bob is drawn (the VBlank interrupt does not). Each plane's blit must end
+         * before the next starts, so the CPU still waits between them -- but now on fewer
+         * register writes (2026-10-14: DrawSpriteClipped was a third of the A1200's frame). */
         {
             int16_t p;
+            waitBlit();
+            BLT_W(_custom->bltcon0, bltcon0);
+            BLT_W(_custom->bltamod, drawSrcMod);
+            BLT_W(_custom->bltbmod, drawSrcMod);
+            BLT_W(_custom->bltcmod, drawDestMod);
+            BLT_W(_custom->bltdmod, drawDestMod);
             for (p = 0; p < NUM_PLANES; p++) {
                 uint32_t pdst = destAddr + (uint32_t)p * PLANE_STRIDE;
-                waitBlit();
+                if (p) waitBlit();
                 if (p < (int16_t)sp) {
-                    BLT_W(_custom->bltcon0, bltcon0);
-                    BLT_W(_custom->bltamod, drawSrcMod);
-                    BLT_W(_custom->bltbmod, drawSrcMod);
-                    BLT_W(_custom->bltcmod, drawDestMod);
-                    BLT_W(_custom->bltdmod, drawDestMod);
                     BLT_L(_custom->bltapt, srcMask2 + (uint32_t)p * srcStrideBytes);
                     BLT_L(_custom->bltbpt, srcData  + (uint32_t)p * srcStrideBytes);
-                    BLT_L(_custom->bltcpt, pdst);
-                    BLT_L(_custom->bltdpt, pdst);
                 } else {
-                    BLT_W(_custom->bltcon0, clearCon0);
-                    BLT_W(_custom->bltamod, drawSrcMod);
-                    BLT_W(_custom->bltcmod, drawDestMod);
-                    BLT_W(_custom->bltdmod, drawDestMod);
+                    if (p == (int16_t)sp)
+                        BLT_W(_custom->bltcon0, clearCon0);
                     BLT_L(_custom->bltapt, srcMask2);        /* plane-0 silhouette */
-                    BLT_L(_custom->bltcpt, pdst);
-                    BLT_L(_custom->bltdpt, pdst);
                 }
+                BLT_L(_custom->bltcpt, pdst);
+                BLT_L(_custom->bltdpt, pdst);
                 BLT_W(_custom->bltsize, drawBltsize);
             }
         }
@@ -1584,30 +1609,41 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             uint32_t tailSrc  = srcData  + (uint32_t)d3 * (uint32_t)sp * (uint32_t)srcStrideBytes;
             uint32_t tailMaskS = srcMask2 + (uint32_t)d3 * (uint32_t)sp * (uint32_t)srcStrideBytes;
             uint16_t tailDrawBltsize = ((uint16_t)d4 << 6) | d7;             /* d4 rows, 1 plane */
+            if (sp == NUM_PLANES && a0->maskPtr != 0) {
+                /* One blit, as the main draw above. */
+                waitBlit();
+                BLT_W(_custom->bltcon0, bltcon0);
+                BLT_W(_custom->bltamod, (uint16_t)(srcStrideBytes - blitWidthBytes));
+                BLT_W(_custom->bltbmod, (uint16_t)(srcStrideBytes - blitWidthBytes));
+                BLT_W(_custom->bltcmod, (uint16_t)(PLANE_STRIDE - blitWidthBytes));
+                BLT_W(_custom->bltdmod, (uint16_t)(PLANE_STRIDE - blitWidthBytes));
+                BLT_L(_custom->bltapt, tailMaskS);
+                BLT_L(_custom->bltbpt, tailSrc);
+                BLT_L(_custom->bltcpt, destAddr2);
+                BLT_L(_custom->bltdpt, destAddr2);
+                BLT_W(_custom->bltsize, (uint16_t)(((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | d7));
+            } else
             {
-                int16_t p;
+                int16_t p;      /* as above: mode and modulos once, pointers per plane */
+                waitBlit();
+                BLT_W(_custom->bltcon0, bltcon0);
+                BLT_W(_custom->bltamod, drawSrcMod);
+                BLT_W(_custom->bltbmod, drawSrcMod);
+                BLT_W(_custom->bltcmod, drawDestMod);
+                BLT_W(_custom->bltdmod, drawDestMod);
                 for (p = 0; p < NUM_PLANES; p++) {
                     uint32_t pdst = destAddr2 + (uint32_t)p * PLANE_STRIDE;
-                    waitBlit();
+                    if (p) waitBlit();
                     if (p < (int16_t)sp) {
-                        BLT_W(_custom->bltcon0, bltcon0);
-                        BLT_W(_custom->bltamod, drawSrcMod);
-                        BLT_W(_custom->bltbmod, drawSrcMod);
-                        BLT_W(_custom->bltcmod, drawDestMod);
-                        BLT_W(_custom->bltdmod, drawDestMod);
                         BLT_L(_custom->bltapt, tailMaskS + (uint32_t)p * srcStrideBytes);
                         BLT_L(_custom->bltbpt, tailSrc  + (uint32_t)p * srcStrideBytes);
-                        BLT_L(_custom->bltcpt, pdst);
-                        BLT_L(_custom->bltdpt, pdst);
                     } else {
-                        BLT_W(_custom->bltcon0, clearCon0);
-                        BLT_W(_custom->bltamod, drawSrcMod);
-                        BLT_W(_custom->bltcmod, drawDestMod);
-                        BLT_W(_custom->bltdmod, drawDestMod);
+                        if (p == (int16_t)sp)
+                            BLT_W(_custom->bltcon0, clearCon0);
                         BLT_L(_custom->bltapt, tailMaskS);
-                        BLT_L(_custom->bltcpt, pdst);
-                        BLT_L(_custom->bltdpt, pdst);
                     }
+                    BLT_L(_custom->bltcpt, pdst);
+                    BLT_L(_custom->bltdpt, pdst);
                     BLT_W(_custom->bltsize, tailDrawBltsize);
                 }
             }
@@ -1809,11 +1845,13 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
                 waitBlit();
                 BLT_W(_custom->bltcon0, clearCon0);
                 for (; planeIdx < NUM_PLANES; planeIdx++) {
+                    /* Wait BEFORE writing, never after the kick: the last blit then runs
+                     * on while the CPU sets up the next bob. */
+                    if (planeIdx != (int16_t)sp) waitBlit();
                     BLT_L(_custom->bltcpt, (uint32_t)a2);
                     BLT_L(_custom->bltdpt, (uint32_t)a2);
                     BLT_L(_custom->bltapt, (uint32_t)a4ptr);   /* single-plane silhouette */
                     BLT_W(_custom->bltsize, bltsize1);
-                    waitBlit();
                     a2 += PLANE_STRIDE;
                 }
             }
@@ -1873,11 +1911,11 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
                     waitBlit();
                     BLT_W(_custom->bltcon0, clearCon0);
                     for (; planeIdx < NUM_PLANES; planeIdx++) {
+                        if (planeIdx != (int16_t)sp) waitBlit();    /* before, not after */
                         BLT_L(_custom->bltcpt, tailDest);
                         BLT_L(_custom->bltdpt, tailDest);
                         BLT_L(_custom->bltapt, tailSrcB);
                         BLT_W(_custom->bltsize, tailBltsize1);
-                        waitBlit();
                         tailDest += PLANE_STRIDE;
                     }
                 }
@@ -2191,6 +2229,9 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     /* Blit sprite data into copper list buffers */
     /* First plane pair */
     waitBlit();
+    /* The source steps a whole sprite scanline: the sprite's own depth, 8 for a padded
+     * running frame (display.h, spriteIsPadded8), 4 for the rest. */
+    BLT_W(_custom->bltamod, (spriteNumPlanes(sprGfx->ordinal) - 2) * 2);
     BLT_L(_custom->bltapt, (uint32_t)(uintptr_t)sprGfx->sprData);
     BLT_L(_custom->bltdpt, (uint32_t)(uintptr_t)a4);
     BLT_W(_custom->bltsize, sprGfx->bltsize);

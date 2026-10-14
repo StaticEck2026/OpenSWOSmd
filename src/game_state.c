@@ -84,6 +84,9 @@ extern uint16_t _secondLeg;
 extern FixedPoint _cameraX;
 extern FixedPoint _cameraY;
 extern uint16_t _lastFrameTicks;
+#if defined(RASTER_BARS) && !defined(SWOS_SDL_BUILD)
+static uint16_t _rasterFps;           /* the clock's number in a -DRASTER_BARS build */
+#endif
 extern uint16_t _gameState;
 
 extern ScorerInfo _team1Scorers[8];
@@ -1017,6 +1020,27 @@ last_minute_in_progress:
     }
 
 no_update_to_time:
+#if defined(RASTER_BARS) && !defined(SWOS_SDL_BUILD)
+    /* -DRASTER_BARS (include/raster_bars.h): the clock shows the FRAME RATE instead of the
+     * minutes -- "50mins." is a solid 50 fps, "25mins." a second in which frames were
+     * missed. Frames completed per 50 vertical blanks, so one slow frame in a second
+     * shows; rebuilt only when the number changes, like the clock. */
+    {
+        static uint16_t s_fpsFrames, s_fpsTicks, s_fpsShown = 0xFFFF;
+        s_fpsFrames++;
+        s_fpsTicks = (uint16_t)(s_fpsTicks + _lastFrameTicks);
+        if (s_fpsTicks >= 50) {
+            uint16_t fps = (uint16_t)((uint32_t)s_fpsFrames * 50u / s_fpsTicks);
+            if (fps > 99) fps = 99;
+            s_fpsFrames = s_fpsTicks = 0;
+            if (fps != s_fpsShown) {
+                s_fpsShown = fps;
+                _rasterFps = fps;
+                _copyTimeSprite = 1;
+            }
+        }
+    }
+#endif
     /* Check if time sprite needs rebuilding */
     if (!_copyTimeSprite)
         goto set_time_sprite_x;
@@ -1028,14 +1052,19 @@ not_end_of_second_extra:
         uint16_t yOff = 0;
         uint16_t sprIdx;
         uint16_t digitSprite;
+#if defined(RASTER_BARS) && !defined(SWOS_SDL_BUILD)
+        uint8_t dHundreds = 0, dTens = (uint8_t)(_rasterFps / 10), dOnes = (uint8_t)(_rasterFps % 10);
+#else
+        uint8_t dHundreds = GAMETIME_HUNDREDS, dTens = GAMETIME_TENS, dOnes = GAMETIME_ONES;
+#endif
 
-        if (GAMETIME_HUNDREDS != 0)
+        if (dHundreds != 0)
         {
             /* 3-digit time (100+) */
             sprIdx = SPR_INVITATION_TOURNAMENT;
             xOff = 5;       /* width for the hundreds digit (always 1) */
         }
-        else if (GAMETIME_TENS != 0)
+        else if (dTens != 0)
         {
             /* 2-digit time */
             sprIdx = SPR_PREMIERE_DIVISION_WINNER;
@@ -1048,13 +1077,13 @@ not_end_of_second_extra:
         }
 
         /* Copy tens digit */
-        digitSprite = SPR_CUP_WINNER + GAMETIME_TENS;
+        digitSprite = SPR_CUP_WINNER + dTens;
         CopySprite(digitSprite, sprIdx, xOff, yOff);
         xOff += 6;
 
     copy_last_digit:
         /* Copy ones digit */
-        digitSprite = SPR_CUP_WINNER + GAMETIME_ONES;
+        digitSprite = SPR_CUP_WINNER + dOnes;
         CopySprite(digitSprite, sprIdx, xOff, yOff);
 
         /* Set sprite image index */

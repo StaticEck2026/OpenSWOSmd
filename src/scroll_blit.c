@@ -113,12 +113,13 @@ static uint32_t s_pendingSrc[2];    /* frontbuffer src addr of the column; 0 = e
 static uint32_t s_pendingBuf[2];    /* draw-buffer base the slot belongs to */
 static uint16_t s_pendingY[2];      /* cameraYMod320 the column was drawn at */
 
-/* Batched A->D column copy: 1 word wide, `rows` tall (rows may exceed the
- * blitter's 1024-row-per-blit max), plane-step modulo on both channels. A batch
- * of 0x400 encodes as bltsize height-field 0, which the blitter reads as 1024. */
+/* A->D column copy: 1 word wide, `rows` tall (more than BLTSIZE's 1024 lines), plane-step
+ * modulo on both channels. AGA only (the function is), so the big-blit registers exist. */
 static void columnBlitCopy(uint32_t src, uint32_t dst, uint16_t rows, uint16_t widthWords)
 {
     uint16_t planeMod = (uint16_t)(PLANE_STRIDE - widthWords * 2u);  /* skip to next plane */
+    if (rows == 0)
+        return;                 /* BLTSIZV 0 would be 32768 lines */
     waitBlit();
     BLT_L(_custom->bltapt, src);
     BLT_L(_custom->bltdpt, dst);
@@ -128,12 +129,13 @@ static void columnBlitCopy(uint32_t src, uint32_t dst, uint16_t rows, uint16_t w
     BLT_W(_custom->bltalwm, BLT_FWM_ALL);
     BLT_W(_custom->bltcon1, 0);
     BLT_W(_custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
-    while (rows) {
-        uint16_t batch = rows > 0x400u ? 0x400u : rows;
-        rows -= batch;
-        waitBlit();
-        BLT_W(_custom->bltsize, (uint16_t)((batch << 6) | widthWords));
-    }
+    /* ONE blit, however tall (2026-10-14). BLTSIZE holds at most 1024 lines, and a full
+     * column is 2176 (272 x 8 planes): it was three blits with the CPU waiting out each
+     * one between them. AGA has ECS's big-blit registers -- BLTSIZV (lines, 15 bits) and
+     * then BLTSIZH (words), whose write starts the blit -- so the copy starts at once
+     * and the CPU goes on; the next blitter user waits for it as every one does. */
+    *(volatile uint16_t *)(CUSTOM_BASE + 0x05Cu) = rows;          /* BLTSIZV */
+    *(volatile uint16_t *)(CUSTOM_BASE + 0x05Eu) = widthWords;    /* BLTSIZH: go */
 }
 
 /* Finish the column deferred for the current draw buffer: its copy into the mirror
@@ -395,6 +397,32 @@ void ScrollXUpdateColumnsAndBlit(void)
         uint32_t dest32 = destXByteOff & (uint32_t)(uint16_t)SCROLL_X_COARSE_ALIGN_MASK;
         uint16_t leftHalf = (uint16_t)(((uint16_t)(_cameraXMod320 + d5) >> 4) & 1u);
         uint16_t leftTileUnits = (uint16_t)(leadTileUnits - leftHalf);
+        /* The second crossing into the same 32px block does nothing new (2026-10-14).
+         * Every crossing writes BOTH 16px halves of the block (above), copies the block
+         * to the mask and queues its mirror -- so in a steady scroll the next crossing,
+         * into the block's other half, would repeat all of it for a block already right.
+         * Skipped when the LAST crossing on this buffer wrote this same block of the
+         * pitch, in the same direction. What a ring position shows changes only when
+         * the coarse scroll moves, which on this buffer is a crossing -- and a crossing
+         * that does not match ends the run; the vertical scroll meanwhile fills the
+         * block's new rows with the same tiles, mirror and mask included. On a stock
+         * A1200 the crossing frame was the worst of the scroll: two tile columns, a
+         * 2176-line mask copy and a 2176-line mirror copy. */
+        {
+            static uint32_t s_lastBuf[2];
+            static int16_t  s_lastTile[2];
+            static int16_t  s_lastDir[2];
+            int16_t dir = (int16_t)(d5 != 0 ? 1 : -1);    /* right leads by d5, left by 0 */
+            int16_t slot = s_lastBuf[0] == (uint32_t)_frontbufferBasePtr ? 0 :
+                           s_lastBuf[1] == (uint32_t)_frontbufferBasePtr ? 1 :
+                           (s_lastBuf[0] == 0 ? 0 : 1);
+            if (s_lastBuf[slot] == (uint32_t)_frontbufferBasePtr &&
+                s_lastTile[slot] == (int16_t)leftTileUnits && s_lastDir[slot] == dir)
+                return;
+            s_lastBuf[slot]  = (uint32_t)_frontbufferBasePtr;
+            s_lastTile[slot] = (int16_t)leftTileUnits;
+            s_lastDir[slot]  = dir;
+        }
         uint8_t *aL = _pitchDatBuffer + pitchRowOff + ((uint32_t)(uint16_t)(leftTileUnits << 2));
         uint8_t *aR = _pitchDatBuffer + pitchRowOff + ((uint32_t)(uint16_t)((leftTileUnits + 1u) << 2));
         scrollXBlitColumn(aL, dest32);
@@ -454,8 +482,20 @@ void ScrollXUpdateColumnsAndBlit(void)
  * Blitter-based mask copy from frontbuffer to mask buffer.
  * ================================================================ */
 __attribute__((used, externally_visible))
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The current pitch-row's tile pointers, in fast RAM: the pointer table is in the chip-RAM
+ * pitch buffer, and it only changes every 16 scanlines (ScrollYUpdateRowsAndBlit). */
+static uint8_t *s_rowTiles[FMODE_FETCH_BYTES / 2];
+extern intptr_t g_pitchTilesFastDelta;     /* pitch.c: chip tile -> its fast-RAM copy */
+extern uint8_t *g_pitchTilesChipBase;
+extern uint32_t g_pitchTilesBytes;
+#endif
+
 void ScrollYUpdateRowsAndBlit(void)
 {
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    uint8_t *rowTilesFor = NULL;     /* the a1 s_rowTiles was read from; NULL = re-read */
+#endif
 #ifdef SWOS_SDL_BUILD
     /* See ScrollXUpdateColumnsAndBlit above — same rationale. */
     return;
@@ -664,6 +704,57 @@ void ScrollYUpdateRowsAndBlit(void)
         }
 #endif
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* One row, two tiles at a time, in LONGS (2026-10-14). The fill is 24 words =
+         * 12 tile pairs and starts 4-byte aligned, and the A1200's chip bus is 32 bits:
+         * per plane, one long [left tile's word | right tile's word] to the row and one
+         * to its mirror, and each tile's 16-byte scanline read as 4 longs (planes 0+1,
+         * 2+3, 4+5, 6+7). The same bytes land in the same places as the word loop below
+         * (the OCS one), in half the chip accesses -- on a stock A1200 every one of them
+         * waits for a slot the 8-plane display is not using. The tile pointers come from
+         * s_rowTiles, refreshed only when the source crosses into the next tile row. */
+        {
+            uint8_t *dst = a3;
+            uint8_t *const *tp = s_rowTiles;
+            int16_t pairs;
+            if (rowTilesFor != a1) {
+                /* ... and read from the fast-RAM copy of the tiles (pitch.c), not the
+                 * chip-RAM pitch buffer the blitter needs: the same pixels. A pointer
+                 * outside the tile area, or before a copy exists, is left as it is. */
+                int16_t t;
+                for (t = 0; t < (int16_t)(d6 + 1); t++) {
+                    uint8_t *tile = *(uint8_t **)(a1 + 4 * t);
+                    if (g_pitchTilesFastDelta &&
+                        (uint32_t)(tile - g_pitchTilesChipBase) < g_pitchTilesBytes)
+                        tile += g_pitchTilesFastDelta;
+                    s_rowTiles[t] = tile;
+                }
+                rowTilesFor = a1;
+            }
+            for (pairs = (int16_t)((d6 + 1) >> 1); pairs > 0; pairs--) {
+                const uint32_t *ta = (const uint32_t *)(tp[0] + d3);
+                const uint32_t *tb = (const uint32_t *)(tp[1] + d3);
+                uint32_t a01 = ta[0], a23 = ta[1], a45 = ta[2], a67 = ta[3];
+                uint32_t b01 = tb[0], b23 = tb[1], b45 = tb[2], b67 = tb[3];
+                uint32_t v;
+                tp += 2;
+#define ROWPAIR_PUT(plane, val) do { v = (val); \
+        *(uint32_t *)(dst + (plane) * PLANE_STRIDE) = v; \
+        *(uint32_t *)(dst + (plane) * PLANE_STRIDE + FB_MIRROR_OFFSET_BYTES) = v; } while (0)
+                ROWPAIR_PUT(0, (a01 & 0xFFFF0000u) | (b01 >> 16));
+                ROWPAIR_PUT(1, (a01 << 16) | (b01 & 0xFFFFu));
+                ROWPAIR_PUT(2, (a23 & 0xFFFF0000u) | (b23 >> 16));
+                ROWPAIR_PUT(3, (a23 << 16) | (b23 & 0xFFFFu));
+                ROWPAIR_PUT(4, (a45 & 0xFFFF0000u) | (b45 >> 16));
+                ROWPAIR_PUT(5, (a45 << 16) | (b45 & 0xFFFFu));
+                ROWPAIR_PUT(6, (a67 & 0xFFFF0000u) | (b67 >> 16));
+                ROWPAIR_PUT(7, (a67 << 16) | (b67 & 0xFFFFu));
+#undef ROWPAIR_PUT
+                dst += 4;
+            }
+            a3 = dst;
+        }
+#else
         /* Inner loop: copy one row of words across all tiles */
         do {
             uint8_t *tilePtr = *(uint8_t **)a1 + d3;
@@ -699,6 +790,7 @@ void ScrollYUpdateRowsAndBlit(void)
 
             wordIdx--;
         } while (wordIdx >= 0);
+#endif
 
         a1 = a1_saved;
 

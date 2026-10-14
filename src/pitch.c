@@ -333,6 +333,34 @@ static uint16_t pitchTilePlanes(const uint32_t *pitchPtrs, uint32_t baseLow,
 #endif /* SWOS_SDL_BUILD */
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The pitch's tiles again, in FAST RAM, for the CPU (2026-10-14). The blitter must read
+ * them from the chip-RAM pitch buffer, but the vertical scroll copies its new rows with
+ * the CPU (ScrollYUpdateRowsAndBlit), and every read it makes from chip RAM waits for a
+ * slot the 8-plane display is not using. A tile's pixels never change once
+ * FixupAndColorPitchFile has coloured the fans -- the crowd animation only moves pointer
+ * slots between tiles -- so a copy made there stays right for the whole match.
+ * g_pitchTilesFastDelta is what to add to a tile pointer into the chip copy to reach the
+ * same tile here: 0 until a copy exists. */
+static uint8_t  s_pitchTilesFast[PITCHFILE_MAX_SIZE - PITCH_POINTER_COUNT * 4];
+static uint32_t s_pitchTileBytes;           /* the tile area of the map just loaded */
+intptr_t        g_pitchTilesFastDelta;
+uint8_t        *g_pitchTilesChipBase;       /* the chip copy's first tile */
+uint32_t        g_pitchTilesBytes;          /* and its size: the delta applies inside it */
+
+static void copyPitchTilesToFast(void)
+{
+    const uint32_t *src = (const uint32_t *)(_pitchDatBuffer + PITCH_POINTER_COUNT * 4);
+    uint32_t *dst = (uint32_t *)s_pitchTilesFast;
+    uint32_t n = s_pitchTileBytes / 4u;
+    while (n--)
+        *dst++ = *src++;
+    g_pitchTilesChipBase  = _pitchDatBuffer + PITCH_POINTER_COUNT * 4;
+    g_pitchTilesBytes     = s_pitchTileBytes;
+    g_pitchTilesFastDelta = (intptr_t)(s_pitchTilesFast - g_pitchTilesChipBase);
+}
+#endif
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
 /* ================================================================
  * loadPitchMap2020 -- OPTIONS -> PITCHES = 2020
  *
@@ -362,6 +390,8 @@ static int32_t loadPitchMap2020(uint16_t mapIndex)
         _panicReasonCode = 3;
         PanicHaltLoop();
     }
+    s_pitchTileBytes = fileSize - PITCH_POINTER_COUNT * 4u;
+    g_pitchTilesFastDelta = 0;
     return 1;
 }
 #endif
@@ -399,6 +429,10 @@ void LoadPitchMap(uint16_t mapIndex)
     (void)result;
 #ifdef SWOS_SDL_BUILD
     s_pitchFileSize = fileSize;   /* -> pitchTilePlanes (source bitplane depth) */
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    s_pitchTileBytes = fileSize > PITCH_POINTER_COUNT * 4u ? fileSize - PITCH_POINTER_COUNT * 4u : 0u;
+    g_pitchTilesFastDelta = 0;          /* stale until FixupAndColorPitchFile copies it */
 #endif
 
     if (fileSize > PITCHFILE_MAX_SIZE)
@@ -831,6 +865,9 @@ void FixupAndColorPitchFile(void)
     { extern int _gArcadePitchActive;
       if (dosPitch && !_gArcadePitchActive)
           PitchMap_Bake(); }
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    copyPitchTilesToFast();     /* the fans are coloured: the tiles are final */
 #endif
 }
 

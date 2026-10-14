@@ -209,16 +209,50 @@ extern volatile struct Custom *_custom;
 #define SOCCER_S_SPRITE_FIRST         0x447
 #define SOCCER_S_SPRITE_LAST          0x486
 
+/* The in-match RUNNING frames of both teams, the goalkeepers and the referee: 15 lines,
+ * one word wide, linked (mask shared by the planes). On AGA they are stored 8 planes deep
+ * -- the colour planes 0-3 and four planes of zeros -- with an 8-row mask, so a player is
+ * ONE blit over the 8-plane playfield (DrawSpriteClipped) instead of eight: on a stock
+ * A1200 the eight small blits, and the CPU waiting each one out, were half the frame
+ * (2026-10-14, AmigaScope). This is the original game's own layout: SWOS2.s draws a bob
+ * in one blit of NUM_PLANES rows a line. The rest of the sprites (tackles, headers,
+ * falls ...) stay 4 planes deep: converting them would cost ~130 KB more chip RAM.
+ * Whether a frame is here only decides its storage and speed, never its pixels: every
+ * reader takes the depth from spriteNumPlanes, and the drawing falls back to the
+ * per-plane path for anything not stored 8 deep with a linked mask. */
+static inline int16_t spriteIsPadded8(int16_t ordinal)
+{
+#if defined(AGA) && !defined(SWOS_SDL_BUILD) && (SWOS_SPRITE_PLANES != 8)
+    static const uint16_t runs[][2] = {
+        { 0x0E3, 0x100 }, { 0x148, 0x165 }, { 0x1AD, 0x1CA }, { 0x212, 0x22F },
+        { 0x277, 0x294 }, { 0x2DC, 0x2F9 }, { 0x341, 0x358 }, { 0x37B, 0x392 },
+        { 0x3B5, 0x3CC }, { 0x3EF, 0x406 },
+    };
+    uint16_t o = (uint16_t)ordinal, i;
+    if (o < 0x0E3 || o > 0x406)
+        return 0;
+    for (i = 0; i < sizeof runs / sizeof runs[0]; i++)
+        if (o >= runs[i][0] && o <= runs[i][1])
+            return 1;
+#else
+    (void)ordinal;
+#endif
+    return 0;
+}
+
 /* Real stored bitplane depth of a sprite by its ordinal (sprite index). In 4-plane mode:
- * 8 for the AGA soccer_s/replay-R bank (genuinely 8-plane), else 4. In 8-plane mode every
- * sprite is padded to 8 so the special case is a no-op. OCS: always 4. Used by every
- * sprite-DATA reader so a 4-plane sprite is walked at 4-plane stride, not the playfield's 8. */
+ * 8 for the AGA soccer_s/replay-R bank (genuinely 8-plane) and for the running frames
+ * above (padded), else 4. In 8-plane mode every sprite is padded to 8 so the special
+ * cases are no-ops. OCS: always 4. Used by every sprite-DATA reader so a 4-plane sprite
+ * is walked at 4-plane stride, not the playfield's 8. */
 static inline uint16_t spriteNumPlanes(int16_t ordinal)
 {
 #if defined(AGA) && !defined(SWOS_SDL_BUILD) && (SWOS_SPRITE_PLANES != 8)
     if ((uint16_t)ordinal >= SOCCER_S_SPRITE_FIRST &&
         (uint16_t)ordinal <= SOCCER_S_SPRITE_LAST)
         return PITCH_NUM_PLANES;   /* SOCCER_S bank is genuinely 8-plane */
+    if (spriteIsPadded8(ordinal))
+        return PITCH_NUM_PLANES;   /* a running frame: 4 colour planes + 4 of zeros */
 #else
     (void)ordinal;
 #endif

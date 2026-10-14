@@ -8,6 +8,7 @@
  * Chunk 41: 10 functions (7 exported + 2 static + 1 helper)
  */
 
+#include "raster_bars.h"     /* -DRASTER_BARS: the frame's phases as colour bands */
 #include "game_loop.h"
 #include "dos_sound.h"
 #include "game_types.h"
@@ -211,6 +212,7 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
     while (_custom->dmaconr & (1u << 14))
         ;
 #endif
+    RASTER(RASTER_IDLE);
     _waitingInterrupt = 1;
     while (_waitingInterrupt != 0) {}
 #endif
@@ -648,6 +650,7 @@ GameFrameResult GameLoop_Frame(void)
         _spaceReplayTimer -= 1;
 
     /* Panel update block */
+    RASTER(RASTER_UNDRAW);
     ProcessSpriteBlitQueue();
     if (_subsWriteOnly != 0) {
         BlitterCopyPanelToScreen();
@@ -682,6 +685,7 @@ GameFrameResult GameLoop_Frame(void)
     }
 
     /* Run gameplay update */
+    RASTER(RASTER_SCROLL);
     MoveCamera();
     ScrollToCurrent();
     /* Record the camera in the SAME space the per-sprite coordinates are written
@@ -723,6 +727,7 @@ GameFrameResult GameLoop_Frame(void)
     { extern void Arcade_MatchTick(void); Arcade_MatchTick(); }
 #endif
     /* nullsub_8 — no-op */
+    RASTER(RASTER_SIM);
     UpdateAndApplyTeamControls();
     UpdateBall();
     MovePlayers();
@@ -741,11 +746,14 @@ GameFrameResult GameLoop_Frame(void)
     SetCurrentPlayerName();
     UpdateBookedPlayerNumberSprite();
     ShowResult();
+    RASTER(RASTER_CROWD);
     DrawAnimatedPatterns();   /* also ticks _showFansCounter / goal-celebration state */
+    RASTER(RASTER_SPRITES);
     DrawSprites();
 #ifdef SWOS_SDL_BUILD
     { extern void ReplayRec_CaptureSprites(void); ReplayRec_CaptureSprites(); }
 #endif
+    RASTER(RASTER_HUD);
     DrawBenchAndSubsMenu();
     BenchCheckControls();
     UpdateAndDrawStatistics();

@@ -7,6 +7,7 @@
 #include "jag_graphics.h"
 #include "game_types.h"
 #include "display.h"
+#include "intro_chip_ram.h"   /* the sprite pool, for its end */
 #ifdef SWOS_SDL_BUILD
 #include <stddef.h>
 #include <stdint.h>
@@ -388,17 +389,14 @@ update_cursor:
      * will be caught by normal segmentation faults instead. */
     _imageStreamBytesLeft = 0x40000;
 #else
-    if (_playGame == 0 && _playHighlightFlag == 0) {
-        /* Menu mode: check against menuInsBank boundary */
-        _imageStreamBytesLeft = (uint32_t)((uint8_t *)_menuInsBank - pixelPtr);
-        if (pixelPtr >= (uint8_t *)_menuInsBank) {
-            _panicReasonCode = 0x0008;
-            PanicHaltLoop();
-        }
-    } else {
-        /* Game mode: check against imageStreamCursor itself (static buffer end) */
-        _imageStreamBytesLeft = (uint32_t)((uint8_t *)&_imageStreamCursor - pixelPtr);
-        if (pixelPtr >= (uint8_t *)&_imageStreamCursor) {
+    /* The sprite pool's real end (include/intro_chip_ram.h). The original checked the
+     * address of whatever label followed the pool in its BSS -- menuInsBank in the
+     * menus, imageStreamCursor in a match -- which here are unrelated globals, so an
+     * overflow was never caught (2026-10-14). */
+    {
+        uint8_t *poolEnd = g_introChipRam.spritePool + SPRITE_POOL_BYTES;
+        _imageStreamBytesLeft = (uint32_t)(poolEnd - pixelPtr);
+        if (pixelPtr >= poolEnd) {
             _panicReasonCode = 0x0008;
             PanicHaltLoop();
         }

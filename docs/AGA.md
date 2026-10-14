@@ -64,6 +64,42 @@ speedup) pending** — see [AMIGA_SPRITES.md](AMIGA_SPRITES.md).
 >   masked each song track's ADDRESS to 24 bits, a WHDLoad patch of the original ("potential issue
 >   if A1 is in fast!!!"). It masks the table OFFSET now. Not yet tried on such a machine.
 
+> **Status (2026-10-14): a stock A1200 holds 42-50 fps in a match (was 25-30 in busy
+> moments).** Measured cycle-exact on the scroll-test rig (`-DPITCH_SCROLL_TEST`, a frozen scene
+> or a scripted scroll, `dma_profile.py` + `cpu_flamegraph.py`) and in matches with the raster
+> build (`make -f Makefile.amiga EXTRA_CFLAGS=-DRASTER_BARS`: each phase of the frame paints
+> COLOR00 -- red undraw, yellow scroll, green logic, magenta crowd, blue bobs, cyan HUD -- and
+> the match clock shows the frame rate, "50mins." = 50 fps; `include/raster_bars.h`). The
+> drawing was CPU-bound, not blitter-bound: the blitter was busy ~15-20% of the frame and the
+> CPU spent half of the bob time waiting out many SMALL blits one at a time. What changed:
+>
+> - **One blit per player** (`spriteIsPadded8`, `display.h`): the 276 in-match running frames
+>   are stored 8 planes deep with an 8-row mask, so a player is one A?B:C blit over the 8-plane
+>   interleave instead of 8 per-plane blits (planes 4-7: B is zero, so mask?0:background, as the
+>   clear blit). The original's own layout. Kit colours are converted on the 4 colour planes only;
+>   the HW-sprite band copy steps each sprite by its own depth. +~37 KB of sprite pool (now 304
+>   KB). CPU per bob 6,977 -> 4,214 cycles.
+> - **The stack is in fast RAM** (`s_swos_stack`, `platform_amiga_stubs.c`). It was chip RAM
+>   because the original's was; compiled C pushes on every call, each push waiting for a slot the
+>   display left. Every blitter/copper/audio pointer was checked: none points at the stack.
+>   +8% of the frame free.
+> - **Vertical scroll** (`ScrollYUpdateRowsAndBlit`): the row copy moves two tiles at a time as
+>   longs, with the tile pointers cached, and reads the tiles from a fast-RAM copy made at the
+>   end of `FixupAndColorPitchFile` (a tile's pixels never change after that; the crowd only moves
+>   pointer slots). 52k -> 24k cycles a call.
+> - **Horizontal scroll**: the 2176-line column copies are ONE blit (`BLTSIZV`/`BLTSIZH`, no CPU
+>   wait between parts), and the second crossing into the same 32px block in the same direction
+>   on the same buffer is skipped -- the first already wrote both halves, the mask and the mirror.
+> - **Undraw** (`ProcessSpriteBlitQueue`): blitter priority once per batch, no trailing wait,
+>   modulos written only when they change. Writing a bob's blit mode and modulos once instead of
+>   per plane.
+> - Tried and dropped, measured: an interrupt-driven blit queue (slower -- interrupt overhead per
+>   tiny blit exceeded the waiting), `-O2` instead of `-Ofast` (no difference). Ruled out: FMODE=3
+>   (64px coarse scroll, an extra 64px fetch, 4-column updates), which would also have been the
+>   only way to free sprite 3's DMA slot for a second hardware-sprite band.
+> - Also fixed: the sprite pool's overflow check compared against the address of whatever label
+>   followed the pool in the original's BSS, so it caught nothing; it checks the pool's end now.
+
 AGA mode gives the game a 256-colour display (8 bitplanes) for backgrounds and
 the pitch, while keeping sprite/menu/charset banks at **4 bitplanes (16 colours)**.
 The depth is **mixed per bank** and auto-detected at load, so the same decode path

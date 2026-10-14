@@ -202,13 +202,15 @@ extern uint32_t S_SavedSP;   /* Resload.s — saves caller's SP for return */
 /* File-scope (not static) so the symbol name lands in the .o symbol
  * table for the naked-function inline asm below to reference.
  *
- * SWOS_CHIP_BSS: original SWOS2.s `stackSpace: ds.b 8192` lived in the
- * CHIP section. Some original code (and likely some helper routines)
- * relied on the stack being in CHIP RAM — e.g. blitter setup from
- * stack-resident structs, or DMA-readable scratch on the stack. Match
- * the original placement so we don't have a hidden CHIP-vs-FAST
- * mismatch when a helper hands the blitter a stack address. */
-SWOS_CHIP_BSS uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
+ * The original SWOS2.s `stackSpace: ds.b 8192` lived in the CHIP section, and this
+ * copied it, in case a helper handed the blitter a stack address. */
+/* NOT in chip RAM any more (2026-10-14). Every blitter source and destination, the copper
+ * list and the sound samples were checked: they are the frontbuffers, the sprite pool, the
+ * pitch buffer and the sample banks, never a local, so the custom chips never read the
+ * stack. The original's stack was hand-written assembly's, touched little; compiled C
+ * pushes arguments and saved registers on every call, and in chip RAM each push waited for
+ * a bus slot the 8-plane display was not using. In fast RAM the CPU has it to itself. */
+uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
 
 __attribute__((naked, used))
 void startShim(void)

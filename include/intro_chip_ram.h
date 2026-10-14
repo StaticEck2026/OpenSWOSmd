@@ -28,9 +28,11 @@ typedef struct {
 /* hero.ins unpacks to 292,984 bytes, IN PLACE (LoadRNCToBufferNoBlit): the RNC
  * decoder may lift the packed data up to 255 bytes of leeway past the end of the
  * output first (rnc.c), so the buffer is that plus the leeway, rounded up. The
- * Amiga sprite pool is 4-plane (SWOS_SPRITE_4PLANE): 280 KB as before. */
-#define TITLE_TUNE_SAMPLES_BYTES  0x48000u      /* 288 KB */
-#define SPRITE_POOL_BYTES         0x46000u      /* 280 KB */
+ * Amiga sprite pool is 4-plane (SWOS_SPRITE_4PLANE) but for the running frames. */
+#define TITLE_TUNE_SAMPLES_BYTES  0x48000u      /* 288 KB (the union is the larger of the two) */
+#define SPRITE_POOL_BYTES         0x4C000u      /* 304 KB: 4-plane sprites, but the in-match
+                                                 * running frames 8 planes deep (display.h,
+                                                 * spriteIsPadded8), ~265 KB + ~37 KB */
 typedef union {
 #endif
     uint8_t titleTuneSamples[TITLE_TUNE_SAMPLES_BYTES];  /* during the loader intro */
