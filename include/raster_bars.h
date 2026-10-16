@@ -3,20 +3,27 @@
  *
  * Build with  make -f Makefile.amiga EXTRA_CFLAGS=-DRASTER_BARS  (never in a release).
  * Each phase of the match frame sets COLOR00 as it starts, and the beam paints the
- * lines it is drawing in that colour: on the pitch, whose grass IS colour 0, the
- * frame becomes stacked bands, one per phase, as tall as that phase took. The band
- * that is still coloured at the bottom of the screen, or a frame whose bands run past
- * it, is a frame over budget -- the game then shows every other frame and runs slow.
+ * lines it is drawing in that colour: the border strip right of the picture becomes
+ * stacked bands, one per phase, as tall as that phase took. The band that is still
+ * coloured at the bottom of the screen, or a frame whose bands run past it, is a frame
+ * over budget -- the game then shows every other frame and runs slow.
  *
- * The copper reloads the palette at the top of every frame and leaves BPLCON3 on
- * bank 0, so a CPU write to COLOR00 lands in colour 0 for the rest of that frame.
+ * Only the border: this build shifts the picture's colours to the other half of the
+ * palette (BPLCON4, display.c's RB_BANK), so the grass is no longer COLOR00. The copper
+ * reloads the palette at the top of every frame and leaves BPLCON3 on bank 0, so a CPU
+ * write to COLOR00 lands in the border's colour for the rest of that frame.
  */
 #ifndef RASTER_BARS_H
 #define RASTER_BARS_H
 
 #if defined(RASTER_BARS) && !defined(SWOS_SDL_BUILD)
 #include "display.h"
-#define RASTER(rgb12)   (_custom->color[0] = (uint16_t)(rgb12))
+/* Never in the first lines of a frame: the copper is loading the palette there, a bank at
+ * a time, and a write between its bank selects lands in THAT bank's colour 0 -- the grass,
+ * since this build swaps the halves. The load is done by line 8 (still vertical blank). */
+#define RASTER(rgb12)   do { \
+        while (((*(volatile uint32_t *)&_custom->vposr >> 8) & 0x1FFu) < 8u) {} \
+        _custom->color[0] = (uint16_t)(rgb12); } while (0)
 #else
 #define RASTER(rgb12)   ((void)0)
 #endif

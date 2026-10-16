@@ -393,7 +393,7 @@ void BlitterCopyOverlayToScreen(void)
 
     /* Wait for blitter idle (dummy read + busy-wait) */
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
 
     /* Disable blitter DMA for setup */
@@ -420,7 +420,7 @@ void BlitterCopyOverlayToScreen(void)
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
             _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (_custom->dmaconr & (1u << 14)) {}
+            while (BLIT_BUSY()) {}
             _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
             BLT_L(_custom->bltapt, (uint32_t)srcPlane);
@@ -432,7 +432,7 @@ void BlitterCopyOverlayToScreen(void)
     }
     /* Wait for last blit */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     BLT_W(_custom->bltamod, 0);
@@ -447,7 +447,7 @@ void BlitterCopyOverlayToScreen(void)
 
     /* Wait for blit to finish (dummy read + busy-wait) */
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
 
     /* Disable blitter DMA */

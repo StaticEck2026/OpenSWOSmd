@@ -34,7 +34,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
 {
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }

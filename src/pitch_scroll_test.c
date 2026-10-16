@@ -142,6 +142,17 @@ int32_t g_pstMoveSprites = 0;   /* 1 = add in-place world-X jitter (player movin
  * bob-only worst case for the frame budget. Poke g_pstForceBobs=0 to A/B the
  * (currently broken in AGA) hardware-sprite band path. */
 int32_t g_pstForceBobs   = 1;
+/* A/B of the match loop's background undraw (display.c ProcessSpriteBlitQueueAsync):
+ * 1 = undraw through the blitter interrupt while the CPU spins g_pstFakeSimLoops (a
+ * stand-in for the frame's logic), 0 = the synchronous undraw, then the same spin. */
+int32_t g_pstExtraImage = 0, g_pstExtraX = 168, g_pstExtraY = 60;
+int32_t g_pstAsyncUndraw = 0;
+int32_t g_pstFakeSimLoops = 0;
+static void __attribute__((noinline)) pstFakeSim(void)
+{
+    volatile int32_t n;
+    for (n = 0; n < g_pstFakeSimLoops; n++) {}
+}
 /* Auto-scroll mode, keyboard-selectable (see the loop):
  *   0 = circular circuit (right -> down -> left -> up), the default
  *   1 = up     (W: jump to bottom, scroll up)
@@ -311,6 +322,20 @@ static void pstMoveSprites(void)
         b->z.s.i = 0;
     }
     _numSpritesToRender = (uint16_t)(n + 1);
+    /* g_pstExtraImage: one more, non-player sprite of that image (e.g. 1205, the top goal),
+     * screen-fixed at g_pstExtraX/Y -- to measure what drawing it costs */
+    if (g_pstExtraImage > 0 && n + 1 < PST_MAX_SPRITES) {
+        Sprite *e = &s_pstSprites[n + 1];
+        e->teamNumber = 0;
+        e->imageIndex = (int16_t)g_pstExtraImage;
+        e->direction  = 0;
+        e->saveSprite = 0;
+        e->visible    = 1;
+        e->x.s.i = (int16_t)(camX + g_pstExtraX);
+        e->y.s.i = (int16_t)(camY + g_pstExtraY);
+        e->z.s.i = 0;
+        _numSpritesToRender = (uint16_t)(n + 2);
+    }
 }
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
@@ -506,7 +531,17 @@ void PitchScrollTest(void)
          * sprites off (B), so the final bobs get erased instead of staying baked
          * into the scrolling pitch. An empty queue (sprites already off) is a
          * cheap no-op. */
-        ProcessSpriteBlitQueue();
+        if (g_pstAsyncUndraw) {
+            /* the match loop's background undraw (game_loop.c): the blitter wipes the
+             * bobs while the CPU spins g_pstFakeSimLoops in fast RAM, standing in for
+             * the frame's logic, then waits for it */
+            ProcessSpriteBlitQueueAsync();
+            pstFakeSim();
+            BlitQueueDrain();
+        } else {
+            ProcessSpriteBlitQueue();
+            pstFakeSim();
+        }
 
         /* --- move camera + blit the newly-exposed edge --- */
         SetCameraCoordinates(g_pstCamX, g_pstCamY);
@@ -525,7 +560,11 @@ void PitchScrollTest(void)
         }
         else
         {
+            /* the match loop's queued twin column (scroll_blit.c) rides on its undraw */
+            extern uint16_t g_scrollTwinQueue;
+            g_scrollTwinQueue = (uint16_t)(g_pstAsyncUndraw != 0);
             ScrollToCurrent();
+            g_scrollTwinQueue = 0;
         }
 
         /* --- repaint the pitch under the overlay strip so last frame's text

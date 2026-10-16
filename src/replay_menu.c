@@ -143,6 +143,24 @@ void ReplayExitMenuAfterFriendly(void)
      * The previous direct LoadFileEx call left the top of the buffer
      * holding raw bitplane bytes (visible as noise) and the bottom
      * holding stale memory (visible as the previous-frame stadium). */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* The match's last bobs are undrawn from both buffers FIRST: the mask buffer the
+     * picture loads into is the second buffer's mirror half (swos_globals.c), where the
+     * window of a match -- and so an undraw -- can reach. Two swaps leave the buffers and
+     * the camera state as they were. */
+    ProcessSpriteBlitQueue();
+    SwapBuffersAndCameraViewState();
+    ProcessSpriteBlitQueue();
+    SwapBuffersAndCameraViewState();
+    LoadOverlayToFrontbuffer(_aGrafsMenubg2Ra);
+    BlitterCopyPanelToScreen();
+
+    /* Reset camera and double-buffer swap */
+    SetCameraCoordinates(0, 0);
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
+    BlitterCopyPanelToScreen();
+#else
     LoadOverlayToFrontbuffer(_aGrafsMenubg2Ra);
 
     ProcessSpriteBlitQueue();
@@ -154,6 +172,7 @@ void ReplayExitMenuAfterFriendly(void)
     UpdatePlanePtrsAndBlitParams();
     ProcessSpriteBlitQueue();
     BlitterCopyPanelToScreen();
+#endif
     SwapBuffersAndCameraViewState();
     UpdatePlanePtrsAndBlitParams();
 

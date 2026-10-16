@@ -149,6 +149,22 @@ static void copper_write_word(uint8_t *addr, uint16_t val)
 #endif
 }
 
+/* -DRASTER_BARS (include/raster_bars.h) paints COLOR00 per phase of the frame. COLOR00 is
+ * also the grass, so the bands covered the pitch; they belong in the border strip at the
+ * right of the display window, which only COLOR00 colours. So that build XORs every
+ * bitplane pixel's colour index with 0x80 (BPLCON4 BPLAM) and loads the palette with its
+ * halves swapped -- each group of 32 colours below goes to the bank 4 away -- so the
+ * picture is unchanged and a pixel of colour 0 shows entry 128, which holds colour 0. The
+ * sprites (no BPLAM) read their 16 colours from 128-143 (ESPRM/OSPRM 8), where 0-15 now
+ * are. The border is not a bitplane pixel: it alone shows entry 0. */
+#if defined(RASTER_BARS)
+#define RB_BANK(sel)  ((uint16_t)((sel) ^ 0x8000u))
+#define RB_BPLCON4    0x8088
+#else
+#define RB_BANK(sel)  (sel)
+#define RB_BPLCON4    0x0000
+#endif
+
 /* ================================================================
  * Copper list template — const data, copied to _copperListBuffer at init.
  * OCS: 160 words (320 bytes), AGA: 658 words (1316 bytes).
@@ -170,7 +186,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x0102, 0x0000,                     /* BPLCON1 */
     0x0104, 0x0024,                     /* BPLCON2 */
     0x01FC, 0x0001,                     /* FMODE = BPL32 (32-bit bitplane fetch, 8bpl lores) */
-    0x010C, 0x0000,                     /* BPLCON4: ESPRM=OSPRM=0 -> HW sprites index palette 0-15 (kit colours) instead of the reset-default base-16 (colours 16-31) */
+    0x010C, RB_BPLCON4,                     /* BPLCON4: ESPRM=OSPRM=0 -> HW sprites index palette 0-15 (kit colours) instead of the reset-default base-16 (colours 16-31) */
     0x0108, 0x0000,                     /* BPL1MOD */
     0x010A, 0x0000,                     /* BPL2MOD */
     0x0092, 0x0020,                     /* DDFSTRT (FMODE=1: 12 longs = full 384px plane row) */
@@ -178,7 +194,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x008E, 0x2471,                     /* DIWSTRT */
     0x0090, 0x34C1,                     /* DIWSTOP */
     /* Bank 0 (colors 0..31) */
-    0x0106, 0x0C00,                     /* BPLCON3: bank 0 */
+    0x0106, RB_BANK(0x0C00),                     /* BPLCON3: bank 0 */
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -188,7 +204,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 1 (colors 32..63) */
-    0x0106, 0x2C00,
+    0x0106, RB_BANK(0x2C00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -198,7 +214,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 2 (colors 64..95) */
-    0x0106, 0x4C00,
+    0x0106, RB_BANK(0x4C00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -208,7 +224,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 3 (colors 96..127) */
-    0x0106, 0x6C00,
+    0x0106, RB_BANK(0x6C00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -218,7 +234,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 4 (colors 128..159) */
-    0x0106, 0x8C00,
+    0x0106, RB_BANK(0x8C00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -228,7 +244,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 5 (colors 160..191) */
-    0x0106, 0xAC00,
+    0x0106, RB_BANK(0xAC00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -238,7 +254,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 6 (colors 192..223) */
-    0x0106, 0xCC00,
+    0x0106, RB_BANK(0xCC00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -248,7 +264,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
     0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
     /* Bank 7 (colors 224..255) */
-    0x0106, 0xEC00,
+    0x0106, RB_BANK(0xEC00),
     0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
     0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
     0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
@@ -483,7 +499,7 @@ void InitDisplayAndCopper(void)
     /* Enable blitter DMA, wait for idle, disable */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
     {
         /* wait for blitter idle */
     }
@@ -530,6 +546,18 @@ int16_t AGA_HwSpriteXShift(void)
 {
     return (int16_t)(_playGame ? 16 - AGA_PITCH_DISPLAY_SHIFT_PX : 16);
 }
+#if AGA_FMODE == 3
+/* The FMODE=3 match display (display.h AGA_FMODE). Only in a match: the menus are drawn for
+ * the 336px FMODE=1 display and keep it. */
+int16_t AGA_Fm3Active(void)
+{
+    return (int16_t)(_playGame != 0);
+}
+/* Its fetch window and the pixel it shows at the window's left edge, as measured on FS-UAE
+ * (see the FMODE=3 block in UpdatePlanePtrsAndBlitParams). Variables, not constants, so the
+ * scroll-test rig can sweep them from gdb. */
+int32_t g_fm3DdfStart = 0x18, g_fm3DdfStop = 0xB8, g_fm3ShowCal = 0;
+#endif
 #elif defined(AGA)
 /* SDL has no copper: the AGA branches below still compile there, unshifted. */
 static inline uint16_t agaDisplayX(void) { return _cameraXMod320; }
@@ -594,6 +622,37 @@ void UpdatePlanePtrsAndBlitParams(void)
      * H7 + pointer-advance scheme showed the right position but revealed the
      * pre-fetch gap = the column, and disagreeing pointer/delay = the jitter).
      * See RandyAGA.txt "Smooth Hardware Scrolling" + "LONG burst mode", docs/AGA.md. */
+#if AGA_FMODE == 3 && !defined(SWOS_SDL_BUILD)
+    /* FMODE=3: a 64px fetch unit. The window shows pitch pixels [v, v+320), v = the scroll
+     * position + AGA_FM3_WINDOW_LEFT_PX. The plane pointer moves in whole units: it is the
+     * unit at or before v-1, so the window starts S = v - pointer = 1..64 pixels into the
+     * 384px (6 units = the whole plane row) fetched, and BPLCON1 delays the picture by
+     * D = 64 - S = 0..63 -- every position reachable, one pointer per frame. */
+    int32_t fm3Ptr = 0;
+    if (AGA_FM3()) {
+        int32_t v = (int32_t)_cameraXMod320 + AGA_FM3_WINDOW_LEFT_PX - AGA_FM3_VIEW_SHIFT_PX
+                  + g_fm3ShowCal;
+        uint16_t delay, lo, h6, h7;
+        fm3Ptr = ((v - 1) >> 6) << 6;                      /* floor, may be -64 */
+        delay = (uint16_t)(64 - (v - fm3Ptr));             /* 0..63 */
+        lo = delay & 0x0Fu; h6 = (delay >> 4) & 1u; h7 = (delay >> 5) & 1u;
+        copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
+        copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
+        copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, (uint16_t)g_fm3DdfStart);
+        copper_write_word(_copperListBuffer + COP_DDFSTOP_VAL_OFF, (uint16_t)g_fm3DdfStop);
+        copper_write_word(_copperListBuffer + COP_FMODE_VAL_OFF, 0x0003u);
+        copper_write_word(_copperListBuffer + COP_DIWSTRT_VAL_OFF, 0x2481u);
+        copper_write_word(_copperListBuffer + COP_DIWSTOP_VAL_OFF, 0x34C1u);
+        copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF,
+                          (uint16_t)(lo | (lo << 4) | (h6 << 10) | (h6 << 14)
+                                        | (h7 << 11) | (h7 << 15)));
+    } else {
+        copper_write_word(_copperListBuffer + COP_FMODE_VAL_OFF, 0x0001u);
+        copper_write_word(_copperListBuffer + COP_DIWSTRT_VAL_OFF, 0x2471u);
+        copper_write_word(_copperListBuffer + COP_DIWSTOP_VAL_OFF, 0x34C1u);
+    }
+    if (!AGA_FM3()) {
+#endif
     d1 = agaDisplayX() & 0x1Fu;                /* fine fraction 0..31px */
     copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
     copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
@@ -616,6 +675,9 @@ void UpdatePlanePtrsAndBlitParams(void)
                           (uint16_t)(lo | (lo << 4) | (h6 << 10) | (h6 << 14)
                                         | (h7 << 11) | (h7 << 15)));
     }
+#if AGA_FMODE == 3 && !defined(SWOS_SDL_BUILD)
+    }
+#endif
 #else
     d1 = _cameraXMod320 & 0x0Fu;
     if (d1 == 0)
@@ -705,6 +767,16 @@ void UpdatePlanePtrsAndBlitParams(void)
          * coarse. This delay-conditional pull-back is what cancels the coarse pointer
          * step at each 32px boundary, making frac 31->0, 0->1 and 16->17 all per-pixel
          * smooth while keeping every fraction column-free (verified on FS-UAE). */
+#if AGA_FMODE == 3 && !defined(SWOS_SDL_BUILD)
+        if (AGA_FM3())
+        {
+            /* the FMODE=3 pointer, computed above, replaces the coarse and the pull-back */
+            int32_t delta = (fm3Ptr >> 3) - (int32_t)d1;
+            baseOffset += (uint32_t)delta;
+            altOffset  += (uint32_t)delta;
+        }
+        else
+#endif
         if ((32u - (uint32_t)(agaDisplayX() & 0x1Fu)) >= 16u)
         {
             /* The pull-back fetches the plane byte at coarse-4 (32px LEFT of the
@@ -1051,7 +1123,7 @@ void BlitterCopyPanelToScreen2(void)
     /* Enable blitter DMA and wait for idle */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
     {
         /* wait */
     }
@@ -1073,7 +1145,7 @@ void BlitterCopyPanelToScreen2(void)
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
             _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (_custom->dmaconr & (1u << 14)) {}
+            while (BLIT_BUSY()) {}
             _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
             BLT_L(_custom->bltapt, (uint32_t)srcPlane);
@@ -1085,7 +1157,7 @@ void BlitterCopyPanelToScreen2(void)
     }
     /* Wait for last blit */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
@@ -1099,7 +1171,7 @@ void BlitterCopyPanelToScreen2(void)
     /* Wait for blit to complete, then disable blitter DMA */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
     {
         /* wait */
     }
@@ -1137,7 +1209,7 @@ void ProcessSpriteBlitQueue(void)
 
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     BLT_W(_custom->bltafwm, BLT_FWM_ALL);
     BLT_W(_custom->bltalwm, BLT_FWM_ALL);
     BLT_W(_custom->bltcon1, 0);
@@ -1151,12 +1223,14 @@ void ProcessSpriteBlitQueue(void)
             break;                              /* sentinel: end of queue */
         mod = entry16[4];
         (void)(_custom->dmaconr & (1u << 14));
-        while (_custom->dmaconr & (1u << 14)) {}
+        while (BLIT_BUSY()) {}
         BLT_L(_custom->bltapt, srcPtr);
         BLT_L(_custom->bltdpt, queue[1]);
         if (mod != lastMod) {
-            BLT_W(_custom->bltamod, mod);
-            BLT_W(_custom->bltdmod, mod);       /* same mod for A and D */
+            /* bit 15: a tile blit (ScrollX's twin column, scroll_blit.c) -- A is one
+             * contiguous tile, D steps a plane row */
+            BLT_W(_custom->bltamod, (mod & QUEUE_MOD_TILE) ? 0 : mod);
+            BLT_W(_custom->bltdmod, mod & (uint16_t)~QUEUE_MOD_TILE);
             lastMod = mod;
         }
         BLT_W(_custom->bltsize, entry16[5]);    /* kicks the blit */
@@ -1169,7 +1243,7 @@ void ProcessSpriteBlitQueue(void)
     /* Enable blitter and wait idle */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Set blitter config: A→D copy, full masks, no shift */
@@ -1187,7 +1261,7 @@ void ProcessSpriteBlitQueue(void)
         /* Wait for blitter idle */
         _custom->dmacon = (uint16_t)DMACON_BLT_ON;
         (void)(_custom->dmaconr & (1u << 14));
-        while (_custom->dmaconr & (1u << 14)) {}
+        while (BLIT_BUSY()) {}
         _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
         srcPtr = queue[0];
@@ -1212,6 +1286,57 @@ void ProcessSpriteBlitQueue(void)
     }
 }
 
+#if !defined(SWOS_SDL_BUILD)
+/* The background undraw (2026-10-14). The same queue as ProcessSpriteBlitQueue, but the CPU
+ * only starts the first blit: each later one is started by the blitter-finished interrupt
+ * (Int3Handler, swos_amiga_func_stubs.c), which reads the next entry from g_blitQPtr and,
+ * at the sentinel, switches itself off and clears g_blitQActive. So the CPU is free while
+ * the bobs of two frames ago are wiped -- the match loop (game_loop.c) runs the frame's
+ * logic meanwhile. Every blitter wait (BLIT_BUSY) waits for the queue too, and
+ * BlitQueueDrain ends it: after it the queue is reset exactly as ProcessSpriteBlitQueue
+ * leaves it. Nothing but the match loop uses it. */
+volatile uint16_t g_blitQActive;
+volatile uint32_t *g_blitQPtr;
+
+void ProcessSpriteBlitQueueAsync(void)
+{
+    volatile uint32_t *queue = (volatile uint32_t *)_spriteBlitQueue;
+    uint16_t *entry16 = (uint16_t *)queue;
+
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (BLIT_BUSY()) {}
+    if ((int32_t)queue[0] < 0) {
+        _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+        return;                                 /* nothing drawn two frames ago */
+    }
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_L(_custom->bltapt, queue[0]);
+    BLT_L(_custom->bltdpt, queue[1]);
+    BLT_W(_custom->bltamod, (entry16[4] & QUEUE_MOD_TILE) ? 0 : entry16[4]);
+    BLT_W(_custom->bltdmod, entry16[4] & (uint16_t)~QUEUE_MOD_TILE);
+    /* A finished blit's request is never acknowledged outside the queue: clear it first,
+     * or the interrupt would take it for this blit and start the next one on top of it. */
+    _custom->intreq = 0x0040u;
+    g_blitQPtr = queue + 3;
+    g_blitQActive = 1;
+    BLT_W(_custom->bltsize, entry16[5]);        /* kicks the first blit */
+    _custom->intena = 0x8040u;                  /* BLIT: the interrupt starts the rest */
+}
+
+void BlitQueueDrain(void)
+{
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (BLIT_BUSY()) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    *(uint32_t *)_spriteBlitQueue = 0xFFFFFFFFu;
+}
+#endif
+
 /* ================================================================
  * BlitterCopyPanelToScreen  (SWOS2.s line 6591)
  *
@@ -1235,7 +1360,7 @@ void BlitterCopyPanelToScreen(void)
     /* Wait for blitter idle */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: A→D copy, full masks */
@@ -1254,7 +1379,7 @@ void BlitterCopyPanelToScreen(void)
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
             _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (_custom->dmaconr & (1u << 14)) {}
+            while (BLIT_BUSY()) {}
             _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
             BLT_L(_custom->bltapt, (uint32_t)srcPlane);
@@ -1265,7 +1390,7 @@ void BlitterCopyPanelToScreen(void)
         }
     }
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
@@ -1278,12 +1403,54 @@ void BlitterCopyPanelToScreen(void)
     /* Wait, then kick small trailing blit */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
     BLT_W(_custom->bltsize, 0x0016u);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The match's BlitterCopyPanelToScreen (2026-10-14): what the bench drew over the pitch is
+ * wiped by copying the window back from its twin rows (undrawTwin, display.h), which hold
+ * nothing but the pitch -- the 1x mask buffer it copied from is no longer kept in a match.
+ * A display row r shows bytes [r*ROW + coarse, (r+1)*ROW + coarse): its last plane runs on
+ * into the head of the next row. So the copy is two runs of whole rows shifted by the
+ * coarse byte: the window's rows below SCREEN_HEIGHT (and row SCREEN_HEIGHT's head) from
+ * the mirror half, the rest from the top half. Rows the camera has moved onto since this
+ * buffer was last scrolled come back stale and are written by this frame's scroll. */
+static void linearBlitCopy(uint32_t src, uint32_t dst, uint32_t bytes)
+{
+    uint16_t lines = (uint16_t)(bytes / FMODE_FETCH_BYTES);
+    if (lines == 0)
+        return;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (BLIT_BUSY()) {}
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
+    BLT_L(_custom->bltapt, src);
+    BLT_L(_custom->bltdpt, dst);
+    *(volatile uint16_t *)(CUSTOM_BASE + 0x05Cu) = lines;                            /* BLTSIZV */
+    *(volatile uint16_t *)(CUSTOM_BASE + 0x05Eu) = (uint16_t)(FMODE_FETCH_BYTES / 2); /* BLTSIZH: go */
+    while (BLIT_BUSY()) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+}
+
+void RestoreWindowFromTwins(void)
+{
+    uint32_t fb = (uint32_t)_frontbufferBasePtr;
+    uint32_t y = _cameraYMod320;
+    uint32_t coarse = ((uint32_t)(_cameraXMod320 >> 3)) & (uint32_t)(uint16_t)SCROLL_X_COARSE_ALIGN_MASK;
+    uint32_t a = fb + y * ROW_STRIDE_BYTES + coarse;
+    linearBlitCopy(a + FB_MIRROR_OFFSET_BYTES, a, (SCREEN_HEIGHT - y) * ROW_STRIDE_BYTES);
+    linearBlitCopy(fb + coarse, fb + FB_MIRROR_OFFSET_BYTES + coarse, y * ROW_STRIDE_BYTES);
+}
+#endif
 
 /* ================================================================
  * HWSprite_LoadFromSpriteGraphics  (SWOS2.s line 6619)
@@ -1322,7 +1489,7 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     /* Wait for blitter idle */
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: D-only fill (LF=F0 with no source channels) */

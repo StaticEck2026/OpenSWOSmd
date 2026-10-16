@@ -6863,7 +6863,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
     { MENU_MARK_START_MENU, 0, 1 },
     MENU_MARK_BYTE_COORDS,
     {
-        { 0, 56, -106, 16 },
+        { 0, 62, -106, 16 },
         { MENU_CMD_NAV, -1, 6, -1, 2 },
         { MENU_CMD_COLORS, 0x3 },
         { MENU_CMD_TEXT_PTR, 0x10, _aEditTactics },
@@ -6871,7 +6871,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { 0, 74, -106, 16 },
+        { 0, 80, -106, 16 },
         { MENU_CMD_NAV, -1, 7, 1, 3 },
         { MENU_CMD_COLORS, 0x8 },
         { MENU_CMD_TEXT_PTR, 0x10, _aEditCustomTeam },
@@ -6879,7 +6879,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { 0, 92, -106, 16 },
+        { 0, 98, -106, 16 },
         { MENU_CMD_NAV, -1, 8, 2, 4 },
         { MENU_CMD_COLORS, 0xB },
         { MENU_CMD_TEXT_PTR, 0x10, _aHighlights_0 },
@@ -6887,7 +6887,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { 0, 110, -106, 16 },
+        { 0, 116, -106, 16 },
         { MENU_CMD_NAV, -1, 9, 3, 5 },
         { MENU_CMD_COLORS, 0x8 },
         { MENU_CMD_TEXT_PTR, 0x10, _aOptions },
@@ -6895,7 +6895,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { 0, -128, -106, 16 },
+        { 0, -122, -106, 16 },
         { MENU_CMD_NAV, -1, 10, 4, 14 },
         { MENU_CMD_COLORS, 0x3 },
         { MENU_CMD_TEXT_PTR, 0x10, _aSaveDiskFiling },
@@ -6903,7 +6903,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { -102, 56, -106, 16 },
+        { -102, 62, -106, 16 },
         { MENU_CMD_NAV, 1, -1, -1, 7 },
         { MENU_CMD_COLORS, 0xC },
         { MENU_CMD_TEXT_PTR, 0x10, _aFriendly_1 },
@@ -6911,7 +6911,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { -102, 74, -106, 16 },
+        { -102, 80, -106, 16 },
         { MENU_CMD_NAV, 2, -1, 6, 8 },
         { MENU_CMD_COLORS, 0x4 },
         { MENU_CMD_TEXT_PTR, 0x10, _aDiyCompetition_0 },
@@ -6919,7 +6919,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { -102, 92, -106, 16 },
+        { -102, 98, -106, 16 },
         { MENU_CMD_NAV, 3, -1, 7, 9 },
         { MENU_CMD_COLORS, 0x5 },
         { MENU_CMD_TEXT_PTR, 0x10, _aPresetCompetit_0 },
@@ -6927,7 +6927,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { -102, 110, -106, 16 },
+        { -102, 116, -106, 16 },
         { MENU_CMD_NAV, 4, -1, 8, 10 },
         { MENU_CMD_COLORS, 0x4 },
         { MENU_CMD_TEXT_PTR, 0x10, _aSeason_1 },
@@ -6935,7 +6935,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { -102, -128, -106, 16 },
+        { -102, -122, -106, 16 },
         { MENU_CMD_NAV, 5, -1, 9, 14 },
         { MENU_CMD_COLORS, 0xC },
         { MENU_CMD_TEXT_PTR, 0x10, _aCareer_1 },
@@ -6943,7 +6943,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     { MENU_MARK_START_MENU, 0, 0 },
-    { 27, -88, -6, 14 },
+    { 27, -84, -6, 14 },
     { MENU_CMD_NAV, -1, -1, 14, 12 },
     { MENU_CMD_COLORS, 0xE },
     { MENU_CMD_TEXT_NO_PTR, 0x0 },
@@ -6966,7 +6966,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
         MENU_CMD_END
     },
     {
-        { 27, -108, -6, 16 },
+        { 27, -103, -6, 16 },
         { MENU_CMD_NAV, -1, -1, 10, 11 },
         { MENU_CMD_COLORS, 0xB },
         { MENU_CMD_TEXT_PTR, 0x10, _aMultiplayer },

@@ -105,6 +105,17 @@ struct Custom {
  * The struct is naturally word-aligned (all Amiga custom regs are). */
 extern volatile struct Custom *_custom;
 
+/* Blitter busy, including the background undraw (ProcessSpriteBlitQueueAsync, display.c):
+ * between two of its blits the blitter is idle for a moment while the blitter interrupt
+ * starts the next one, so a wait on BBUSY alone could slip a blit in between and have its
+ * registers overwritten. Every blitter wait goes through this. */
+#if !defined(SWOS_SDL_BUILD)
+extern volatile uint16_t g_blitQActive;
+#define BLIT_BUSY() (g_blitQActive | (_custom->dmaconr & (1u << 14)))
+#else
+#define BLIT_BUSY() (_custom->dmaconr & (1u << 14))
+#endif
+
 /* ---- Blitter register offsets from CUSTOM_BASE (kept for asm compat) ---- */
 #define BLTCON0_OFF         0x40
 #define BLTCON1_OFF         0x42
@@ -388,6 +399,9 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
 #define COP_BPL2MOD_VAL_OFF         0x5E
 #define COP_DDFSTRT_VAL_OFF         0x62
 #define COP_DDFSTOP_VAL_OFF         0x66
+#define COP_FMODE_VAL_OFF           0x52    /* AGA template only */
+#define COP_DIWSTRT_VAL_OFF         0x6A    /* AGA template only */
+#define COP_DIWSTOP_VAL_OFF         0x6E    /* AGA template only */
 
 /* Copper byte offsets — differ between OCS and AGA */
 #ifdef AGA
@@ -606,10 +620,25 @@ extern int32_t _sim_draw_width;
  * unchanged). The scroll blits double-write each row into the mirror at offset
  * FB_MIRROR_OFFSET_BYTES. See docs/AGA.md section 12. */
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-#define FRONTBUFFER_DISPLAY_LINES       (2 * SCREEN_HEIGHT + 1)
+/* +2, not +1: the menus' mask buffer lives in the second buffer's mirror half from row
+ * SCREEN_HEIGHT+1 on, FRONTBUFFER_TOTAL_LINES rows (swos_globals.c). */
+#define FRONTBUFFER_DISPLAY_LINES       (2 * SCREEN_HEIGHT + 2)
 #define FB_MIRROR_OFFSET_BYTES          (SCREEN_HEIGHT * ROW_STRIDE_BYTES)
 #else
 #define FRONTBUFFER_DISPLAY_LINES       (SCREEN_HEIGHT + 1)
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* Where a bob's background is undrawn FROM: its twin row in the other half of the 2x-tall
+ * buffer (2026-10-14; it was the separate 1x mask buffer). Nothing but the pitch is ever
+ * in a twin: every bob, text and box is drawn inside the window [cameraYMod320, +272),
+ * whose twins all lie outside it, and everything that draws the pitch -- the vertical
+ * scroll's rows, the column of a horizontal one (copied at once), the crowd's tiles --
+ * writes both twins. So the twin of the rows a bob covers IS the clean pitch under it,
+ * and the mask, kept up to date beside the twins, was a third copy of every scroll. */
+#define undrawTwin(dest) \
+    ((uint32_t)(dest) - (uint32_t)_frontbufferBasePtr < (uint32_t)FB_MIRROR_OFFSET_BYTES \
+        ? (uint32_t)(dest) + (uint32_t)FB_MIRROR_OFFSET_BYTES \
+        : (uint32_t)(dest) - (uint32_t)FB_MIRROR_OFFSET_BYTES)
 #endif
 #define FRONTBUFFER_SIZE_VISIBLE_BYTES  (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_VISIBLE_LINES)
 #define FRONTBUFFER_SIZE_TOTAL_BYTES    (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
@@ -701,6 +730,34 @@ extern int _menu_draw_x_offset;
  * AGA (8bpl) only; OCS keeps 16px. Copper is Amiga-only, so on SDL these are
  * inert. */
 #define FMODE_FETCH_BYTES           48
+
+/* AGA_FMODE: the bitplane fetch mode of the MATCH pitch (2026-10-14). 3 = 64-bit fetch (64px
+ * unit), the default since 2026-10-16: the 8-plane display takes half the chip-bus slots it
+ * does at 1 (48 a line instead of 96), so the blitter and the CPU get more -- about a tenth of
+ * the frame, measured. A 64-bit fetch must start a whole unit before the first visible pixel
+ * and cannot start before DDFSTRT $18, so the window is 320px, hpos $81-$1C1 -- the width of
+ * the DOS release -- and the hardware sprites past sprite 0 are lost, so every sprite is a bob.
+ * Every scroll position stays reachable (BPLCON1 scrolls a whole 64px unit). 1 = BPL32 (32px
+ * unit), the 336px window the AGA build had before: `make -f Makefile.amiga
+ * EXTRA_CFLAGS=-DAGA_FMODE=1`. Menus keep FMODE=1 either way. AGA_Fm3Active() (display.c) is
+ * true while the match display is the FMODE=3 one. */
+#ifndef AGA_FMODE
+#define AGA_FMODE 3
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD) && AGA_FMODE == 3
+int16_t AGA_Fm3Active(void);
+#define AGA_FM3()                   AGA_Fm3Active()
+#else
+#define AGA_FM3()                   0
+#endif
+#define AGA_FM3_WINDOW_LEFT_PX      16      /* the 320px window starts 16px into the 336px one */
+/* ... but shows the pitch 8px further left than that: the 336px picture centred, 8px off each
+ * side, as the DOS release's 320px screen does (render only -- _cameraX, and so what the game
+ * counts as on screen, is untouched). That moves everything drawn on the pitch, the HUD
+ * included, 8px right on screen; AGA_FM3_HUD_SHIFT_PX moves the HUD (screen-pinned sprites,
+ * z >= 8000) further still. */
+#define AGA_FM3_VIEW_SHIFT_PX       8
+#define AGA_FM3_HUD_SHIFT_PX        0
 #define PITCH_DEST_MOD_FMODE        (ROW_STRIDE_BYTES - FMODE_FETCH_BYTES)
 #ifdef AGA
 #define SCROLL_X_COARSE_ALIGN_MASK  0xFFFCu   /* 4-byte / 32px for FMODE=1 */
@@ -749,6 +806,11 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 void DoubleBufferSwapSequence(void);
 void BlitterCopyPanelToScreen2(void);
 void ProcessSpriteBlitQueue(void);
+void ProcessSpriteBlitQueueAsync(void);
+/* Undraw-queue entry modulo flag (AGA): the entry is a tile blit -- A reads one contiguous
+ * tile (modulo 0), D steps by the rest of the word. Set by ScrollX's queued twin column. */
+#define QUEUE_MOD_TILE 0x8000u
+void BlitQueueDrain(void);
 void BlitterCopyPanelToScreen(void);
 void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
 void FlashColor0Delay(uint32_t loopCount, uint16_t color);

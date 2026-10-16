@@ -72,47 +72,21 @@ static inline __attribute__((always_inline)) void waitBlit(void)
 {
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
 /* ================================================================
- * Deferred ScrollX mirror maintenance (AGA block-B elimination)
+ * ScrollX twin maintenance (AGA 2x-tall frontbuffer)
  *
- * The 2x-tall frontbuffer needs rows [SCREEN_HEIGHT, 2*SCREEN_HEIGHT) to mirror
- * [0, SCREEN_HEIGHT) so the copper's single block A can display the whole screen
- * contiguously (no mid-screen 8-plane pointer reload). On a tile cross ScrollX
- * draws a fresh 16px column into [0, SH); its mirror is a full-height A->D copy
- * of SCREEN_HEIGHT*NUM_PLANES one-word rows.
- *
- * Doing that copy on the SAME frame as the column-tile blits OVERRUNS vblank:
- * the ~18 tile blits alone already fill the ~36-line vblank window (measured:
- * L4..L33, display starts vpos 36), so the ~2176-row mirror runs on into the
- * visible display lines and starves the 8-plane bitplane fetch -> the moving
- * garbage column (proven cycle-exact, dma_profile.py).
- *
- * FIX: DEFER the post-column maintenance to NON-CROSS frames of the same buffer.
- * At normal scroll speed a buffer crosses a tile only every ~8 frames but is the
- * draw buffer every 2nd frame, so 3 idle-for-this-buffer frames sit between two
- * of its crosses -- their empty vblank absorbs the copies, and the flush never
- * shares a frame with the column-tile blits. Two slots, one per physical
- * double-buffer, so the alternating frames don't clobber each other's job.
- *
- * BOTH the mirror AND the frontbuffer->mask column copy are deferred: on a cross
- * frame the ~2176-row column blit alone fills vblank, so either copy tacked on
- * after it also spills into the display (the original SWOS2.s Phase 3 mask copy
- * did exactly that). Each copy is itself a full ~2176-row column, so the two run
- * on TWO successive non-cross frames (mirror, then mask) rather than one. The
- * column stays valid in its buffer until it rolls off (~192 frames), and the
- * fresh column is off-screen for several frames (the ~1-coarse-quantum lead
- * SWOS draws each column with), so both copies are done before it is displayed.
+ * Rows [SCREEN_HEIGHT, 2*SCREEN_HEIGHT) twin [0, SCREEN_HEIGHT), so the copper's one
+ * block of plane pointers shows the window from any cameraYMod320 (8 pointers cannot be
+ * reloaded mid-screen in the horizontal blank: 43 free colour clocks at FMODE=1, 16 moves).
+ * A tile cross blits the new column into the window rows and copies it into the twin
+ * rows at once (mirrorColumn) -- which is also where the bobs are undrawn from.
  * ================================================================ */
-static uint32_t s_pendingSrc[2];    /* frontbuffer src addr of the column; 0 = empty */
-static uint32_t s_pendingBuf[2];    /* draw-buffer base the slot belongs to */
-static uint16_t s_pendingY[2];      /* cameraYMod320 the column was drawn at */
-
 /* A->D column copy: 1 word wide, `rows` tall (more than BLTSIZE's 1024 lines), plane-step
  * modulo on both channels. AGA only (the function is), so the big-blit registers exist. */
 static void columnBlitCopy(uint32_t src, uint32_t dst, uint16_t rows, uint16_t widthWords)
@@ -138,51 +112,17 @@ static void columnBlitCopy(uint32_t src, uint32_t dst, uint16_t rows, uint16_t w
     *(volatile uint16_t *)(CUSTOM_BASE + 0x05Eu) = widthWords;    /* BLTSIZH: go */
 }
 
-/* Finish the column deferred for the current draw buffer: its copy into the mirror
- * half, a FULL-column (SCREEN_HEIGHT*NUM_PLANES-row) blit kept off the frame that
- * blits the column itself. (The mask column is copied on the crossing frame.) */
-static void flushPendingColumn(void)
+/* Copy a freshly blitted 32px column into its twin rows. The column was blitted as the
+ * display reads it: rows [y, y+SCREEN_HEIGHT) of the 2x-tall buffer. Their twins are the
+ * rows it did not write: [0, y) from the mirror half, [SCREEN_HEIGHT+y, 2*SCREEN_HEIGHT)
+ * from the top. */
+static void mirrorColumn(uint32_t col, uint16_t y)
 {
-    int i;
-    for (i = 0; i < 2; i++) {
-        if (!s_pendingSrc[i] || s_pendingBuf[i] != (uint32_t)_frontbufferBasePtr)
-            continue;
-        {
-            /* The column was blitted as the display reads it: rows [y, y+SCREEN_HEIGHT)
-             * of the 2x-tall buffer. Fill the rows it did not write from their twins:
-             * [0, y) from the mirror half, [SCREEN_HEIGHT+y, 2*SCREEN_HEIGHT) from the top. */
-            uint32_t col = s_pendingSrc[i];
-            uint32_t yOff = (uint32_t)s_pendingY[i] * ROW_STRIDE_BYTES;
-            if (s_pendingY[i])
-                columnBlitCopy(col + FB_MIRROR_OFFSET_BYTES, col,
-                               (uint16_t)(s_pendingY[i] * NUM_PLANES), 2u);
-            columnBlitCopy(col + yOff, col + yOff + FB_MIRROR_OFFSET_BYTES,
-                           (uint16_t)((SCREEN_HEIGHT - s_pendingY[i]) * NUM_PLANES), 2u);
-        }
-        s_pendingSrc[i] = 0;    /* slot done */
-    }
-}
-
-/* Queue the freshly-drawn column (mirror + mask) for the current draw buffer. */
-static void recordPendingColumn(uint32_t mSrc)
-{
-    int i, slot = -1;
-    for (i = 0; i < 2; i++)                          /* reuse this buffer's slot */
-        if (s_pendingBuf[i] == (uint32_t)_frontbufferBasePtr) { slot = i; break; }
-    if (slot < 0)
-        for (i = 0; i < 2; i++)                      /* else a free slot */
-            if (!s_pendingSrc[i]) { slot = i; break; }
-    if (slot < 0) slot = 0;                          /* else another buffer's (never: two buffers) */
-    /* The slot still holds this buffer's PREVIOUS column (the camera crossed two tiles
-     * before two quiet frames came): finish it now. Overwriting it left that column's
-     * mirror half and its mask column stale for good -- wrong tiles below the Y wrap,
-     * and bobs undrawn there with whatever the mask held. Costs time on a fast scroll,
-     * never a column. */
-    while (s_pendingSrc[slot] && s_pendingBuf[slot] == (uint32_t)_frontbufferBasePtr)
-        flushPendingColumn();
-    s_pendingBuf[slot] = (uint32_t)_frontbufferBasePtr;
-    s_pendingSrc[slot] = mSrc;
-    s_pendingY[slot] = _cameraYMod320;
+    uint32_t yOff = (uint32_t)y * ROW_STRIDE_BYTES;
+    if (y)
+        columnBlitCopy(col + FB_MIRROR_OFFSET_BYTES, col, (uint16_t)(y * NUM_PLANES), 2u);
+    columnBlitCopy(col + yOff, col + yOff + FB_MIRROR_OFFSET_BYTES,
+                   (uint16_t)((SCREEN_HEIGHT - y) * NUM_PLANES), 2u);
 }
 #endif /* AGA && !SWOS_SDL_BUILD */
 
@@ -274,6 +214,64 @@ static void scrollXBlitColumn(uint8_t *a1, uint32_t destXByteOff)
 #endif /* !SWOS_SDL_BUILD */
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The twin rows of a crossing's column, LATER (2026-10-14). The twins only have to hold the
+ * new tiles by this buffer's next frame -- its undraw reads them first, and a vertical wrap
+ * shows them no sooner -- so the match loop (g_scrollTwinQueue) does not copy them on the
+ * crossing frame: the same tile blits scrollXBlitColumn makes, aimed at the twin rows, go
+ * to the HEAD of this buffer's undraw queue (QUEUE_MOD_TILE: A is a contiguous tile), and
+ * run there before its undraw. On a pan that is the buffer's next frame, the quiet one
+ * between its crossings, instead of beside the tile columns. The tile addresses are taken
+ * now, so a crowd tile toggled in between cannot make the twin differ from the window. */
+uint16_t g_scrollTwinQueue;
+extern volatile uintptr_t _spriteBlitQueue;
+
+static void queueTwinTileBlit(uint32_t src, uint32_t dst, uint16_t bltsize)
+{
+    uint32_t *q = (uint32_t *)_spriteBlitQueue;
+    q[0] = src;
+    q[1] = undrawTwin(dst);
+    ((uint16_t *)q)[4] = (uint16_t)(QUEUE_MOD_TILE | BLTDMOD_PLANE_STEP);
+    ((uint16_t *)q)[5] = bltsize;
+    q += 3;
+    *q = BLT_BLITQ_END;
+    _spriteBlitQueue = (uintptr_t)q;
+}
+
+/* scrollXBlitColumn's blits, in the same order and sizes, queued for the twin rows. */
+static void scrollXQueueTwinColumn(uint8_t *a1, uint32_t destXByteOff)
+{
+    uint32_t dst = (uint32_t)_frontbufferBasePtr + destXByteOff
+                 + (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
+    uint16_t d1, d2, d3;
+
+    d2 = _cameraYMod320;
+    d1 = d2 & TILE_MASK;
+    if (d1 != 0) {
+        d3 = TILE_HEIGHT - d1;
+        queueTwinTileBlit((uint32_t)(*(uint8_t **)a1 + (d1 << NUM_PLANES_SHIFT_PLUS1)), dst,
+                          (uint16_t)(((d3 << NUM_PLANES_SHIFT) << 6) | 1));
+        dst += (uint32_t)d3 * ROW_STRIDE_BYTES;
+        a1 += PITCH_PTR_ROW_BYTES;
+        d2 += d3;
+    }
+    while (d2 < SCREEN_HEIGHT) {
+        queueTwinTileBlit((uint32_t)*(uint8_t **)a1, dst, BLTSIZE_TILE_COL);
+        dst += (uint32_t)TILE_HEIGHT * ROW_STRIDE_BYTES;
+        a1 += PITCH_PTR_ROW_BYTES;
+        d2 += TILE_HEIGHT;
+    }
+    d2 = _cameraYMod320;
+    while (d2 >= TILE_HEIGHT) {
+        queueTwinTileBlit((uint32_t)*(uint8_t **)a1, dst, BLTSIZE_TILE_COL);
+        dst += (uint32_t)TILE_HEIGHT * ROW_STRIDE_BYTES;
+        a1 += PITCH_PTR_ROW_BYTES;
+        d2 -= TILE_HEIGHT;
+    }
+    if (d2 != 0)
+        queueTwinTileBlit((uint32_t)*(uint8_t **)a1, dst,
+                          (uint16_t)(((d2 << NUM_PLANES_SHIFT) << 6) | 1));
+}
+
 void ScrollYVergeRefresh(void);   /* verge-only margin refresh; defined after ScrollYUpdateRowsAndBlit */
 #endif
 
@@ -303,11 +301,6 @@ void ScrollXUpdateColumnsAndBlit(void)
     /* Check if camera moved horizontally */
     d0 = _cameraX.s.i;
     if (d0 == _oldCameraX) {
-#if defined(AGA) && !defined(SWOS_SDL_BUILD)
-        /* No X scroll this frame -> flush any column maintenance deferred from an
-         * earlier tile-cross of this buffer (non-cross frame, empty vblank). */
-        flushPendingColumn();
-#endif
         return;
     }
 
@@ -356,13 +349,6 @@ void ScrollXUpdateColumnsAndBlit(void)
         /* No tile boundary crossed — just update oldCameraX */
         _oldCameraX = _cameraX.s.i;
         _cameraCoordinatesValid = 0;
-#if defined(AGA) && !defined(SWOS_SDL_BUILD)
-        /* Non-cross frame: empty vblank -> flush this buffer's deferred column
-         * maintenance (mirror + mask). Confining the flush to the two non-cross
-         * early-returns guarantees it never shares a frame with the column-tile
-         * blits (which alone fill the ~36-line vblank), so nothing overruns. */
-        flushPendingColumn();
-#endif
         return;
     }
 
@@ -428,27 +414,18 @@ void ScrollXUpdateColumnsAndBlit(void)
         scrollXBlitColumn(aL, dest32);
         scrollXBlitColumn(aR, dest32 + 2u);
 
-        /* DEFER the 32px-wide (2-word) mirror (block-B elimination) + mask copy to
-         * the next two non-cross frames of this buffer (they'd overrun vblank here). */
-        /* The mask column NOW, before this frame's bobs are drawn: the mask is what a
-         * bob is undrawn from. Deferred (as it was, two quiet frames later), a player on
-         * the incoming column was undrawn from the column that had been in this place of
-         * the ring 416px ago -- a block of other tiles beside him -- and the late copy,
-         * taken from the frame buffer, then kept that block in the mask for good. The
-         * column just blitted is clean: nothing has been drawn on it yet. */
-        {
-            uint32_t col = _frontbufferBasePtr + dest32;
-            uint32_t msk = (uint32_t)_frontbufferMaskBuffer + dest32;
-            uint32_t yOff = (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
-            /* the mask is 1x tall and wraps: rows [y, SCREEN_HEIGHT) from the top half,
-             * rows [0, y) from the mirror half, where the column's tail now is */
-            columnBlitCopy(col + yOff, msk + yOff,
-                           (uint16_t)((SCREEN_HEIGHT - _cameraYMod320) * NUM_PLANES), 2u);
-            if (_cameraYMod320)
-                columnBlitCopy(col + FB_MIRROR_OFFSET_BYTES, msk,
-                               (uint16_t)(_cameraYMod320 * NUM_PLANES), 2u);
+        /* The column's twin rows, NOW (2026-10-14): the twins are what a bob is undrawn
+         * from (undrawTwin, display.h), so they must hold the new tiles before any bob
+         * that touches this column is undrawn -- two frames from now on this buffer. The
+         * separate mask buffer, which got a full-column copy of its own here, is gone
+         * from the match. In the match loop the twins are queued for this buffer's next
+         * frame instead (scrollXQueueTwinColumn); elsewhere (replays) copied now. */
+        if (g_scrollTwinQueue) {
+            scrollXQueueTwinColumn(aL, dest32);
+            scrollXQueueTwinColumn(aR, dest32 + 2u);
+        } else {
+            mirrorColumn(_frontbufferBasePtr + dest32, _cameraYMod320);
         }
-        recordPendingColumn(_frontbufferBasePtr + dest32);
     }
 #else
     {
@@ -835,6 +812,12 @@ void ScrollYUpdateRowsAndBlit(void)
     } while (rowCount >= 0);
 
     /* ---- Blitter mask copy: frontbuffer → mask buffer ---- */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* Not on AGA: the bobs are undrawn from the rows' twins (undrawTwin, display.h),
+     * which the loop above has just written. */
+    (void)maskBlitDestPtr; (void)blitWordCount;
+    return;
+#endif
     waitBlit();
     BLT_W(_custom->bltafwm, BLT_FWM_ALL);
     BLT_W(_custom->bltalwm, BLT_FWM_ALL);

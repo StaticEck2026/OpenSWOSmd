@@ -920,7 +920,7 @@ static void swap_int2_to_game(void)
 static inline __attribute__((always_inline)) void wait_blitter(void)
 {
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
 }
 

@@ -61,6 +61,16 @@ extern uint16_t _writeOnly01;
 extern uint32_t _gameTime;
 extern FixedPoint _cameraX;
 extern FixedPoint _cameraY;
+extern int16_t  _oldCameraX, _oldCameraY;
+extern uint16_t _cameraCoordinatesValid;
+
+/* The Amiga AGA match frame overlaps the undraw with the logic (see runFrame's body). */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+#define MATCH_BACKGROUND_UNDRAW 1
+#else
+#define MATCH_BACKGROUND_UNDRAW 0
+#endif
+extern FixedPoint _cameraY;
 extern volatile int16_t _waitingInterrupt;
 extern uint32_t _irqCookieObfuscated;
 extern uint16_t _quitToDos;
@@ -170,7 +180,7 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
 {
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14)) {}
+    while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Anti-tamper cookie check — always passes in normal execution */
@@ -209,7 +219,7 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
     /* Each blit waits for the one before it, so the frame's LAST blit can still be
      * running here: let it finish before the buffer it draws into is put on screen. */
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
 #endif
     RASTER(RASTER_IDLE);
@@ -651,17 +661,37 @@ GameFrameResult GameLoop_Frame(void)
 
     /* Panel update block */
     RASTER(RASTER_UNDRAW);
+#if MATCH_BACKGROUND_UNDRAW
+    /* The bobs of two frames ago are wiped by the blitter on its own (display.c) while
+     * the CPU reads the keys, moves the camera and runs the frame's logic. Anything that
+     * may draw or swap first waits for it: the panel copy (its blitter waits do), a key
+     * (pause, the crowd-chant fade, ESC), a frame that leaves the loop. */
+    ProcessSpriteBlitQueueAsync();
+#else
     ProcessSpriteBlitQueue();
+#endif
     if (_subsWriteOnly != 0) {
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        { extern void RestoreWindowFromTwins(void); RestoreWindowFromTwins(); }
+#else
         BlitterCopyPanelToScreen();
+#endif
         _subsWriteOnly -= 1;
     }
 
     /* Read inputs and dispatch */
     GetKey();
+#if MATCH_BACKGROUND_UNDRAW
+    if (_currentKey != 0)
+        BlitQueueDrain();
+#endif
     MainKeysCheck(_currentKey);
     /* nullsub_10, nullsub_9 — no-ops */
 
+#if MATCH_BACKGROUND_UNDRAW
+    if (_playGame == 0 || _goIntoHighlightsLoop != 0 || _replayState != 0)
+        BlitQueueDrain();
+#endif
     /* Check end of match */
     if (_playGame == 0)
         return GAME_FRAME_MATCH_OVER;
@@ -687,7 +717,17 @@ GameFrameResult GameLoop_Frame(void)
     /* Run gameplay update */
     RASTER(RASTER_SCROLL);
     MoveCamera();
+#if MATCH_BACKGROUND_UNDRAW
+    /* The scroll draws into the frame being undrawn, so it waits for the undraw, after
+     * the logic below. The logic reads one thing the scroll writes: whether the camera
+     * stood still (the break timers wait for it). The scroll leaves it 1 exactly when
+     * neither axis moved since this buffer was last scrolled (scroll_blit.c), and the
+     * logic does not move the camera, so it is set here to the value the scroll will
+     * write -- the logic reads what it always read. */
+    _cameraCoordinatesValid = (uint16_t)(_cameraX.s.i == _oldCameraX && _cameraY.s.i == _oldCameraY);
+#else
     ScrollToCurrent();
+#endif
     /* Record the camera in the SAME space the per-sprite coordinates are written
      * in. Those come off the draw path (sprites.c), which measures from
      * Render_CameraX() -- the RENDER camera. `_cameraX` is the SIMULATION one,
@@ -746,6 +786,18 @@ GameFrameResult GameLoop_Frame(void)
     SetCurrentPlayerName();
     UpdateBookedPlayerNumberSprite();
     ShowResult();
+#if MATCH_BACKGROUND_UNDRAW
+    RASTER(RASTER_SCROLL);
+    BlitQueueDrain();
+    {
+        /* a crossing's twin rows go to the head of this buffer's undraw queue
+         * (scroll_blit.c), which the next frame of this buffer runs first */
+        extern uint16_t g_scrollTwinQueue;
+        g_scrollTwinQueue = 1;
+        ScrollToCurrent();
+        g_scrollTwinQueue = 0;
+    }
+#endif
     RASTER(RASTER_CROWD);
     DrawAnimatedPatterns();   /* also ticks _showFansCounter / goal-celebration state */
     RASTER(RASTER_SPRITES);

@@ -87,9 +87,29 @@ volatile uint32_t bitPlane7BasePtr;
  * point at these for the main display area. */
 /* Sized at the MAX (widescreen) stride so the array is big enough whatever the
  * runtime _screen_width is; the live frame uses _screen_width as its row stride. */
-SWOS_CHIP_BSS uint8_t _frontbufferBase[FRONTBUFFER_DISPLAY_ALLOC_BYTES];
-SWOS_CHIP_BSS uint8_t _frontbufferBaseAlt[FRONTBUFFER_DISPLAY_ALLOC_BYTES];
+/* 8-byte aligned: a 64-bit bitplane fetch (display.h AGA_FMODE=3) reads whole aligned
+ * quadwords, so a plane row that starts 4 bytes into one shows 64px slices out of order. */
+SWOS_CHIP_BSS uint8_t _frontbufferBase[FRONTBUFFER_DISPLAY_ALLOC_BYTES] __attribute__((aligned(8)));
+SWOS_CHIP_BSS uint8_t _frontbufferBaseAlt[FRONTBUFFER_DISPLAY_ALLOC_BYTES] __attribute__((aligned(8)));
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The mask buffer (the menus' clean backdrop, and where sprite banks are staged) shares
+ * chip RAM with the second frontbuffer's MIRROR half (2026-10-16, 102 KB back) -- as the
+ * original shared its buffers by when they are used. Only a match uses the mirror half, and
+ * a match no longer draws from the mask (its bobs are undrawn from the twin rows,
+ * display.h undrawTwin). The match's set-up stages its sprite banks here before the pitch
+ * is first drawn; after a match, or the highlights, PrepareMenuForFadeIn loads menubg.raw
+ * into it again, and the replay menu loads menubg2.raw each time it opens. It starts one
+ * row into the half: LoadFileEx stages files in the displayed buffer, up to
+ * FRONTBUFFER_SIZE_TOTAL_BYTES -- one row past the first half. */
+#define MASK_IN_ALT_OFFSET 104832
+_Static_assert(MASK_IN_ALT_OFFSET == (SCREEN_HEIGHT + 1) * ROW_STRIDE_BYTES, "mask offset");
+_Static_assert(MASK_IN_ALT_OFFSET + FRONTBUFFER_ALLOC_TOTAL_BYTES <= FRONTBUFFER_DISPLAY_ALLOC_BYTES,
+               "the mask must fit in the frontbuffer's mirror half");
+__asm__(".globl " _ASM_PFX "_frontbufferMaskBuffer\n"
+        ".equ   " _ASM_PFX "_frontbufferMaskBuffer, " _ASM_PFX "_frontbufferBaseAlt + 104832\n");
+#else
 SWOS_CHIP_BSS uint8_t _frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+#endif
 #ifdef SWOS_SDL_BUILD
 /* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
  * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
@@ -748,7 +768,16 @@ __asm__(
  * Note: sound/sfx.in1 (71500 bytes) loads into poolplyrDatBuffer
  * (52200 bytes) — which overruns by ~19 KB. Fix when sfx path lights up. */
 uint8_t _menuSongData[8  * 1024];
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* The menu music's samples share chip RAM with the END of the pitch buffer (2026-10-16,
+ * 64 KB back), as the original's buffers did by when they are used: only the menus play
+ * them, and the pitch buffer is only loaded for a match or the highlights -- after the
+ * sound effects took over (StartMatchSequence) or the music was stopped (ShowHighlights).
+ * Both reload the menu music on the way back (InitMenuMusic), as the original did. Only a
+ * SWOS 2020 pitch reaches this far into the buffer. Aliased after _pitchDatBuffer below. */
+#else
 SWOS_CHIP_BSS uint8_t _menuInsBank [64 * 1024];
+#endif
 uint8_t _sfxSongData [8  * 1024];
 
 /* ---- SFX instrument bank (IN1 + IN2 contiguous in CHIP RAM) ----
@@ -1013,6 +1042,10 @@ int16_t _kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x00
  * load-size check (pitch.c) rejects any map > PITCHFILE_MAX_SIZE, so a map that
  * would overflow is refused (no overrun); real AGA maps are <=78K. */
 SWOS_CHIP_BSS uint8_t _pitchDatBuffer[PITCHFILE_MAX_SIZE];
+_Static_assert(PITCHFILE_MAX_SIZE >= 2u * 64u * 1024u, "menu music bank at the pitch buffer's end");
+__asm__(".globl " _ASM_PFX "_menuInsBank\n"
+        ".equ   " _ASM_PFX "_menuInsBank, " _ASM_PFX "_pitchDatBuffer + (544 * 1024 - 64 * 1024)\n");
+_Static_assert(PITCHFILE_MAX_SIZE == 544u * 1024u, "update the _menuInsBank alias");
 #else
 SWOS_CHIP_BSS uint8_t _pitchDatBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 #endif

@@ -100,6 +100,20 @@ speedup) pending** — see [AMIGA_SPRITES.md](AMIGA_SPRITES.md).
 > - Also fixed: the sprite pool's overflow check compared against the address of whatever label
 >   followed the pool in the original's BSS, so it caught nothing; it checks the pool's end now.
 
+> **Status (2026-10-16): a match displays at FMODE=3 (64-bit fetch) by default** (`AGA_FMODE`,
+> `include/display.h`; `EXTRA_CFLAGS=-DAGA_FMODE=1` for the old display). The 8-plane fetch takes
+> 48 chip-bus slots a line instead of 96, which left ~10% more of the frame free on the rig.
+> BPLCON1 scrolls a whole 64px unit, so every position stays reachable with one pointer per frame
+> (pointer = the unit at or before the window's first pixel - 1, delay 0..63). The fetch must start
+> a unit early and not before DDFSTRT $18, so the window is 320px (hpos $81-$1C1), laid out like
+> the DOS screen: the 336px picture centred (8px off each side). Only
+> the display changed -- the FMODE=1 scroll code already keeps every pixel this window shows. The
+> frontbuffers are 8-byte aligned (a 64-bit fetch reads aligned quadwords). Sprites 1-7 are lost
+> to the early fetch, so every sprite is a bob. Menus stay FMODE=1 at 336px. The bobs are undrawn
+> from the 2x-tall buffer's twin rows -- no mask buffer in a match -- and a crossing's twin column
+> rides at the head of its buffer's undraw queue, which runs in the background (blitter interrupt)
+> while the CPU runs the frame's logic.
+
 AGA mode gives the game a 256-colour display (8 bitplanes) for backgrounds and
 the pitch, while keeping sprite/menu/charset banks at **4 bitplanes (16 colours)**.
 The depth is **mixed per bank** and auto-detected at load, so the same decode path

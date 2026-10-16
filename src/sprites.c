@@ -84,7 +84,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
 {
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
-    while (_custom->dmaconr & (1u << 14))
+    while (BLIT_BUSY())
         ;
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
@@ -624,7 +624,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
         if (d2 + SPRITE_HEIGHT_LINES <= SCREEN_HEIGHT) {
             /* Entirely in the first half. */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
@@ -632,7 +632,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         } else if (d2 >= SCREEN_HEIGHT) {
             /* Entirely in the mirror half — fold the bg-save read back to the
              * matching first-half row (the 1x mask buffer has no mirror half). */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = (destOff - (uint32_t)FB_MIRROR_OFFSET_BYTES) + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
@@ -647,14 +647,14 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             uint16_t topSize  = (uint16_t)(((topCount * NUM_PLANES) << 6) | wc);
             uint16_t botSize  = (uint16_t)(((botCount * NUM_PLANES) << 6) | wc);
             /* top */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = topSize;
             a3 = (uint32_t *)((uint8_t *)a3 + 12);
             /* bottom (mirror top; contiguous continuation of destAddr) */
             uint32_t botDest = destAddr + (uint32_t)topCount * (uint32_t)ROW_STRIDE_BYTES;
-            *(uint32_t *)((uint8_t *)a3 + 0)  = (uint32_t)xWordOffL + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(botDest);
             *(uint32_t *)((uint8_t *)a3 + 4)  = botDest;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = botSize;
@@ -696,15 +696,19 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     DrawSpriteClipped(a0, d1, d2);
     return;
 #else
-    /* 4-plane sprite storage: the optimised single-interleaved-blit fast path below assumed
-     * 8-plane storage (one blit of nlines*NUM_PLANES rows). With sprites at real 4-plane
-     * depth, route player bobs through the per-plane-correct DrawSpriteClipped (which also
-     * clears the upper playfield planes and queues the undraw) — same as the SDL branch.
-     * TODO: reinstate an optimised 4-plane fast path here if the in-match frame budget needs it. */
-    if (a0) DrawSpriteClipped(a0, d1, d2);
-    return;
+    /* The optimised single-interleaved-blit fast path below (the original's) needs the
+     * sprite stored as deep as the playfield: one blit of nlines*NUM_PLANES rows. The
+     * in-match running frames are (display.h, spriteIsPadded8, 2026-10-14), so they take
+     * it -- no clipping arithmetic, no seam split of the draw, twelve register writes.
+     * Every other sprite, and a running frame the fast path's own checks refuse (off the
+     * top, too low), goes through DrawSpriteClipped as before. */
+    if (!a0)
+        return;
+    if (spriteNumPlanes(a0->ordinal) != NUM_PLANES) {
+        DrawSpriteClipped(a0, d1, d2);
+        return;
+    }
 
-    /* ---- former 8-plane fast path (unreached; kept for a future 4-plane rewrite) ---- */
     /* Validate sprite: nlines must be 15, pixWidth <= 16, type != 0 */
     if ((uint16_t)a0->nlines != 15)
         goto fallback;
@@ -815,7 +819,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
         if (d2 + SPRITE_HEIGHT_LINES <= SCREEN_HEIGHT) {
             /* Entirely in the first half. */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
@@ -823,7 +827,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         } else if (d2 >= SCREEN_HEIGHT) {
             /* Entirely in the mirror half — fold the bg-save read back to the
              * matching first-half row (the 1x mask buffer has no mirror half). */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = (destOff - (uint32_t)FB_MIRROR_OFFSET_BYTES) + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
@@ -838,14 +842,14 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             uint16_t topSize  = (uint16_t)(((topCount * NUM_PLANES) << 6) | wc);
             uint16_t botSize  = (uint16_t)(((botCount * NUM_PLANES) << 6) | wc);
             /* top */
-            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(destAddr);
             *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = topSize;
             a3 = (uint32_t *)((uint8_t *)a3 + 12);
             /* bottom (mirror top; contiguous continuation of destAddr) */
             uint32_t botDest = destAddr + (uint32_t)topCount * (uint32_t)ROW_STRIDE_BYTES;
-            *(uint32_t *)((uint8_t *)a3 + 0)  = (uint32_t)xWordOffL + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = undrawTwin(botDest);
             *(uint32_t *)((uint8_t *)a3 + 4)  = botDest;
             *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
             *(uint16_t *)((uint8_t *)a3 + 10) = botSize;
@@ -1057,7 +1061,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
         if (d2 >= SCREEN_HEIGHT)
             maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
-        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+        uint32_t maskBufAddr = undrawTwin(destAddr); (void)maskFirstHalfOff;
 #else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1121,7 +1125,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
              * mask buffer is only 1x tall — so restore the tail from the FIRST-half
              * mask position (destAddr2 minus the mirror offset), not destAddr2's own
              * (out-of-range) offset. */
-            uint32_t tailMask = (destAddr2 - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+            uint32_t tailMask = undrawTwin(destAddr2);
 #else
             uint32_t tailMask = destAddr2 - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1243,7 +1247,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
         if (d2 >= SCREEN_HEIGHT)
             maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
-        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+        uint32_t maskBufAddr = undrawTwin(destAddr); (void)maskFirstHalfOff;
 #else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1344,7 +1348,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             /* Queue entry for tail */
             *(uint32_t *)((uint8_t *)a3 + 4) = tailDest;
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-            uint32_t tailMask = (tailDest - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+            uint32_t tailMask = undrawTwin(tailDest);
 #else
             uint32_t tailMask = tailDest - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1498,7 +1502,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
         if (d2 >= SCREEN_HEIGHT)
             maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
-        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+        uint32_t maskBufAddr = undrawTwin(destAddr); (void)maskFirstHalfOff;
 #else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1596,7 +1600,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
             *(uint32_t *)((uint8_t *)a3 + 4) = destAddr2;
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-            uint32_t tailMask = (destAddr2 - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+            uint32_t tailMask = undrawTwin(destAddr2);
 #else
             uint32_t tailMask = destAddr2 - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1760,7 +1764,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
         if (d2 >= SCREEN_HEIGHT)
             maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
-        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+        uint32_t maskBufAddr = undrawTwin(destAddr); (void)maskFirstHalfOff;
 #else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -1881,7 +1885,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             BLT_L(_custom->bltbpt, tailSrcA);
             *(uint32_t *)((uint8_t *)a3 + 4) = tailDest;
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-            uint32_t tailMask = (tailDest - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+            uint32_t tailMask = undrawTwin(tailDest);
 #else
             uint32_t tailMask = tailDest - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
 #endif
@@ -2481,6 +2485,11 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         int16_t d2sim = a1->y.s.i - a0->centerY - _cameraY.s.i - a1->z.s.i;
         int16_t d2 = a1->y.s.i - a0->centerY - Render_CameraY();
         d2 -= a1->z.s.i;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* the FMODE=3 window's HUD layout (display.h): drawing only, after the cull */
+        if (a1->z.s.i >= HUD_LAYER_Z_MIN && AGA_FM3())
+            d1 = (int16_t)(d1 + AGA_FM3_HUD_SHIFT_PX);
+#endif
 
         /* Two culls, deliberately: one decides GAMEPLAY, the other DRAWING.
          *
@@ -2569,7 +2578,9 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
 #ifdef SWOS_SDL_BUILD
         if (1) {
 #else
-        if (_overlayActiveFlag != 0 || a0->pixWidth > 16) {
+        /* FMODE=3 (display.h AGA_FMODE): the fetch starts at DDFSTRT $18, before the DMA
+         * slots of the band's sprites, so every sprite is a bob */
+        if (_overlayActiveFlag != 0 || a0->pixWidth > 16 || AGA_FM3()) {
 #endif
             /* Wide sprite: update occlusion buckets and go to general stack */
             /* `>> 4` then `<< 1` on a negative x: the shift left is UB (include/math68k.h). */
