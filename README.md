@@ -760,6 +760,29 @@ the long version):
   Trace upward and fix the cause; don't add a `if (!ptr) return;` to make
   the menu draw work.
 
+## License
+
+Copyright (C) 2025-2026 Ben Baker and the OpenSWOS contributors.
+
+OpenSWOS's own source code is free software: you can redistribute it and/or modify it
+under the terms of the **GNU General Public License, version 3 or (at your option) any
+later version** (GPL-3.0-or-later). See [LICENSE](LICENSE). In short: anyone who
+distributes a build of OpenSWOS, changed or not, must make its complete source code
+available under the same license.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+The license does **not** cover:
+
+- ***Sensible World of Soccer* itself.** The game and its graphics, sound, music, data
+  files and code are © Sensible Software and their current rights holders, and nothing
+  here grants any right to them. OpenSWOS is a fan project and is not affiliated with
+  Sensible Software or its current rights holders.
+- **Third-party code in `third_party/`**, which keeps its own license (see each folder):
+  GGPO-X, ENet, miniz, SimpleMatchmaker and opl_models (MIT), Opal (public domain),
+  dr_mp3 (public domain or MIT-0), and Tile Agent's runtime.
+
 ## Support development
 
 If you enjoy OpenSWOS and want to support its development:
