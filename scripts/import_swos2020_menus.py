@@ -59,8 +59,6 @@ MULTIPLAYER_MENUS = [
     "mlogReader", "mlogTicker", "mlogStats",
     # online stats                                                  (replays/replaysMenu.cpp)
     "myRankedStats", "myFriendlyStats",
-    # the credits, from the main menu                               (game.cpp)
-    "credits",
     # the pre-match uniform selector, from the PLAY MATCH screen    (game.cpp)
     "selectUniform",
 ]

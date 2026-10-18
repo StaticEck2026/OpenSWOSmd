@@ -11,7 +11,7 @@ between two reads" all look the same. Three things now cover that.
 
 `[input] key_up`, `key_down`, `key_left`, `key_right`, `key_fire` in `SWOS.ini`, or
 **OPTIONS -> CONTROLS -> REDEFINE KEYS** (`src/controls_menu.c`,
-`bin/data_json/menus/openswos/controlsMenu.json`; `--menu=united/controlsMenu`).
+`bin/data_json/menus/openswos/controlsMenu.json`; `--menu=openswos/controlsMenu`).
 
 - A key is named as SDL names its **scancode** -- the physical key, whatever the layout or
   the shift state: `W`, `Space`, `Left Shift`, `Keypad 8`. Empty: none.

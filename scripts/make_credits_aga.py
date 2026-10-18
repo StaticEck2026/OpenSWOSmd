@@ -2,18 +2,20 @@
 """Build bin/grafs_aga/CREDITS.RAW -- the Amiga AGA CREDITS screen's backdrop.
 
 The SDL builds draw the developer photos over the menu backdrop at run time
-(online_menus.c, from bin/data/credits_icons.bmp). The Amiga has no chunky frame buffer
+(src/credits_menu.c, from bin/data/credits_icons.bmp). The Amiga has no chunky frame buffer
 to draw them into, so its screen is ONE 8-plane picture made here: the AGA menu backdrop
-(SwosGfx's Amiga_Images_256/MENUBG.bmp) with the seven photos set into it, packed to an
-RNC'd interleaved RAW by SwosGfx like every other full-screen image.
+(SwosGfx's Amiga_Images_256/MENUBG.bmp) with four of the strip's photos set into it
+(PHOTOS), packed to an RNC'd interleaved RAW by SwosGfx like every other full-screen image.
 
 The photos keep the palette indices they have in credits_icons.bmp, 128..255 -- a block
 the menu screens do not use -- so the game lends those entries to the photos while the
 screen is up, exactly as the SDL builds do. Their colours are written to
 include/credits_aga_palette.h (12-bit, as the menu palette stores them).
 
-Where a photo goes is the menu's business: menus.c draws the names under them and
-includes the generated header for the geometry, so the two cannot drift.
+Where a photo goes is the menu's business: menus.c draws the names under them and the
+text around them (include/credits_text.h), and includes the generated header for the
+geometry, so the two cannot drift. PHOTO_Y is where the text above the photos ends:
+add a line there and the photos move down by its pitch (credits_text.h).
 
   scripts/make_credits_aga.py [--swosgfx DIR]
 
@@ -31,14 +33,18 @@ from PIL import Image
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 W, H = 352, 272         # a full-screen overlay: 44 bytes a plane row, SCREEN_HEIGHT rows
 PHOTO = 40              # px, square
-STEP = 44               # photo + 4 px, as SWOS 2020 spaces them
-COUNT = 7
+STEP = 60               # photo + 20 px: room for a name under each
+STRIP = 7               # photos in credits_icons.bmp (credits_text.h CREDITS_STRIP_*)
+# The photos shown, in the order drawn, by their place in the strip -- the order of
+# menus.c k_creditsAgaNames: BENBAKER76, ZKZ, PLAYAVELI, THD79.
+PHOTOS = [1, 3, 0, 4]
+COUNT = len(PHOTOS)
 # Where the first photo is, in the coordinates menu TEXT is drawn at (DrawMenuText*).
 # Those are 24 px left and 36 px above the coordinates of menu ENTRIES, which the menu
 # system centres on the screen: the header entry at (82, 0) is drawn at text (106, 36).
 # Measured on the A1200 screen (2026-10-11), not derived.
-PHOTO_X = 24
-PHOTO_Y = 144
+PHOTO_X = 176 - ((COUNT - 1) * STEP + PHOTO) // 2   # centred on text x 176 (menus.c)
+PHOTO_Y = 129           # under credits_text.h's lines above CREDITS_PHOTOS, from y 56
 FG_SHIFT = 16           # menu x -> picture x on AGA (menu_system.c AGA_MENU_FG_SHIFT_BYTES * 8)
 PAL_BASE = 128
 SHADOW = 3              # the menu palette's black: SWOS 2020's 1 px drop shadow
@@ -54,22 +60,22 @@ def main():
     strip = Image.open(os.path.join(REPO, "bin", "data", "credits_icons.bmp"))
     if bg.mode != "P" or bg.size != (W, H):
         sys.exit("make_credits_aga: MENUBG.bmp is not a %dx%d 8-bit image" % (W, H))
-    if strip.mode != "P" or strip.size != (PHOTO * COUNT, PHOTO):
-        sys.exit("make_credits_aga: credits_icons.bmp is not a %dx%d 8-bit strip" % (PHOTO * COUNT, PHOTO))
+    if strip.mode != "P" or strip.size != (PHOTO * STRIP, PHOTO):
+        sys.exit("make_credits_aga: credits_icons.bmp is not a %dx%d 8-bit strip" % (PHOTO * STRIP, PHOTO))
     if max(bg.tobytes()) >= PAL_BASE or min(strip.tobytes()) < PAL_BASE:
         sys.exit("make_credits_aga: the backdrop and the photos share palette entries")
 
     out = bg.copy()
     px = out.load()
     sp = strip.load()
-    for p in range(COUNT):
+    for p, s in enumerate(PHOTOS):
         x0 = FG_SHIFT + PHOTO_X + p * STEP
         for y in range(PHOTO):
             for x in range(PHOTO):
                 px[x0 + x + 1, PHOTO_Y + y + 1] = SHADOW
         for y in range(PHOTO):
             for x in range(PHOTO):
-                px[x0 + x, PHOTO_Y + y] = sp[p * PHOTO + x, y]
+                px[x0 + x, PHOTO_Y + y] = sp[s * PHOTO + x, y]
 
     pal = bg.getpalette()[:768]
     spal = strip.getpalette()[:768]

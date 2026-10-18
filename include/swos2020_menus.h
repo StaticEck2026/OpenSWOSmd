@@ -39,10 +39,9 @@
     X(mLogStatsMenu, "swos2020/mLogStatsMenu", MLogStatsMenu, 56) \
     X(myRankedStatsMenu, "swos2020/myRankedStatsMenu", MyRankedStatsMenu, 107) \
     X(myFriendlyStatsMenu, "swos2020/myFriendlyStatsMenu", MyFriendlyStatsMenu, 107) \
-    X(creditsMenu, "swos2020/creditsMenu", CreditsMenu, 31) \
     X(selectUniformMenu, "swos2020/selectUniformMenu", SelectUniformMenu, 39) \
 
-/* Every handler name the imported menus reference (271), sorted. */
+/* Every handler name the imported menus reference (258), sorted. */
 #define SWOS2020_MENU_CALLBACKS(X) \
     X(LeftBasicColor_Dec_onSelect) \
     X(LeftBasicColor_Inc_onSelect) \
@@ -81,27 +80,14 @@
     X(SetExitMenuFlag) \
     X(aboutMPMenu_OnDraw) \
     X(bestNewsMenu_OnSelect) \
-    X(creditsMenu_OnDraw) \
-    X(creditsMenu_OnInit) \
     X(cupMatchView_exit_onSelect) \
     X(cupMatchView_onDraw) \
     X(cupMatchView_onInit) \
     X(cupMatchView_onReturn) \
     X(cupMatchView_scrollDown_onSelect) \
     X(cupMatchView_scrollUp_onSelect) \
-    X(dev1LinkMenu_onSelect) \
-    X(dev2LinkMenu_onSelect) \
-    X(dev5LinkMenu_onSelect) \
-    X(dev6LinkMenu_onSelect) \
-    X(drawDev1Name) \
-    X(drawDev2Name) \
-    X(drawDev3Name) \
-    X(drawDev4Name) \
-    X(drawDev5Name) \
-    X(drawDev6Name) \
     X(drawGoButtonAndStarsGraphics) \
     X(draw_mp_game_style_icon_sets) \
-    X(exitCreditsMenu_onSelect) \
     X(exitNewsMenu_OnSelect) \
     X(exitRankingMenu_OnSelect) \
     X(hostGameMessageMenu_OnDraw) \
@@ -2207,42 +2193,6 @@ enum {
 #define MyFriendlyStatsMenu_kRANKING_SRNCStep (8)
 #define MyFriendlyStatsMenu_kRANKING_SRNCWidth (32)
 #define MyFriendlyStatsMenu_kRANKING_SRNCBaseColor (7)
-
-/* ---- creditsMenu -- src/menus/credits.mnu ---- */
-enum {
-    CreditsMenu_header = 0,
-    CreditsMenu_msg01 = 1,
-    CreditsMenu_msg02 = 2,
-    CreditsMenu_msg03 = 3,
-    CreditsMenu_msg04 = 4,
-    CreditsMenu_msg05 = 5,
-    CreditsMenu_msg06 = 6,
-    CreditsMenu_msg07 = 7,
-    CreditsMenu_msg08 = 8,
-    CreditsMenu_msg09 = 9,
-    CreditsMenu_msg10 = 10,
-    CreditsMenu_msg11 = 11,
-    CreditsMenu_msg12 = 12,
-    CreditsMenu_msg13 = 13,
-    CreditsMenu_msg14 = 14,
-    CreditsMenu_msg15 = 15,
-    CreditsMenu_msg16 = 16,
-    CreditsMenu_msg17 = 17,
-    CreditsMenu_msg18 = 18,
-    CreditsMenu_msg19 = 19,
-    CreditsMenu_dev1 = 20,
-    CreditsMenu_dev2 = 21,
-    CreditsMenu_dev3 = 22,
-    CreditsMenu_dev4 = 23,
-    CreditsMenu_dev5 = 24,
-    CreditsMenu_dev6 = 25,
-    CreditsMenu_dev1Link = 26,
-    CreditsMenu_dev2Link = 27,
-    CreditsMenu_dev5Link = 28,
-    CreditsMenu_dev6Link = 29,
-    CreditsMenu_exit = 30,
-};
-#define CreditsMenu_numEntries 31
 
 /* ---- selectUniformMenu -- src/menus/selectUniform.mnu ---- */
 enum {

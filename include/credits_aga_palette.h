@@ -4,11 +4,11 @@
 #ifndef CREDITS_AGA_PALETTE_H
 #define CREDITS_AGA_PALETTE_H
 
-#define CREDITS_AGA_PHOTOS    7
+#define CREDITS_AGA_PHOTOS    4
 #define CREDITS_AGA_PHOTO     40
-#define CREDITS_AGA_STEP      44
-#define CREDITS_AGA_X         24
-#define CREDITS_AGA_Y         144
+#define CREDITS_AGA_STEP      60
+#define CREDITS_AGA_X         66
+#define CREDITS_AGA_Y         129
 #define CREDITS_AGA_PAL_BASE  128
 
 static const uint16_t k_creditsAgaPalette[128] = {

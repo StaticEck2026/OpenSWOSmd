@@ -12,8 +12,6 @@ void    OnlineMenus_Init(void);
 
 /* Show a JSON-only menu by its loader name, e.g. "swos2020/logInMenu". */
 void    OnlineMenus_Show(const char *name);
-/* The CREDITS screen, from the main menu: lends it the palette its photos need. */
-void    OnlineMenus_ShowCredits(void);
 
 /* --menu=<name>: remember a menu for OnlineMenus_ShowStartMenu to open once, when
  * the front end first starts. */

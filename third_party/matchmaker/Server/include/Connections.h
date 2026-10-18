@@ -22,7 +22,7 @@ public:
     void OnUserChangeState(class User*) override;
     ENetHost* Host() { return m_host.get(); }
     // OpenSWOS: the relay, when the server runs one (Relay.h). StartGame makes a
-    // session for a OpenSWOS pair and hands each player its token.
+    // session for an OpenSWOS pair and hands each player its token.
     void SetRelay(Relay* relay) { m_relay = relay; }
     void BroadcastMessage(const class Message& m) const override;
     void BroadcastActiveUsers() const override;

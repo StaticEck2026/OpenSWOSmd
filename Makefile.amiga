@@ -82,6 +82,7 @@ SDL_ONLY_SRCS := \
     p2p_link.c            \
     p2p_menu.c            \
     controls_menu.c       \
+    credits_menu.c        \
     platform_sdl.c        \
     platform_timer.c      \
     replay_test.c         \

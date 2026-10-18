@@ -1040,7 +1040,7 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
     uint8_t type = buf[5];
 
     if (buf[4] != (uint8_t)kProtocol) {
-        /* A OpenSWOS of another version. Tell a joiner so, and take the same from a
+        /* An OpenSWOS of another version. Tell a joiner so, and take the same from a
          * host rather than waiting out the timeout. */
         if (l->state == P2P_HOSTING && type == PKT_HELLO)
             send_refuse(l, from, P2P_FAIL_PROTOCOL);

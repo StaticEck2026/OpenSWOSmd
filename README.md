@@ -760,9 +760,45 @@ the long version):
   Trace upward and fix the cause; don't add a `if (!ptr) return;` to make
   the menu draw work.
 
+## Support development
+
+If you enjoy OpenSWOS and want to support its development:
+
+- Patreon: <https://patreon.com/Baker76>
+- Ko-fi: <https://ko-fi.com/benbaker76>
+- Buy Me a Coffee: <https://buymeacoffee.com/benbaker76>
+- GitHub Sponsors: <https://github.com/sponsors/benbaker76>
+- PayPal: <https://paypal.me/benbaker1976>
+
 ## Credits
 
-- **Sensible Software** — original SWOS (1994).
+```
+Sensible World of Soccer
+
+Developer                      Sensible Software
+Publisher                      Renegade
+Producer                       Graeme Boxall
+Programmer / Coder             Chris Chapman
+Graphics                       Jon Hare, Stoo Cambridge
+Music & Sound                  Alex Joseph, Graham King, Jason Page,
+                               Jon Hare, Richard Joseph
+
+OpenSWOS
+
+Port to C                      benbaker76
+Reverse Engineering            benbaker76 (Amiga) / zkz (DOS)
+AGA                            benbaker76
+Multiplayer (GGPO-X)           thd79
+Server Help                    Redhair
+Custom Graphics                Francescomanetti82
+Lead Tester                    Playaveli
+Beta Testers                   crom1, ElMichaJ, EMPI, gatifun, petarku,
+                               Predicador, Redhair, segra, starwindz, thd79
+Donators                       benbaker76, Playaveli, starwindz, Petarku,
+                               gatifun, burellapaolo, az0man0,
+                               Cartoplotus68, JoSon, aliko
+```
+
 - **Ben Baker** ([github.com/benbaker76](https://github.com/benbaker76)) —
   reverse-engineered the SWOS Amiga 68k assembly in
   **[SWOS-RE](https://github.com/benbaker76/SWOS-RE)**, which this C port grew

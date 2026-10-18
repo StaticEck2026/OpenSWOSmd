@@ -69,21 +69,42 @@
  THIS PACKAGE COMES WITH NO WARRANTY OF ANY KIND. USE IT AT YOUR OWN RISK.
 
 
+ SUPPORT DEVELOPMENT
+ -------------------
+
+ If you enjoy OpenSWOS and want to support its development:
+
+ Patreon                        https://patreon.com/Baker76
+ Ko-fi                          https://ko-fi.com/benbaker76
+ Buy Me a Coffee                https://buymeacoffee.com/benbaker76
+ GitHub Sponsors                https://github.com/sponsors/benbaker76
+ PayPal                         https://paypal.me/benbaker1976
+
+
  CREDITS
  -------
 
- Project Management             Playaveli
- Engineering Lead               benbaker76
- SWOS 2020 Feature Engineering  starwindz
- SWOS Reverse Engineering       benbaker76 (Amiga) / zkz (DOS)
- SWOS AGA                       benbaker76
- SWOS Live (swos.eu)            Redhair
- SWOS Multiplayer (GGPO-X)      thd79
- SWOS Web Online Rankings       ElMichaJ
+ Sensible World of Soccer
+
+ Developer                      Sensible Software
+ Publisher                      Renegade
+ Producer                       Graeme Boxall
+ Programmer / Coder             Chris Chapman
+ Graphics                       Jon Hare, Stoo Cambridge
+ Music & Sound                  Alex Joseph, Graham King, Jason Page,
+                                Jon Hare, Richard Joseph
+
+ OpenSWOS
+
+ Port to C                      benbaker76
+ Reverse Engineering            benbaker76 (Amiga) / zkz (DOS)
+ AGA                            benbaker76
+ Multiplayer (GGPO-X)           thd79
+ Server Help                    Redhair
  Custom Graphics                Francescomanetti82
+ Lead Tester                    Playaveli
  Beta Testers                   crom1, ElMichaJ, EMPI, gatifun, petarku,
-                                Playaveli, Predicador, Redhair, segra,
-                                starwindz, thd79
+                                Predicador, Redhair, segra, starwindz, thd79
  Donators                       benbaker76, Playaveli, starwindz, Petarku,
                                 gatifun, burellapaolo, az0man0,
                                 Cartoplotus68, JoSon, aliko

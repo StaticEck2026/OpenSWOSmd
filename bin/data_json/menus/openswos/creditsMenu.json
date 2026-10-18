@@ -1,0 +1,68 @@
+{
+  "name": "creditsMenu",
+  "comment": "OpenSWOS's CREDITS screen, from the main menu's CREDITS button. JSON-only (docs/MENUS.md section 10): a header and the exit button; the text (include/credits_text.h) and the photos are drawn by src/credits_menu.c every frame.",
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": null,
+  "onReturn": null,
+  "onDraw": "openswosCredits_OnDraw",
+  "defaultEntry": 1,
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "OPENSWOS - CREDITS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 92,
+        "y": 210,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "openswosCredits_exit_OnSelect"
+        }
+      ]
+    }
+  ]
+}

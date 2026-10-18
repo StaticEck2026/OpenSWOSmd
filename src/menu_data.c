@@ -6833,7 +6833,7 @@ Menu_ContinueAbort _continueAbortMenu = {
 extern void CreditsAgaInit(void);
 extern void CreditsAgaDraw(void);
 char _aCreditsAgaHeader[] = "OPENSWOS - CREDITS";
-char _aCreditsAgaExit[]   = "STAY UNITED";
+char _aCreditsAgaExit[]   = "AMIGA FOREVER!";
 Menu_CreditsAga _creditsAgaMenu = {
     { CreditsAgaInit, 0, CreditsAgaDraw, 1 },
     MENU_MARK_BYTE_COORDS,

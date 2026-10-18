@@ -23,6 +23,7 @@
 #include "display.h"            /* AGA: which Amiga display this build is */
 #include "menu_system.h"
 #include "online_menus.h"   /* MULTIPLAYER opens SWOS 2020's online flow */
+#include "credits_menu.h"   /* CREDITS (SDL) */
 #include "deterministic.h"
 #include "string_utils.h"
 #include "text_render.h"
@@ -2391,12 +2392,14 @@ void MultiplayerMenuSelected(void)
 #ifndef SWOS_SDL_BUILD   /* compiled for both Amigas, reached on AGA only (CommonMenuExit) */
 /* ---- The Amiga AGA CREDITS screen (menu_data.c _creditsAgaMenu) ----
  * The SDL builds draw the photos into their chunky frame buffer every frame. Here they
- * are part of the backdrop: grafs_aga/CREDITS.RAW is the menu backdrop with the seven
+ * are part of the backdrop: grafs_aga/CREDITS.RAW is the menu backdrop with the four
  * photos set into it, an 8-plane picture like any other (scripts/make_credits_aga.py,
  * packed by SwosGfx), shown by the display hardware. The photos use palette entries
  * 128..255, which the menus leave alone, so those are lent to them while the screen is
- * up -- the same arrangement as on SDL. Text and names are as online_menus.c has them. */
+ * up -- the same arrangement as on SDL. The words are include/credits_text.h, the same
+ * as the SDL screen's (src/credits_menu.c). */
 #include "credits_aga_palette.h"
+#include "credits_text.h"
 extern uint8_t  _creditsAgaMenu[];
 extern uint16_t _menuPalette[256];
 extern void     WriteCopperPalette(const uint16_t *palette);
@@ -2407,19 +2410,14 @@ extern uint16_t DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
 /* Text is drawn 24 px left of and 36 px above where an ENTRY with the same coordinates
  * lands (the menu system centres entries on the screen): the header entry, centred on
  * x 152 at y 0, is at text x 176, y 36. Everything below is in text coordinates. */
-enum { kCreditsAgaCentreX = 152 + 24 };
-
-static const char *const k_creditsAgaNames[CREDITS_AGA_PHOTOS] = {
-    "PLAYAVELI", "BENBAKER76", "STARWINDZ", "ZKZ", "THD79", "REDHAIR", "ELMICHAJ",
+enum {
+    kCreditsAgaCentreX = 152 + 24,
+    kCreditsAgaTextY   = 56,        /* the first line, under the header */
 };
-static const struct { uint8_t y; const char *text; } k_creditsAgaLines[] = {
-    {  60, "YOU ARE PLAYING OPENSWOS AN ORIGINAL PROJECT BASED ON" },
-    {  70, "SENSIBLE SOCCER BY SENSIBLE SOFTWARE. WE HOPE YOU ENJOY" },
-    {  80, "THIS NEW RELEASE BY THE TEAM THAT BROUGHT YOU SWOS 2020!" },
-    {  98, "WE WOULD LIKE TO THANK EVERYONE WHO HAS CONTRIBUTED AND" },
-    { 108, "HELPED MAKE IT HAPPEN. TEAM UPDATERS, ARTISTS, BETA" },
-    { 118, "TESTERS, AND THE WHOLE OPENSWOS COMMUNITY." },
-    { 214, "SPECIAL THANKS: INSANE AND FRANCESCOMANETTI82" },
+
+/* In the order make_credits_aga.py set the photos into the backdrop (its PHOTOS). */
+static const char *const k_creditsAgaNames[CREDITS_AGA_PHOTOS] = {
+    "BENBAKER76", "ZKZ", "PLAYAVELI", "THD79",
 };
 
 /* onInit: the screen's own backdrop, as the stadium screen loads its own. */
@@ -2429,38 +2427,50 @@ void CreditsAgaInit(void)
     LoadOverlayToFrontbuffer((const uint8_t *)"grafs/credits.raw");
 }
 
-/* onDraw: after the backdrop, before the two entries. */
+/* onDraw: after the backdrop, before the two entries. The lines before the photos run
+ * down from the header; the photos are where the backdrop has them (CREDITS_AGA_Y), and
+ * the lines after them start under their names. */
 __attribute__((used, externally_visible))
 void CreditsAgaDraw(void)
 {
-    uint16_t i, stagger = 0;
+    uint16_t i, stagger = 0, y = kCreditsAgaTextY;
 
-    for (i = 0; i < sizeof k_creditsAgaLines / sizeof k_creditsAgaLines[0]; i++)
-        DrawMenuTextCentered(kCreditsAgaCentreX, k_creditsAgaLines[i].y, 2,
-                             (uint8_t *)k_creditsAgaLines[i].text, (uint8_t *)_charTables[0]);
-    /* Seven names in 44 px each is tight: when any is wider than its slot, every other
-     * one drops a line. */
-    for (i = 0; i < CREDITS_AGA_PHOTOS; i++)
-        if (GetTextWidth((uint8_t *)k_creditsAgaNames[i], (uint8_t *)_charTables[0]) > CREDITS_AGA_STEP - 2)
+    /* When two neighbouring names would run into each other, every other one drops a
+     * line (as src/credits_menu.c). */
+    for (i = 1; i < CREDITS_AGA_PHOTOS; i++)
+        if ((GetTextWidth((uint8_t *)k_creditsAgaNames[i - 1], (uint8_t *)_charTables[0]) +
+             GetTextWidth((uint8_t *)k_creditsAgaNames[i], (uint8_t *)_charTables[0])) / 2 > CREDITS_AGA_STEP - 4)
             stagger = 1;
-    for (i = 0; i < CREDITS_AGA_PHOTOS; i++)
-        DrawMenuTextCentered((uint16_t)(CREDITS_AGA_X + i * CREDITS_AGA_STEP + CREDITS_AGA_PHOTO / 2),
-                             (uint16_t)(CREDITS_AGA_Y + CREDITS_AGA_PHOTO + 4 + (stagger && (i & 1) ? 8 : 0)),
-                             2, (uint8_t *)k_creditsAgaNames[i], (uint8_t *)_charTables[0]);
+    for (i = 0; i < sizeof k_creditsLines / sizeof k_creditsLines[0]; i++) {
+        const char *line = k_creditsLines[i];
+        if (line == CREDITS_PHOTOS) {
+            uint16_t p;
+            for (p = 0; p < CREDITS_AGA_PHOTOS; p++)
+                DrawMenuTextCentered((uint16_t)(CREDITS_AGA_X + p * CREDITS_AGA_STEP + CREDITS_AGA_PHOTO / 2),
+                                     (uint16_t)(CREDITS_AGA_Y + CREDITS_AGA_PHOTO + CREDITS_NAME_DROP +
+                                                (stagger && (p & 1) ? CREDITS_NAME_PITCH : 0)),
+                                     2, (uint8_t *)k_creditsAgaNames[p], (uint8_t *)_charTables[0]);
+            y = (uint16_t)(CREDITS_AGA_Y + CREDITS_AGA_PHOTO + CREDITS_NAME_DROP +
+                           CREDITS_NAME_PITCH * (1 + stagger));
+        } else if (!line[0])
+            y += CREDITS_GAP_PITCH;
+        else {
+            DrawMenuTextCentered(kCreditsAgaCentreX, y, 2, (uint8_t *)line, (uint8_t *)_charTables[0]);
+            y += CREDITS_LINE_PITCH;
+        }
+    }
 }
 #endif
 
-/* CreditsMenuSelected -- OpenSWOS's CREDITS button (entry 15). SDL: SWOS 2020's credits
- * screen, run from JSON like its online menus (src/online_menus.c, creditsMenu). Amiga
- * AGA: the native screen above. On the OCS Amiga (16 colours: no room for the photos)
- * the button is hidden (CommonMenuExit) and this does nothing. Returning re-unpacks the
- * main menu, hence CommonMenuExit, as above. */
+/* CreditsMenuSelected -- OpenSWOS's CREDITS button (entry 15). SDL: a JSON-only menu
+ * (src/credits_menu.c). Amiga AGA: the native screen above. On the OCS Amiga (16
+ * colours: no room for the photos) the button is hidden (CommonMenuExit) and this does
+ * nothing. Returning re-unpacks the main menu, hence CommonMenuExit, as above. */
 __attribute__((used, externally_visible))
 void CreditsMenuSelected(void)
 {
 #ifdef SWOS_SDL_BUILD
-    OnlineMenus_Init();
-    OnlineMenus_ShowCredits();
+    CreditsMenu_Show();
     CommonMenuExit();
 #elif defined(AGA)
     uint16_t saved[256 - CREDITS_AGA_PAL_BASE];

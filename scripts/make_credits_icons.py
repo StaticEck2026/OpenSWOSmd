@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""Build bin/data/credits_icons.bmp -- the developer photos on the CREDITS screen.
+"""Build bin/data/credits_icons.bmp -- the photos the CREDITS screens pick from.
 
-The CREDITS menu is SWOS 2020's (credits.mnu, imported by import_swos2020_menus.py),
-with OpenSWOS's own developer added in front. SWOS 2020 draws its six developers
-from developer_icons/dev_icons_40px_indexed.bmp, whose indices are ITS palette; ours
-is different, so the photos are rebuilt here from the truecolour sheet instead:
+A strip of seven 40x40 photos. Each screen chooses its own from it, by place
+(include/credits_text.h CREDITS_STRIP_*: src/credits_menu.c on SDL, and
+make_credits_aga.py's PHOTOS for the Amiga's backdrop):
 
-  * the six SWOS 2020 developers, in SWOS 2020's order, from
-    swos-2020/developer_icons/dev_icons_40px_truecolor.bmp (a 3x3 grid of 40x40 cells,
-    reading order, the last row unused);
-  * OpenSWOS's, second -- after PLAYAVELI -- from a square portrait given with
-    --first (the option keeps its name; the order is PORTRAIT_AT below).
+  * six from swos-2020/developer_icons/dev_icons_40px_truecolor.bmp (a 3x3 grid of
+    40x40 cells, reading order, the last row unused) -- its indexed sheet uses its
+    own palette, so they are rebuilt from the truecolour one;
+  * benbaker76's, second -- after PLAYAVELI -- from a square portrait given with
+    --first (the option keeps its name; the place is PORTRAIT_AT below).
 
-The result is ONE 8-bit image, 40 px tall and 40 px a photo wide, in the order drawn.
+The result is ONE 8-bit image, 40 px tall and 40 px a photo wide, in strip order.
 Its pixels are already the palette indices the game shows them with: 128..255, a
 block the menu screens do not use (menus use 0..31), which the CREDITS screen lends to
-the photos while it is open and gives back when it closes (online_menus.c). Index 0
+the photos while it is open and gives back when it closes (credits_menu.c). Index 0
 is never used, so a pixel is always part of a photo. The colours are 12-bit, as the
 Amiga-style palette stores them (4 bits a channel), quantized together to 128.
 
@@ -32,7 +31,7 @@ CELL = 40
 BASE = 128              # first palette index the photos use
 COLOURS = 128           # 128..255
 SWOS2020_ORDER = [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)]   # PLAYAVELI .. ELMICHAJ
-PORTRAIT_AT = 1         # where --first's photo goes: after PLAYAVELI (online_menus.c k_creditNames)
+PORTRAIT_AT = 1         # where --first's photo goes: after PLAYAVELI (credits_text.h CREDITS_STRIP_*)
 
 
 def square(img):
