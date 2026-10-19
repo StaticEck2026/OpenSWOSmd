@@ -100,7 +100,7 @@ kick, the short pass after it") and we find the frame in the recording. What mat
 that the match is recorded:
 
 1. Both on the same build (bottom line of the main menu), installed with `SWOS-Setup.exe`
-   or `SWOS-full.zip`.
+   or `SWOS-portable.zip`.
 2. Both with RECORD MATCHES on: MULTIPLAYER, log in, SETTINGS, MULTIPLAYER SETTINGS -- or
    `record=server` under `[netplay]` in SWOS.ini.
 3. SEND MATCH REPORTS left on (the default in tester builds).

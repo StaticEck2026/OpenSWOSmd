@@ -3,7 +3,7 @@
 #
 #   scripts/stage_runtime.sh dist/windows data grafs_aga sound_dos setup
 #
-# Every drop (SWOS-full.zip, the Windows installer, the Amiga drawer, the macOS
+# Every drop (SWOS-portable.zip, the Windows installer, the Amiga drawer, the macOS
 # .app) is staged through this, and only tracked files go in. bin/ is also the
 # working folder every target runs from, so it can hold anything a developer put
 # there -- above all the original game's data, which OpenSWOS does not ship: the

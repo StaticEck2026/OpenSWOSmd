@@ -7,7 +7,7 @@
 #   scripts/build_dist.sh --only windows  # just the .exe
 #   scripts/build_dist.sh --skip wasm     # everything but the browser build
 #   scripts/build_dist.sh --no-zip        # build only, don't package
-#   scripts/build_dist.sh --no-full       # skip the big SWOS-full.zip
+#   scripts/build_dist.sh --no-full       # skip the big SWOS-portable.zip
 #   scripts/build_dist.sh --no-installer  # skip dist/SWOS-Setup.exe
 #
 # EVERYTHING A TESTER IS GIVEN LANDS IN dist/. bin/ stays what it has always
@@ -19,7 +19,7 @@
 #
 # Three archives and a Windows installer are written:
 #   dist/SWOS.zip       binaries only (~10 MB) — for someone who already has bin/
-#   dist/SWOS-full.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
+#   dist/SWOS-portable.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
 #                       unzip and play. Excludes save/ (per-user dir, and 24 MB
 #                       of test careers here).
 #   dist/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
@@ -27,7 +27,7 @@
 #                       icon: drop it onto a hard drive and double-click SWOS.
 #                       c/ s/ inside the drawer boot an emulator from it.
 #   dist/SWOS-Setup.exe the Inno Setup installer: the same content as
-#                       SWOS-full.zip minus the non-Windows binaries, for a
+#                       SWOS-portable.zip minus the non-Windows binaries, for a
 #                       tester who would rather double-click than unzip.
 #                       scripts/build_installer.sh does the work; see it and
 #                       packaging/windows/swos.iss.
@@ -165,7 +165,7 @@ ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows s
 # WASM=1` links them straight into dist/web/ (Makefile, OUTDIR).
 ZIP_MEMBERS="SWOS SWOS.x86_64 SWOS.aarch64 SWOS.armhf SWOS.exe SWOS2"
 
-# SWOS-full.zip — a RUNNABLE drop: the same binaries plus the project's own
+# SWOS-portable.zip — a RUNNABLE drop: the same binaries plus the project's own
 # data and the data setup. The ORIGINAL GAME'S data is not in it: the player's
 # own copy is turned into it by the setup (tools/swosdata, openswos-setup.exe /
 # swosdata) into their assets folder. Everything sits at the zip root because the
@@ -295,7 +295,7 @@ DO_ZIP=1
 VERIFY=0
 NOINJ=1          # tester builds: suppress injuries/cards. --release turns it off.
 ZIP_PATH="dist/SWOS.zip"
-FULL_ZIP_PATH="dist/SWOS-full.zip"
+FULL_ZIP_PATH="dist/SWOS-portable.zip"
 AMIGA_ZIP_PATH="dist/SWOS-Amiga.zip"
 INSTALLER_PATH="dist/SWOS-Setup.exe"
 DO_FULL=1
@@ -317,7 +317,7 @@ Options:
                       (default is a tester build, SWOS_TEST_RULES=1)
       --no-clean      don't wipe object dirs first (only safe if flags unchanged)
       --no-zip        build but don't package (no zips, no installer)
-      --no-full       skip SWOS-full.zip (binaries-only SWOS.zip still written)
+      --no-full       skip SWOS-portable.zip (binaries-only SWOS.zip still written)
       --no-installer  skip dist/SWOS-Setup.exe
       --full-zip PATH full-dist output path (default: $FULL_ZIP_PATH)
       --amiga-zip PATH Amiga-dist output path (default: $AMIGA_ZIP_PATH)
@@ -641,7 +641,7 @@ fi
 
 # ---- package: full dist (binaries + data + Windows runtime) ------------------
 if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; then
-    banner "package -> $FULL_ZIP_PATH  (full game: binaries + data)"
+    banner "package -> $FULL_ZIP_PATH  (portable: every PC binary + the data setup, no game data)"
     FULL_TMP="$(mktemp -d)"
     FULL_DIRS="$(scripts/stage_runtime.sh "$FULL_TMP" $FULL_DATA_DIRS)"
     if [ -z "$FULL_DIRS" ]; then

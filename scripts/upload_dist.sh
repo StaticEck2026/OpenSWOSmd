@@ -17,7 +17,7 @@
 # own state instead of making you guess from the log:
 #
 #   dist/.upload-status      one line, rewritten atomically:
-#                              running  file=3/10 name=SWOS-full.zip ...
+#                              running  file=3/10 name=SWOS-portable.zip ...
 #                              done     rc=0 ok=10 failed=0 bytes=... elapsed=...
 #                              failed   rc=1 ...
 #   == DONE rc=N ...         the LAST line of the log, on every exit path
@@ -78,7 +78,7 @@
 #
 # UPLOADS ARE ATOMIC-ISH: UPLOAD TO .part, THEN RENAME
 #
-# SWOS.data is 22 MB and SWOS-full.zip is 35 MB. A visitor who fetches either
+# SWOS.data is 22 MB and SWOS-portable.zip is 35 MB. A visitor who fetches either
 # one midway through a plain overwrite gets a truncated file that looks valid to
 # the browser. So every file is uploaded as <name>.part and renamed onto the
 # real name (RNFR/RNTO) only once the transfer completed — a rename is atomic on
@@ -121,7 +121,7 @@ WEB_SRC="dist/web"
 
 # The tester-facing archives. dist/SWOS.nsp is NOT here: the Switch package is
 # not something the website hands out.
-BIN_FILES="SWOS-Amiga.zip SWOS-full.zip SWOS-macOS-app.zip SWOS-macOS.zip SWOS-Setup.exe SWOS.zip"
+BIN_FILES="SWOS-Amiga.zip SWOS-portable.zip SWOS-macOS-app.zip SWOS-macOS.zip SWOS-Setup.exe SWOS.zip"
 BIN_SRC="dist"
 
 DO_WEB=1

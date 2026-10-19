@@ -234,7 +234,7 @@ beside it.
 | artifact | ~size | contents |
 |---|---|---|
 | `dist/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
-| `dist/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
+| `dist/SWOS-portable.zip` | 45 MB | every PC binary + the project's own data + the data setup (`openswos-setup.exe`, `swosdata`) + the Cygwin runtime for `SWOS.exe`; NO original game data (was `SWOS-full.zip`) |
 | `dist/SWOS-Amiga.zip` | 2 MB | a SWOS drawer + icon: `SWOS2`, its Workbench script and icon, only the trees the m68k binary opens, `c`/`s`, an empty `save/` |
 | `dist/SWOS-Setup.exe` | 14 MB | Inno Setup installer — the Windows half of the full zip, for a tester who'd rather double-click |
 | `dist/SWOS.nsp` | 84 MB | the Switch package (`scripts/build_switch.sh`) |
@@ -280,7 +280,7 @@ shipped DLLs, with Cygwin off PATH — that is what a tester's machine looks lik
 cmd.exe /c "cd /d C:\Temp\dlltest && set PATH=C:\Windows\system32;C:\Windows && SWOS.exe --help"
 ```
 
-**Linux gets the same treatment**, at `lib/<arch>/` in `SWOS-full.zip`:
+**Linux gets the same treatment**, at `lib/<arch>/` in `SWOS-portable.zip`:
 `libSDL2-2.0.so.0` **and `libdecor-0.so.0`**, for each of the four ELFs that
 was built. Two things make this work, and both are easy to undo by accident:
 
@@ -309,7 +309,7 @@ cross dev stacks are installed here, so that is a script away.
 **macOS needs nothing** — and that is by design, not an oversight. The tiers are
 consistent: the *binaries-only* archives (`SWOS.zip`, `SWOS-macOS.zip`) ship no
 libraries on any platform, and the *runnable* ones each carry their own
-(`SWOS-Setup.exe`/`SWOS-full.zip` the Cygwin DLLs and now `lib/<arch>`,
+(`SWOS-Setup.exe`/`SWOS-portable.zip` the Cygwin DLLs and now `lib/<arch>`,
 `SWOS-macOS-app.zip` its bundled `SDL2.framework`). `--no-full` skips the big one.
 
 The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`, in a drawer (below). The data list

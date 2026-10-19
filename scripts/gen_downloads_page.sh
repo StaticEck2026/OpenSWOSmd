@@ -73,7 +73,7 @@ fi
 # and sending the page again must not move the time of a drop that has not
 # changed. The commit date above says which code; this says which drop.
 STAMP_EPOCH=0
-for f in SWOS-Setup.exe SWOS-full.zip SWOS-macOS-app.zip SWOS-Amiga.zip SWOS.zip SWOS-macOS.zip; do
+for f in SWOS-Setup.exe SWOS-portable.zip SWOS-macOS-app.zip SWOS-Amiga.zip SWOS.zip SWOS-macOS.zip; do
     [ -f "dist/$f" ] || continue
     t=$(stat -c %Y "dist/$f" 2>/dev/null || stat -f %m "dist/$f" 2>/dev/null) || continue
     [ "$t" -gt "$STAMP_EPOCH" ] && STAMP_EPOCH=$t
@@ -95,7 +95,7 @@ sed -e "s|@BUILD@|$BUILD|g" \
     -e "s|@STAMP_ISO@|$STAMP_ISO|g" \
     -e "s|@STAMP@|$STAMP|g" \
     -e "s|@SIZE_SETUP@|$(size_of SWOS-Setup.exe)|g" \
-    -e "s|@SIZE_FULL@|$(size_of SWOS-full.zip)|g" \
+    -e "s|@SIZE_FULL@|$(size_of SWOS-portable.zip)|g" \
     -e "s|@SIZE_MACAPP@|$(size_of SWOS-macOS-app.zip)|g" \
     -e "s|@SIZE_AMIGA@|$(size_of SWOS-Amiga.zip)|g" \
     -e "s|@SIZE_BIN@|$(size_of SWOS.zip)|g" \

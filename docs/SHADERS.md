@@ -372,7 +372,7 @@ mechanical half.
 | Windows | Cygwin already ships `cygSDL3-0.dll` ✓ (we link it through a shim as it is) |
 | WASM | emscripten 6.0.1 here has an `sdl3` port ✓ (`tools/ports/sdl3.py`) |
 | macOS | Homebrew `sdl3`; the `.app` bundles `SDL3.framework` instead of SDL2's |
-| Linux | **Ubuntu 22.04 here has no `libsdl3-dev`** — build it for the four cross targets and bundle `libSDL3.so.0` in `SWOS-full.zip` in place of `libSDL2` (and re-check whether libdecor is still needed: CLAUDE.md bundles it *because SDL2 is its only consumer*) |
+| Linux | **Ubuntu 22.04 here has no `libsdl3-dev`** — build it for the four cross targets and bundle `libSDL3.so.0` in `SWOS-portable.zip` in place of `libSDL2` (and re-check whether libdecor is still needed: CLAUDE.md bundles it *because SDL2 is its only consumer*) |
 
 **And `SDL_GPU`?** Not yet, and the reason is the browser. SDL3's GPU backends
 are Vulkan, D3D12 and Metal, so `SDL_CreateGPUDevice` has nothing to create in a

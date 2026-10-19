@@ -519,7 +519,7 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
 LDFLAGS := $(ARCHFLAGS)
 
 # Linux: look for a bundled SDL beside the binary before falling back to the
-# system one. SWOS-full.zip ships lib/<arch>/libSDL2-2.0.so.0 (see
+# system one. SWOS-portable.zip ships lib/<arch>/libSDL2-2.0.so.0 (see
 # LINUX_SDL_LIBS in scripts/build_dist.sh) so a tester who has never installed
 # libsdl2 can still run it; a dev tree has no lib/ dir, so the loader falls
 # straight through to the system copy and nothing changes here.

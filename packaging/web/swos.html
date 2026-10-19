@@ -104,6 +104,10 @@
 <p class="build">Build <code>@BUILD@</code> &middot; <time datetime="@STAMP_ISO@" title="@STAMP@">@STAMP@</time></p>
 
 <h2>Downloads</h2>
+<p class="note"><strong>You need your own copy of Sensible World of Soccer.</strong> OpenSWOS
+does not include the game's graphics, sound or teams: <em>OpenSWOS Setup</em> makes them from
+the PC version (<a href="https://www.gog.com/en/game/sensible_world_of_soccer_9697">on GOG</a>)
+or your Amiga disk images, once. The Windows installer runs it for you.</p>
 <table>
   <thead>
     <tr><th>File</th><th>Platform</th><th>What it is</th><th>Size</th></tr>
@@ -112,31 +116,31 @@
     <tr>
       <td class="file"><a href="/download/swos/SWOS-Setup.exe">SWOS-Setup.exe</a></td>
       <td class="plat">Windows</td>
-      <td>Installer, everything included &mdash; recommended</td>
+      <td>Installer; runs OpenSWOS Setup when it finishes &mdash; recommended</td>
       <td class="size">@SIZE_SETUP@</td>
     </tr>
     <tr>
-      <td class="file"><a href="/download/swos/SWOS-full.zip">SWOS-full.zip</a></td>
+      <td class="file"><a href="/download/swos/SWOS-portable.zip">SWOS-portable.zip</a></td>
       <td class="plat">Windows / Linux</td>
-      <td>Unzip and play</td>
+      <td>Unzip, run <code>openswos-setup.exe</code> (Linux: <code>swosdata</code>) once, then play</td>
       <td class="size">@SIZE_FULL@</td>
     </tr>
     <tr>
       <td class="file"><a href="/download/swos/SWOS-macOS-app.zip">SWOS-macOS-app.zip</a></td>
       <td class="plat">macOS</td>
-      <td>Drag SWOS.app to Applications</td>
+      <td>SWOS.app and OpenSWOS Setup.app: run the setup once</td>
       <td class="size">@SIZE_MACAPP@</td>
     </tr>
     <tr>
       <td class="file"><a href="/download/swos/SWOS-Amiga.zip">SWOS-Amiga.zip</a></td>
       <td class="plat">Amiga</td>
-      <td>Real hardware, or FS-UAE / WinUAE</td>
+      <td>A SWOS drawer: OpenSWOS Setup adds the game data, then copy it to your Amiga or FS-UAE / WinUAE</td>
       <td class="size">@SIZE_AMIGA@</td>
     </tr>
     <tr>
       <td class="file"><a href="/download/swos/SWOS.zip">SWOS.zip</a></td>
       <td class="plat">All</td>
-      <td>Binaries only &mdash; if you already have the game data</td>
+      <td>Binaries only &mdash; to update an install that already has its data</td>
       <td class="size">@SIZE_BIN@</td>
     </tr>
     <tr>
@@ -153,7 +157,7 @@
     </tr>
   </tbody>
 </table>
-<p class="note">The Linux binaries in <code>SWOS-full.zip</code> carry their own
+<p class="note">The Linux binaries in <code>SWOS-portable.zip</code> carry their own
 SDL2; <code>SWOS.zip</code> and <code>SWOS-macOS.zip</code> do not.</p>
 
 <h2>What's new</h2>

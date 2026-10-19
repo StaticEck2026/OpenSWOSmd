@@ -32,7 +32,7 @@
 #
 # WHAT SHIPS
 #
-# The data list mirrors SWOS-full.zip in scripts/build_dist.sh, which in turn
+# The data list mirrors SWOS-portable.zip in scripts/build_dist.sh, which in turn
 # mirrors what `make macos-app` bundles: this project's tested definition of
 # "what the game needs at runtime". Keep the three in step — an installer that
 # ships a different set from the zip generates bug reports that reproduce on one
@@ -47,7 +47,7 @@
 # bin/SWOS.exe is a CYGWIN binary and will not start without its runtime beside
 # the exe. That is FOUR DLLs, only two of which cygcheck can see — see the long
 # comment above DLLS below, and keep it in step with FULL_DLLS in
-# scripts/build_dist.sh so the installer and SWOS-full.zip ship the same set.
+# scripts/build_dist.sh so the installer and SWOS-portable.zip ship the same set.
 
 set -uo pipefail
 
