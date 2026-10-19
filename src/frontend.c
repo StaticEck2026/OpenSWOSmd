@@ -179,9 +179,13 @@ void FrontEndMainLoop(void)
     ReadTimerDelta();
     FrontEndPreLoopSetup();
 #ifdef SWOS_SDL_BUILD
-    /* --menu=<name>: open a JSON-only menu first; leaving it lands on the main menu. */
-    extern void OnlineMenus_ShowStartMenu(void);
-    OnlineMenus_ShowStartMenu();
+    /* --menu=<name>: open a JSON-only menu first; leaving it lands on the main menu --
+     * re-unpacked from its packed bytes, so put it back the way every main-menu button
+     * does (CommonMenuExit). Without it CONTINUE and SAVE came back as two blank, live
+     * rows under MULTIPLAYER. */
+    extern int32_t OnlineMenus_ShowStartMenu(void);
+    if (OnlineMenus_ShowStartMenu())
+        CommonMenuExit();
 #endif
 
     do

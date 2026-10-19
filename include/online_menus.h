@@ -14,9 +14,10 @@ void    OnlineMenus_Init(void);
 void    OnlineMenus_Show(const char *name);
 
 /* --menu=<name>: remember a menu for OnlineMenus_ShowStartMenu to open once, when
- * the front end first starts. */
+ * the front end first starts. ShowStartMenu returns 1 when it showed one (and so the
+ * main menu must be put back, as every main-menu button does: CommonMenuExit). */
 void    OnlineMenus_SetStartMenu(const char *name);
-void    OnlineMenus_ShowStartMenu(void);
+int32_t OnlineMenus_ShowStartMenu(void);
 
 /* --menu-selftest: load, unpack and check every imported menu, report how many
  * of their handlers are ported. 0 on success. */

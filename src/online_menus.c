@@ -2072,7 +2072,7 @@ int32_t OnlineMenus_SetLoopbackLobby(const char *role)
     return 0;
 }
 
-void OnlineMenus_ShowStartMenu(void)
+int32_t OnlineMenus_ShowStartMenu(void)
 {
     if (s_loopbackLobby) {
         enum { kHostPort = 23921, kJoinPort = 23922 };
@@ -2086,12 +2086,13 @@ void OnlineMenus_ShowStartMenu(void)
         s_matchPlayer = player;
         snprintf(s_myName, sizeof s_myName, "%s", player == 1 ? "HOST" : "JOIN");
         snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING OVER LOOPBACK");
-        if (P2PLink_Punch(list, 1, (uint16_t)(player == 1 ? kHostPort : kJoinPort)) == 0)
-            OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
-        return;
+        if (P2PLink_Punch(list, 1, (uint16_t)(player == 1 ? kHostPort : kJoinPort)) != 0)
+            return 0;
+        OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
+        return 1;
     }
     if (!s_startMenu[0])
-        return;
+        return 0;
     char name[sizeof s_startMenu];
     memcpy(name, s_startMenu, sizeof name);
     s_startMenu[0] = '\0';      /* once: the front end can be re-entered after a match */
@@ -2115,6 +2116,7 @@ void OnlineMenus_ShowStartMenu(void)
         CustomTeam_Manage();        /* the slots AND what choosing one does, as its button */
     else
         OnlineMenus_Show(name);
+    return 1;
 }
 
 /* ======================================================================
