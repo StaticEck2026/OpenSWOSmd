@@ -828,7 +828,7 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
 
     /* Fill selection with matching teams. The output array
      * (diyCompetitionStart.matchData.league.leagueTeamIds) uses the BE-packed byte-pair convention from
-     * 4e5f378 — consumers read via BE_READ_U16. Use PACK_BE_U16 to
+     * 295c9f3 — consumers read via BE_READ_U16. Use PACK_BE_U16 to
      * produce the same `(country << 8) | ordinal` value that
      * findTeamInCache / isTeamInCache compare against, and
      * BE_WRITE_U16 to store. */
@@ -885,7 +885,7 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
     if ((result & 0x10000) == 0)
         return;  /* already in list */
 
-    /* BE-write convention (4e5f378). */
+    /* BE-write convention (295c9f3). */
     BE_WRITE_U16(*pIdOut, teamId);
     (*pIdOut)++;
     (*pRemaining)--;
@@ -919,7 +919,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
      * takes a uint8_t ** in/out parameter and reassigns it across calls. */
     uint8_t *selDst = (uint8_t *)(_selectedTeams + _numSelectedTeams);
 
-    /* BE-write convention for diyCompetitionStart.cupTeamIds (4e5f378). */
+    /* BE-write convention for diyCompetitionStart.cupTeamIds (295c9f3). */
     /* If not career loaded and gameType==4, add selected team first */
     if (_careerLoadedFlag == 0 && _gameType == 4) {
         BE_WRITE_U16(idOut, _selTeamNumber); idOut++;
@@ -1027,7 +1027,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
     TeamFileEx *selDst = _selectedTeams + _numSelectedTeams;
 
-    /* BE-write convention for diyFileBufferCopy.teamIds (4e5f378). */
+    /* BE-write convention for diyFileBufferCopy.teamIds (295c9f3). */
     /* If not career loaded and gameType==4, add selected team first */
     if (_careerLoadedFlag == 0 && _gameType == 4) {
         BE_WRITE_U16(idOut, _selTeamNumber); idOut++;
@@ -1289,7 +1289,7 @@ extern void Career_FillCurrentSeasonInfo(void);
  *          SWOS2.s did a flat 1450-word (0x5AA) copy into diyFileBufferCopy
  *          because the master and the current-stage buffer were contiguous
  *          (diyCompetitionStart == diyFileBufferCopy + 0x420). The step-3
- *          untangle (cf8cedd) made diyFileBufferCopy a typed struct
+ *          untangle (0dcd736) made diyFileBufferCopy a typed struct
  *          (teamIndexOrder @0x41E) and diyCompetitionStart a standalone
  *          buffer, so a flat copy now both MISALIGNS the differing layouts
  *          and overruns the master struct into pitchChunkyBuffer. Use the
@@ -1824,7 +1824,7 @@ void Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * pointed at selTeams[0] (locked VIEW RESULT / squadChangesAllowed=0, and
          * the 0x6666 keycache desync DIY_RecordCupBracketProgress walks) — but
          * Part B retired that overlay, killing the staleness root (same as the
-         * 3ac95cf / be8ac25 removals, validated 10/10 + 14/14). Production no
+         * 8c660f4 / d16ad5b removals, validated 10/10 + 14/14). Production no
          * longer rebuilds; debug keeps the shared non-writing regression check. */
 #ifdef SWOS_DEBUG_AUTOSKIP
         extern void DIY_TotRebuildRegressionCheck(const char *site);

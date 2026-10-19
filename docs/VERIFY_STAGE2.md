@@ -1,7 +1,7 @@
-# Stage-2 cross-target verification — `leagueStandings` field move (8f14738)
+# Stage-2 cross-target verification — `leagueStandings` field move (44e6f81)
 
 > **Status (2026-09-30): done for Scenario 1 — kept as the protocol.** Stage 2 was
-> signed off in `4acca58` (2026-06-18, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md):
+> signed off in `1b837bf` (2026-06-18, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md):
 > an SDL-written `AUTO_S03.CAR` (Serie A standings) round-tripped byte-identically
 > on SDL and loaded + re-saved on the Amiga build (FS-UAE) with identical
 > standings, driven by the Amiga gdb inferior-call harness rather than by hand —
@@ -12,7 +12,7 @@
 
 ## What this verifies
 
-Roadmap step-3 stage-1 (`8f14738`) moved the league/group standings out of the
+Roadmap step-3 stage-1 (`44e6f81`) moved the league/group standings out of the
 cup `bracketScratch` overlay into a real trailing field,
 `DIYCompetitionEx.leagueStandings[64]` (Amiga `+0x2B4`/`+0x420` →
 `DIY_STANDINGS_OFFSET`). The on-paper coverage audit
@@ -39,7 +39,7 @@ one fresh career:
 Path 2's identity is reconstructed on load as the row index `i` (national teams
 sit in `selTeamsPtr` order). Paths 1 and 3 serialize the explicit identity
 because the rows are a subset / sort in place. The historical bug class this
-guards against (`aba1a9b`): the int32 `teamSelOffset` rode a raw blob and
+guards against (`21f2776`): the int32 `teamSelOffset` rode a raw blob and
 byte-swapped LE→BE, so an entire Champions-Cup group table showed the career
 team in every row.
 
@@ -145,7 +145,7 @@ scripts/decode_save.py --standings YOURSAVE.CAR
 You want a `GROUP STANDINGS — <ctx> context (type-2 club cup)` table (e.g.
 `euro_comp_slot_stage`). These carry the explicit identity, so the decoded names
 should match the Amiga screen club-for-club — this is the exact path the
-`aba1a9b` collapse-onto-`selected_teams[0]` bug lived in, so it's the most
+`21f2776` collapse-onto-`selected_teams[0]` bug lived in, so it's the most
 important of the three.
 
 **Amiga steps:** load on the Amiga → the club cup's group table → compare

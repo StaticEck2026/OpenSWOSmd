@@ -779,7 +779,7 @@ void FixupAndColorPitchFile(void)
      * — so those blocks of fans kept the raw artwork and showed up as a small
      * patch of the wrong colour in the bottom-right corner. That is the
      * long-running "small group of crowd graphics not getting colored
-     * correctly" report; e73ac30 fixed the 99% of it that was the whole
+     * correctly" report; 60edd30 fixed the 99% of it that was the whole
      * recolour being skipped, and this is the remainder.
      *
      * Which kit a stray tile should wear is DERIVED, never assumed: find a

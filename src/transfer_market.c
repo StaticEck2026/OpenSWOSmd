@@ -1018,7 +1018,7 @@ int16_t FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
      * (see appendTeamToList in career_eurocups.c). teamIdPtr points
      * at a TeamFile's leading {country, ordinal} byte pair (also BE).
      *
-     * d95b76a fixed the target side (BE_READ_U16) but kept the list
+     * c8a509f fixed the target side (BE_READ_U16) but kept the list
      * read as host-native `*list`, which on LE decodes [country, ord]
      * as (ord<<8)|country — opposite endian, no match. That left
      * TOP GOAL SCORERS empty in career mode because every non-career

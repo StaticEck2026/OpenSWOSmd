@@ -80,7 +80,7 @@ tests/amiga/    (planned — needs a dumper, see section 8)
 
 `tests/dos` started as a verbatim copy of `swos-port/tests/data` (13 archives,
 all passing `gzip -t`); `2xcpu-08030320` and `shootout-08200245` were added
-later (the latter by 03c311b) and are not in that folder, so the copy below
+later (the latter by 8a57760) and are not in that folder, so the copy below
 does not restore them.
 
 The corpus is **untracked** (`.gitignore`) until the rig has proven it decodes
@@ -639,7 +639,7 @@ not; the three sets of failures are disjoint, which is the whole point.
 > decodable recording, Eranio and Ayala included.
 
 This also grades the four formations this port deliberately edited (commit
-`23f0c59`, tester-supplied `.TAC` fixes for central defenders / attackers
+`1828528`, tester-supplied `.TAC` fixes for central defenders / attackers
 flipping sides — see docs/TACTICS_POSITION_VALUE.md §9):
 
 | formation | what the fix does | DOS | corpus |
@@ -2548,7 +2548,7 @@ over the same simulation and `--replay-sim-width=<N>` sets `_sim_draw_width`;
 `scripts/replay_widecheck.sh` runs the corpus at 484/672 against 336. The
 gameplay pin is still there: `--replay-test` forces `_gDosGameplay = 1`.)
 
-The fix (`310c1a6`) gives animation its own per-frame visibility set in
+The fix (`6bb54d9`) gives animation its own per-frame visibility set in
 `sprites.c` — `Sprite` has a hard size assert (110 Amiga / 118 SDL) so the flag
 cannot live on the sprite — and only ever *adds* to what `onScreen` allows,
 guarded on `!onScreen && _screen_width > SCREEN_WIDTH`. At the rig's geometry
@@ -2647,7 +2647,7 @@ When the sliding-sprite report came in, the reasonable question was whether the
 47 defects had actually been checked against the listing or whether the corpus
 had been chased into agreeing with itself. So every gameplay change of the run
 was re-read against `data/SWOS2.s` line by line. **All of them hold**, and the
-bug was not among them — it was a rendering change from `22f370a`, months
+bug was not among them — it was a rendering change from `90285a2`, months
 earlier, that no gameplay test touches.
 
 Confirmed against the listing:

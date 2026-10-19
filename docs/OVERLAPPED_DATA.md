@@ -2,8 +2,8 @@
 
 > **Status (2026-09-30): reference, partly resolved.** #5 (league standings past
 > the struct end) is resolved — `DIYCompetitionEx.leagueStandings[64]` is a real
-> field (`8f14738`, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md); #8 is resolved
-> (`b993f43`); the `careerFileBufferBuf` overlay is retired
+> field (`44e6f81`, docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md); #8 is resolved
+> (`d15d79f`); the `careerFileBufferBuf` overlay is retired
 > (`src/swos_globals_career_overlay.c` holds two plain globals). #1 is still not
 > modelled. The `game_types.h:NNN` line numbers below predate many edits (it now
 > lives at `include/game_types.h`) — grep the symbol. The "64-bit transition"
@@ -177,11 +177,11 @@ past struct end" is intentional shared-memory overlay; it is **not**
 represented as a struct field; reached only via raw byte arithmetic
 in the table-clear routine.
 
-**RESOLVED (2026-06-13, `8f14738`):** the standings are now the real
+**RESOLVED (2026-06-13, `44e6f81`):** the standings are now the real
 trailing field `DIYCompetitionEx.leagueStandings[64]` (offset 0x5C8 /
 0x5D0 on 64-bit), reached via `DIY_STANDINGS_OFFSET` / `diy_standings_row`,
 so they no longer overlay `cupTeamIds` or run past the struct. Verified
-across SDL↔Amiga saves 2026-06-18 (`4acca58`, docs/VERIFY_STAGE2.md).
+across SDL↔Amiga saves 2026-06-18 (`1b837bf`, docs/VERIFY_STAGE2.md).
 
 ### 6. `imageCmdWorkBuf` sprite-pool overflow
 
@@ -303,7 +303,7 @@ legitimate cache.
 jumping. If outside [10, 256], treat as end-of-cache. Replicates the
 Amiga's accidental safety-net behaviour deterministically.
 
-**Status: RESOLVED (overlap removed).** The untangle landed in `b993f43`:
+**Status: RESOLVED (overlap removed).** The untangle landed in `d15d79f`:
 `teamSelectionKeyCache` (+ cursors + end marker + the promoted
 `careerJobOfferPhaseBias` scalar) now lives in `src/career_key_cache.c` and
 `careerForeignMarketPlayers` in `src/career_foreign_market.c` as two independent

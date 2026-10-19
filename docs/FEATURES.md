@@ -16,7 +16,7 @@ enhancements.
 Add the **CONMEBOL** equivalent of the European Cup / Champions League — a
 continental club cup contested by South American league champions.
 
-> **Status: done** (f88b062, ca2dedc, a4dc0e1 and later fixes). Detailed design in
+> **Status: done** (206ffd3, 580ca70, 53b28ee and later fixes). Detailed design in
 > `docs/COPA_LIBERTADORES.md`. It went the preferred way: a pure-data competition in
 > `bin/data_json/competitions/tournaments.json`, installed at runtime by
 > `DataJson_InstallCompetitionGraph` on SDL and baked for the Amiga in
@@ -66,7 +66,7 @@ rather than a hardcoded record.
 Career mode currently runs a **fixed 20 seasons** then forces retirement. Make the
 length a **setting** (default 20; allow e.g. 35).
 
-> **Status: done** (b49a793). `num_seasons` in `bin/data_json/career_params.json`
+> **Status: done** (c011c12). `num_seasons` in `bin/data_json/career_params.json`
 > (`_careerParams.num_seasons`, default 20, clamped to `CAREER_MAX_SEASONS` = 35 in
 > `include/career_params.h`) — a data knob, not the `[career] length` INI setting or
 > `--career-length` flag sketched below. `_seasonInformationsArray` is `[35]`, the three

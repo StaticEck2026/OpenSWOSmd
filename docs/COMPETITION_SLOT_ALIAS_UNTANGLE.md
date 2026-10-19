@@ -1,6 +1,6 @@
 # Plan — Retire the comp-slot `SLOT_ALIAS` family + finish the `careerFileBuffer` overlay
 
-> Status (2026-09-30): **complete** -- the "PLAN ONLY" line below is the original header. Part A (S1-S6) landed (`e3d7278`, `6a504dd`, `c2c4d0b`, `3d85078`, `6f2ab40`): the SLOT_ALIAS `.equ` family is gone (see the note in `src/swos_competition_slots.c`). Part B landed through Phase 2b (`cd5c359`, `2734186`, `ac5ad49`): `careerFileBufferBuf` is retired and `src/swos_globals_career_overlay.c` holds just the two `uint16` scalars. Kept as the record of how; `SRC_FILES`/Amiga-commit steps in §10 predate the 2026-08-12 merge.
+> Status (2026-09-30): **complete** -- the "PLAN ONLY" line below is the original header. Part A (S1-S6) landed (`4fb6b93`, `1387b0b`, `30f7aa7`, `e1235bb`, `b533c57`): the SLOT_ALIAS `.equ` family is gone (see the note in `src/swos_competition_slots.c`). Part B landed through Phase 2b (`845832b`, `2734186`, `c46086f`): `careerFileBufferBuf` is retired and `src/swos_globals_career_overlay.c` holds just the two `uint16` scalars. Kept as the record of how; `SRC_FILES`/Amiga-commit steps in §10 predate the 2026-08-12 merge.
 
 Status: **PLAN ONLY (no code).** Written 2026-06-12 after the `.equ` untangle
 sweep (groups #1–#10: offerOrdinals, englishLeagues +64-bit fix, euroCup, sprite
@@ -279,19 +279,19 @@ the exact forbidden address-range pattern.
 
 ### 8.3 Phase plan
 
-- **Phase 1 — DONE (`cd5c359`, Amiga-validated):** replace the comp-slot
+- **Phase 1 — DONE (`845832b`, Amiga-validated):** replace the comp-slot
   address-span selection with an explicit `comp` tag on `FieldDesc`
   (`FXC`/`FAC` macros); select the 23 primary-slot + header + count fields by
   identity. Removes `field_in_range`; decouples comp-field selection from
   `numSelectedTeams`'s address. Format-neutral (same 23 keys). VERIFY: career 0,
   DIY 0; cup-stage preset shows pre-existing ~12 derived-`teamOffsetTable`/
   stage-name snapshot diffs (`[[project_tournament_type2_save]]`, benign).
-  - **Follow-up (`4a5e65b`, Amiga-validated):** Phase 1 unmasked that the
+  - **Follow-up (`f7b7a9b`, Amiga-validated):** Phase 1 unmasked that the
     `.DIY`/`.PRE` LEAGUE standings only rode the raw blob and byte-swapped the
     int32 `teamSelOffset` cross-target. Wired `emit/load_competition_overrides`
     (the career path's endian-neutral standings re-lay) into
     `write_/load_competition_buf`. TEST.DIY now loads correct on the BE Amiga.
-- **Phase 2a — DONE (`2734186` + `df0f068`):** replace the near-vacuous career
+- **Phase 2a — DONE (`2734186` + `d04625d`):** replace the near-vacuous career
   VERIFY *region* diff (`[&careerFileBuffer, +data_size)`) with
   `verify_roundtrip_fields()` — a per-field walk of `s_career_scalars`. Strict
   coverage increase: **0 mismatches across 240 typed fields** (was zeros-vs-zeros).

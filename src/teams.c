@@ -836,7 +836,7 @@ TeamFileEx *FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
     /* teamId is the BE-packed (country<<8|ordinal) form used by the
      * loop comparison below. Pre-fix this read was *(uint16_t *)
      * teamToFind which on LE gives (ordinal<<8|country) — once the
-     * loop side was converted to PACK_BE_U16 in commit 91c1b70 the
+     * loop side was converted to PACK_BE_U16 in commit 1eab85d the
      * two sides stopped matching and selecting any team for friendly
      * panicked with reasonCode 0x6987. */
     uint16_t teamId = PACK_BE_U16(((uint8_t *)teamToFind)[0],

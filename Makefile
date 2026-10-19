@@ -411,7 +411,7 @@ DEBUG_FLAGS += -DSWOS_TEST_RULES=1
 endif
 
 # Build with the PRISTINE Amiga data for the four formations this port
-# deliberately corrected — 4-4-2, 4-3-3, 3-4-3, Sweep (commit 23f0c59, whose
+# deliberately corrected — 4-4-2, 4-3-3, 3-4-3, Sweep (commit 1828528, whose
 # tester-supplied fix un-swaps central defenders that crossed sides instead of
 # holding station). It is the port's one intentional gameplay-data divergence,
 # so anything measuring us against ORIGINAL behaviour — the recorded-game

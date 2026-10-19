@@ -2,7 +2,7 @@
 
 > **Note (2026-06-29) — historical snapshot.** This data reflects the *original*
 > Amiga formations. Tester-supplied `.TAC` fixes were later applied (commit
-> `23f0c59`) to **4-4-2, Sweep, 4-3-3, 3-4-3** (buggy ball positions — CDs /
+> `1828528`) to **4-4-2, Sweep, 4-3-3, 3-4-3** (buggy ball positions — CDs /
 > attackers flipping sides). The shipped formations now live in
 > `bin/data_json/tactics/*.json` and diverge from the "amiga" column here for
 > those four. This snapshot is kept as the record of the original Amiga-vs-DOS

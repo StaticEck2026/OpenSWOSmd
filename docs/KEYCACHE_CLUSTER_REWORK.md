@@ -1,12 +1,12 @@
 # teamSelectionKeyCache cluster rework — design (read-only, pre-implementation)
 
 Status: **IMPLEMENTED + TIGHTENED — DONE.** The cluster lift + de-overlap
-(Tier 1 + foreign-market split + phase-bias promotion) landed in `b993f43`; the
+(Tier 1 + foreign-market split + phase-bias promotion) landed in `d15d79f`; the
 cache buffer was then tightened from the 20014-byte historical slack to an honest
 **8192 B** bound (§8.3 finish). What remains is only the deferred per-record
 writer redesign (§9, optional, Amiga-shared). The plan text below is preserved
 for reference. (Was: the last untangle item remaining in the `careerFileBuffer`
-overlay after the careerTeam step-4 rework `aded568`; modeled on
+overlay after the careerTeam step-4 rework `79bddb0`; modeled on
 `docs/CAREERTEAM_STEP4_REWORK.md`.)
 (2026-09-30: verified -- `src/career_key_cache.c`, `KEY_CACHE_BUF_SIZE 8192`; the
 `sync_to_amiga_port.sh` steps below predate the 2026-08-12 merge, when that script
@@ -17,7 +17,7 @@ overlap-removal land together as a clean struct rather than relocating the bug
 intact. §§8–10 below are the Tier 2 detailed design; §§1–7 are the original
 audit.
 
-**IMPLEMENTED 2026-06-08 (`b993f43`), then TIGHTENED 2026-06-16.** Stage 1 lifted
+**IMPLEMENTED 2026-06-08 (`d15d79f`), then TIGHTENED 2026-06-16.** Stage 1 lifted
 the cluster out intact at the original `&teamSelectionKeyCacheEnd` bound (20014 B
 past `teamSelectionKeyCache`) so the `0x8889` panic fired at the identical point —
 no behaviour change to the bound, only stopping foreign market from sharing the

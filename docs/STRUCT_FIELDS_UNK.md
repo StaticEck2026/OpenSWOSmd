@@ -42,10 +42,10 @@ This started as a backlog; nearly all of it is now applied in `include/game_type
 > **Update (2026-09-30):** the "still `unkX`" list above is out of date — in
 > `include/game_types.h` now: `Competition.unk2` (byte 6) is **`isPlayoff`**
 > (Playoffs-vs-Cup discriminator); `Division.unk1` is **`qualifierLinkOffset`**;
-> `CompetitionCup2.unk4` is **`reserved`** (confirmed unread; `a145e36`). Only the
+> `CompetitionCup2.unk4` is **`reserved`** (confirmed unread; `a8af362`). Only the
 > `Leagues.linkParams1..4[8]` bytes keep a generic name. Since then `CompetitionCup2`
-> was renamed **`CompetitionTournament`** (header `CompTournamentHeader`, `fbf391d`),
-> and Untangle Step 4b (`3de6702`) moved `nameTableOffset`/`teamListOffset` reads
+> was renamed **`CompetitionTournament`** (header `CompTournamentHeader`, `aed8453`),
+> and Untangle Step 4b (`481ee44`) moved `nameTableOffset`/`teamListOffset` reads
 > behind accessors (`comp_name_table()`, `comp_team_seed_list()`), leaving those
 > bytes as the inert `reserved1`/`reserved2`. The `game_types.h:NNN` line numbers
 > in the sections below are stale — grep the struct name.

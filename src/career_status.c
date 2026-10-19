@@ -1191,7 +1191,7 @@ league_match:
         /* Find team rank in league table — search sorted team order for selTeamNumber.
          * ASM: a0 = leagueTeamIds, loop reads teamEntryOffsets,
          * divides by 18 to get team index, looks up in leagueTeamIds.
-         * leagueTable is BE-packed (4e5f378); compare via BE_READ_U16. */
+         * leagueTable is BE-packed (295c9f3); compare via BE_READ_U16. */
         uint16_t *teamEntryOffsets = comp->matchData.league.teamEntryOffsets;
         uint16_t *leagueTable = comp->matchData.league.leagueTeamIds;
         int16_t d1 = 0;
@@ -2042,7 +2042,7 @@ void UpdateCareerReputationBonuses(void) {
         int16_t d7 = (int16_t)avgPrice;
 
         /* Find team rank in league table.
-         * leagueTable is BE-packed (4e5f378 convention) — compare via
+         * leagueTable is BE-packed (295c9f3 convention) — compare via
          * BE_READ_U16 against selTeamNumber, which the rest of the code
          * keeps in (country<<8)|ordinal form. Without this the loop
          * compares the host-native byte-swap of each entry and never
@@ -4407,7 +4407,7 @@ validated:
         int16_t count = (int16_t)((const CompCupHeader *)comp)->teams;
         int16_t i = count - 1;
         while (i >= 0) {
-            /* cupTeamIds is BE-packed {country, ordinal} (4e5f378 convention);
+            /* cupTeamIds is BE-packed {country, ordinal} (295c9f3 convention);
              * every reader uses BE_READ_U16 (e.g. DIY_BuildTeamSelectionPointerCache).
              * The Amiga `move.w d0,(a0)+` stored a big-endian word; a host-native
              * `cupTeamIds[i] = teamId` on an LE host stores the bytes swapped, so
@@ -4467,7 +4467,7 @@ init_competition:
     /* Reload state and update competition progress */
     Career_LoadCompetitionSlotStateFromBuffer(slotState);
     if (compType == 1) {
-        /* Stage-3 band-aid removal (be8ac25, TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md
+        /* Stage-3 band-aid removal (d16ad5b, TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md
          * §4). The teamOffsetTable rebuild before the season keycache fill is
          * REMOVED. It guarded the selTeams-index staleness — "the cup slot load
          * restores bracketScratch.teamOffsetTable (selTeams INDICES that go stale
@@ -4475,7 +4475,7 @@ init_competition:
          * resolves a slot to a duplicate team → two fixtures in one 1-game
          * keycache entry → walker desync → VerifyTeamLoaded garbage-id panic" —
          * but Part B retired that overlay, killing the staleness root (same as the
-         * 3ac95cf removal). The §4 probe confirmed it a no-op 14/14 across many
+         * 8c660f4 removal). The §4 probe confirmed it a no-op 14/14 across many
          * cup/euro seasons, INCLUDING roundIterator (this site never save/restored
          * it, but the loaded slot's value already equals the Part-2 recompute, so
          * that was redundant too). Production no longer rebuilds; debug keeps a
@@ -4505,12 +4505,12 @@ init_competition:
                 _diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
             _diyCompetitionStart.base.roundIterator = ri_before;
             if (m || ri_chg)
-                SWOS_AUTOSKIP_LOG("[tot-rebuild-be8ac25] REMOVED but rebuild WOULD CHANGE tot=%d/64 "
+                SWOS_AUTOSKIP_LOG("[tot-rebuild-d16ad5b] REMOVED but rebuild WOULD CHANGE tot=%d/64 "
                                   "(idx %d %ld->%ld) roundIter(%d->%d) -> STALENESS BACK, revisit",
                                   m, first, (long)(first >= 0 ? tot_before[first] : 0), new_first,
                                   ri_before, ri_new);
             else
-                SWOS_AUTOSKIP_LOG("[tot-rebuild-be8ac25] band-aid REMOVED, no-rebuild state stays correct");
+                SWOS_AUTOSKIP_LOG("[tot-rebuild-d16ad5b] band-aid REMOVED, no-rebuild state stays correct");
         }
 #endif
     }

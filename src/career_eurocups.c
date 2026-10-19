@@ -315,7 +315,7 @@ void DIY_CachePrimaryQualifiedTeamsGrid(void)
         /* ext.l d0 then divu.w #$12,d0: sign-extend to 32-bit then unsigned div by 18 */
         uint16_t slotIdx = (uint16_t)((uint32_t)(int32_t)posIdx / 18);
         slotIdx <<= 1;
-        /* leagueTeamIds is BE-packed per 4e5f378. */
+        /* leagueTeamIds is BE-packed per 295c9f3. */
         uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + slotIdx);
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
@@ -381,7 +381,7 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
     int8_t gridByte = (int8_t)_diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
     /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs per the
-     * 4e5f378 convention; read with BE_READ_U16 so titleHolderTeamId
+     * 295c9f3 convention; read with BE_READ_U16 so titleHolderTeamId
      * holds the packed value the rest of the code expects. The byte
      * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
     uint16_t teamNum = BE_READ_U16((uint8_t *)_diyCompetitionStart.cupTeamIds + (idx << 1));
@@ -695,7 +695,7 @@ void Career_UpdateEuropeanChampionshipCompetitions(void)
     /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
      * Use BE_WRITE_U16 so the destination byte order matches the rest
      * of europeanChampionships2Copy.unk1 (BE-packed `{country, ordinal}`
-     * per the 4e5f378 convention). */
+     * per the 295c9f3 convention). */
     BE_WRITE_U16(a5, _euroChampionshipQualTeam);
     a5 += 2;
 
@@ -765,7 +765,7 @@ void Career_UpdateWorldCupCompetitions(void)
      * above. comp_team_seed_list handles the offset + 64-bit delta. */
     a5 = (uint8_t *)comp_team_seed_list((Competition *)a5);
     /* BE write — matches the eurochampionship variant above and the
-     * BE-packed convention for *.unk1 team-id lists (4e5f378). */
+     * BE-packed convention for *.unk1 team-id lists (295c9f3). */
     BE_WRITE_U16(a5, _worldCupHostTeam);
     a5 += 2;
 

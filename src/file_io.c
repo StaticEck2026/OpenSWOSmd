@@ -445,7 +445,7 @@ int16_t LoadPresetFile(uint8_t *filename)
      * careerFileBuffer-overlay-region .PRE dump into the now-standalone
      * competitionFileBuffer (a fixed-size CompetitionSlotBuffer) — post-untangle
      * that overflows the buffer and the typed slots no longer line up, exactly
-     * like the retired career raw read (f1a5146). JSON-only; a non-JSON .PRE is
+     * like the retired career raw read (5a78f4f). JSON-only; a non-JSON .PRE is
      * unsupported (graceful error). SaveJson_LoadPreset restores the typed
      * competition slot and re-derives the tournament/cup identities itself; it
      * deliberately does NOT run the career RebuildPointersAfterLoad (a routed
@@ -503,7 +503,7 @@ int16_t LoadDIYFile(uint8_t *filename)
      * careerFileBuffer-overlay-region .DIY dump into the now-standalone
      * competitionFileBuffer (a fixed-size CompetitionSlotBuffer) — post-untangle
      * that overflows the buffer and the typed slots no longer line up, exactly
-     * like the retired career raw read (f1a5146). JSON-only; a non-JSON .DIY is
+     * like the retired career raw read (5a78f4f). JSON-only; a non-JSON .DIY is
      * unsupported (graceful error). SaveJson_LoadDIY restores the typed
      * competition slot and re-derives the tournament/cup identities itself; it
      * deliberately does NOT run the career RebuildPointersAfterLoad (a routed

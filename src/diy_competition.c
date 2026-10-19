@@ -287,7 +287,7 @@ void DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
         uint8_t *p = teamIndices;
         for (int16_t inner = outer; inner >= 0; inner--) {
             /* Get avg price for team at p[0]. teamIds (at diy+0x9A =
-             * diyTournamentTeamIds) is BE-packed per the 4e5f378
+             * diyTournamentTeamIds) is BE-packed per the 295c9f3
              * convention; use BE_READ_U16 so the value passed to
              * VerifyTeamLoaded is the packed `(country<<8)|ordinal`. */
             int16_t idx0 = (int8_t)p[0];
@@ -540,7 +540,7 @@ void DIY_CacheSelectedTeamPointers(void)
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int8_t idx = (int8_t)teamIndices[i];
         /* leagueTeamIds stores BE-packed `{country, ordinal}` byte
-         * pairs to match the asm-faithful layout (see 4e5f378). */
+         * pairs to match the asm-faithful layout (see 295c9f3). */
         uint16_t teamNum = BE_READ_U16(&teamIds[(uint16_t)(int16_t)idx]);
         TeamFileEx *teamPtr = VerifyTeamLoaded(teamNum);
 
@@ -1517,7 +1517,7 @@ static void decrementMissingIfNotLoaded(uint8_t *comp, uint16_t *teamIds, uint16
 {
     DIYCompetition *compS = (DIYCompetition *)comp;
     gridByte &= 0xFF;
-    /* teamIds is cupTeamIds — BE-packed per 4e5f378. */
+    /* teamIds is cupTeamIds — BE-packed per 295c9f3. */
     uint16_t teamNum = BE_READ_U16(&teamIds[gridByte]);
     TeamFileEx *teamPtr = VerifyTeamLoaded(teamNum);
     if (teamPtr->team.teamControls != 1) {
@@ -1609,7 +1609,7 @@ void DIY_BuildTeamSelectionPointerCache(void)
 
     /* Part 1: build relative pointer cache (teamOffsetTable inside
      * bracketScratch). cupTeamIds holds BE-packed `{country, ordinal}`
-     * byte pairs (4e5f378 convention) — read via BE_READ_U16. */
+     * byte pairs (295c9f3 convention) — read via BE_READ_U16. */
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = BE_READ_U16(&teamIds[gridIdx]);
@@ -2228,7 +2228,7 @@ void DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
         int8_t weight = (int8_t)w[idx];
 
         if (weight != 0) {
-            /* Look up team ID from cup team IDs (BE-packed per 4e5f378). */
+            /* Look up team ID from cup team IDs (BE-packed per 295c9f3). */
             uint16_t teamId = BE_READ_U16(&_diyCompetitionStart.cupTeamIds[idx]);
             /* VerifyTeamLoaded returns the team pointer */
             TeamFileEx *team = VerifyTeamLoaded(teamId);
@@ -2339,7 +2339,7 @@ uint32_t Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *end
 {
     uint16_t *ptr = _diyCompetitionStart.cupTeamIds;
     while (ptr != endPtr) {
-        /* diyCompetitionStart.cupTeamIds stores BE-packed byte pairs (4e5f378). */
+        /* diyCompetitionStart.cupTeamIds stores BE-packed byte pairs (295c9f3). */
         if (BE_READ_U16(ptr) == teamId)
             return (uint32_t)teamId;  /* found */
         ptr++;
@@ -2357,7 +2357,7 @@ uint32_t Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *en
 {
     uint16_t *ptr = _diyFileBufferCopy.teamIds;
     while (ptr != endPtr) {
-        /* diyFileBufferCopy.teamIds stores BE-packed byte pairs (4e5f378). */
+        /* diyFileBufferCopy.teamIds stores BE-packed byte pairs (295c9f3). */
         if (BE_READ_U16(ptr) == teamId)
             return (uint32_t)teamId;  /* found */
         ptr++;
@@ -2930,7 +2930,7 @@ void DIY_RecordCupBracketProgress(void)
     int16_t d7 = 0;
 
     /* Stage-3 band-aid removal (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4). The
-     * 3ac95cf rebuild of bracketScratch.teamOffsetTable that ran here is REMOVED.
+     * 8c660f4 rebuild of bracketScratch.teamOffsetTable that ran here is REMOVED.
      * It guarded the selTeams-index staleness — "the careerFileBuffer overlay
      * reorders selTeams between a cup slot store and load, so slots 62/63 resolve
      * to selTeams[0], dragging the player into TWO grid pairs → the 22-byte
@@ -4653,7 +4653,7 @@ void DIY_InitCupFromTeamGridAndValidateTeams(void)
 
     for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
         uint16_t idx = (uint8_t)*orderList++;
-        /* teamGrid (cupTeamIds) is BE-packed per 4e5f378. */
+        /* teamGrid (cupTeamIds) is BE-packed per 295c9f3. */
         uint16_t teamNum = BE_READ_U16(&teamGrid[idx]);
         TeamFileEx *teamPtr = VerifyTeamLoaded(teamNum);
         if (teamPtr->team.teamControls != 1) {
@@ -7960,7 +7960,7 @@ void DIYCupFinish(void)
     /* KEPT — Stage-3 re-test found this rebuild STILL LOAD-BEARING
      * (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4). The cup result / match-list strings
      * below resolve team NAMES via diyCompetitionStart.bracketScratch.teamOffsetTable.
-     * Unlike the other rebuild band-aids (3ac95cf / be8ac25 / cup-menu — all removed
+     * Unlike the other rebuild band-aids (8c660f4 / d16ad5b / cup-menu — all removed
      * once Part B's overlay retirement killed the selTeams-index staleness), the
      * 2026-06-16 non-writing-check re-test caught THIS site genuinely needing it:
      * at DIYCupFinish (e.g. a secondary cup finishing during next-season
@@ -9855,7 +9855,7 @@ league_search:
         for (uint16_t i = 0; i < numTeams; i++) {
             int16_t rawIdx = (int16_t)entryOffs[i];
             uint16_t teamIdx = (uint16_t)((uint32_t)(int32_t)rawIdx / 18u);
-            /* leagueTeamIds is BE-packed (4e5f378) — compare against
+            /* leagueTeamIds is BE-packed (295c9f3) — compare against
              * host-native teamNo via BE_READ_U16. */
             if (BE_READ_U16(&leagueTeamIds[teamIdx]) == teamNo)
                 return i;
@@ -9884,7 +9884,7 @@ cup_search:
         while (rem-- > 0) {
             d1++;
             int16_t idx = (int16_t)(int8_t)cupIndexTable[d1];
-            /* cupTeamIds is BE-packed (4e5f378). */
+            /* cupTeamIds is BE-packed (295c9f3). */
             if (BE_READ_U16(&cupTeamIds[idx]) == teamNo) {
                 /* Found in cup — post-processing */
                 if (comp->competitionFinished != 0 && (uint16_t)d1 < 2) {
@@ -9939,7 +9939,7 @@ tournament_entry:
         while (rem-- > 0) {
             d1++;
             int16_t idx = (int16_t)(int8_t)tournIndexTable[d1];
-            /* tournTeamIds is BE-packed (4e5f378). */
+            /* tournTeamIds is BE-packed (295c9f3). */
             if (BE_READ_U16(&tournTeamIds[idx]) == teamNo) {
                 /* Found in tournament */
                 uint16_t stageConfig = (uint16_t)comp->roundComplete;
@@ -10090,7 +10090,7 @@ void InitializeNewSeason_BuildTeamBudgetRankTable(void)
     for (uint16_t i = 0; i < numTeams; i++) {
         int16_t idx = (int16_t)(int8_t)indexTable[i];  /* sign-extend byte to word */
         /* teamIdArray entries are BE-packed `{country, ordinal}` per the
-         * 4e5f378 convention; read via BE_READ_U16 so we pass the
+         * 295c9f3 convention; read via BE_READ_U16 so we pass the
          * (country<<8)|ordinal id everything downstream expects. */
         uint16_t teamNo = BE_READ_U16(&teamIdArray[idx]);
         uint16_t rank = GetMoreExpensiveTeamsCount(teamNo, comp);
@@ -10135,7 +10135,7 @@ uint16_t GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp)
 
     /* Count teams with higher average price.
      * teamIds points at competitionFileBuffer +0x12E/+0x24E/+0x9A — all
-     * BE-packed `{country, ordinal}` per the 4e5f378 convention. Use
+     * BE-packed `{country, ordinal}` per the 295c9f3 convention. Use
      * BE_READ_U16 so the comparison and VerifyTeamLoaded lookup see
      * the same id format as the rest of the call chain. */
     uint16_t count = 0;
@@ -11235,7 +11235,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
      *
      * A slot's `numRounds` is log2(numTeams) (DIY_InitCupBracketState), so the
      * 16-team SECOND ROUND slot reports numRounds=4 even though it only plays
-     * ONE round. f0ade69 dropped the hasGroups short-circuit and let that count
+     * ONE round. 46bf9dd dropped the hasGroups short-circuit and let that count
      * gate the finalise, so a grouped stage never set competitionFinished and
      * the bracket advanced INSIDE slot 1 instead of moving to slot 2:
      *   - career: the slot never advanced, so DIY_RecordCupBracketProgress
@@ -11244,9 +11244,9 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
      *     tester's "R2 rows show the QF opponent, results vanish, COMPETITION
      *     INFO lists the QF ties under a SECOND ROUND header", and the
      *     competition then stopped progressing.
-     *   - the preset symptom f0ade69 was chasing ("no NEXT ROUND after R16")
+     *   - the preset symptom 46bf9dd was chasing ("no NEXT ROUND after R16")
      *     was really the inverted hasGroups test in DIYCupOnSelectCommonC,
-     *     root-caused and fixed 3 days later in fb99ad9. */
+     *     root-caused and fixed 3 days later in e5380ae. */
     if (baseS->hasGroups != 0)  /* 0x48 */
         goto final_or_groups;   /* grouped tournament -> finalise this stage */
 
@@ -11294,7 +11294,7 @@ final_or_groups:
         if (a3Ex->matchData.cup.cupRoundResults[0] & 0x01)
             slotIdx = (int8_t)a3Ex->teamGridPairings[1]; /* second grid slot */
         int16_t slotWord = (int16_t)slotIdx;
-        /* cupTeamIds is BE-packed (4e5f378) — read the winner's id
+        /* cupTeamIds is BE-packed (295c9f3) — read the winner's id
          * with BE_READ_U16 so resultCode holds the packed value
          * downstream comparisons expect. */
         baseS->resultCode = (int16_t)BE_READ_U16(&a3Ex->cupTeamIds[slotWord]);
@@ -11558,7 +11558,7 @@ uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sele
         if (doWinner) {
             int16_t ranking = rankings[0];
             uint16_t idx = (uint16_t)((uint32_t)(uint16_t)ranking / 18);
-            /* standingsLookup (leagueTeamIds) is BE-packed per 4e5f378.
+            /* standingsLookup (leagueTeamIds) is BE-packed per 295c9f3.
              * resultCode is compared host-native elsewhere (e.g. cup
              * result-flip detection) so unpack into the host-native
              * packed value here. */
@@ -11578,7 +11578,7 @@ uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sele
                      * promotion output region. diyQualifiedTeamIndices —
                      * the eventual consumer via
                      * DIY_CopyCompetitionTeamIndexTable — expects BE
-                     * bytes per 4e5f378. */
+                     * bytes per 295c9f3. */
                     uint16_t teamId = BE_READ_U16(&standingsLookup[lookupIdx]);
                     BE_WRITE_U16(promRelOutput, teamId);
                     promRelOutput++;

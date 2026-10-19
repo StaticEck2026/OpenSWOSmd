@@ -9,7 +9,7 @@ x86_64/armhf/aarch64, cross-target save-validated. Plan kept below for history.
 
 > Update (2026-09-30): the type-2 names changed afterwards — `CompetitionCup2` is
 > now **`CompetitionTournament`** and `CompCupHeader2` is **`CompTournamentHeader`**
-> (`fbf391d`, 2026-06-18). The §9 `AnimTable` merge was **not** done:
+> (`aed8453`, 2026-06-18). The §9 `AnimTable` merge was **not** done:
 > `AnimTable_20`/`_12`/`_8` and the dead `plTacklingAnimTable_2` are still in
 > `include/game_types.h` / `src/sprite_data.c`.
 

@@ -322,7 +322,7 @@ The complete, working solution is documented in **§11·SOLVED** immediately bel
 older subsections (§11a "DMA contention TODO", the SNAP fine-scroll table, "no buffer
 widen needed", "empty column is off-screen headroom") describe **earlier, since-superseded
 theories** and are kept only as a debugging cautionary trail — read §11·SOLVED for the
-truth. Not committed at time of writing (owner commits) — since committed (`2899dea`
+truth. Not committed at time of writing (owner commits) — since committed (`ac030f1`
 "AGA FMODE geometry"; `SCROLL_LEFT_MARGIN_BYTES` is in `include/display.h`).
 
 ### 11·SOLVED — the complete FMODE=1 pitch scroll (2026-07-14)

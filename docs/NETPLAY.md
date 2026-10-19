@@ -605,7 +605,7 @@ match by frame 1000.
 | where | what the width decided | now |
 |---|---|---|
 | `DrawAnimatedPatterns` | which column of crowd tiles toggles, and the widescreen mirror -- whether a slot fills, so the `Rand` calls of every frame after | the simulation draw width |
-| `BuildSpriteBandAndGeneralRenderStacks` | which sprites in the margin animate (310c1a6), a list the match reads a frame later | the simulation draw width, world sprites only |
+| `BuildSpriteBandAndGeneralRenderStacks` | which sprites in the margin animate (6bb54d9), a list the match reads a frame later | the simulation draw width, world sprites only |
 | `UpdateCornerFlagSprite` | which corner the flag stands at, and the second flag | the simulation draw width |
 | `DrawBenchAndSubsMenu` | the frame the bench is populated, which writes the subs state | the simulation draw width |
 | the score panel's extra tile | whether it is in the draw list, whose contents are match state | the simulation draw width |
@@ -613,7 +613,7 @@ match by frame 1000.
 
 **The simulation draw width** (`_sim_draw_width`, `display.h`; `Sim_DrawCameraX()`, where a
 view that wide draws from) is what those decisions read. Locally it IS the render width, so a
-widescreen player keeps 310c1a6's animated margins; the replay rig pins it to 336 unless
+widescreen player keeps 6bb54d9's animated margins; the replay rig pins it to 336 unless
 `--replay-sim-width` says otherwise, which keeps the corpus exact; and a live session takes one
 both peers agreed -- the wider of the two screens (`P2PLink_AgreedSimWidth`, from the widths
 each side's handshake already carried) -- and puts the display's own back when the match ends.

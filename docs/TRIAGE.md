@@ -257,7 +257,7 @@ form the game itself shows it (main menu bottom line, window title, `--version`,
 first line of `SWOS.log`):
 
 ```
-Build: 0abef86 (2026-09-17)
+Build: 64bfca3 (2026-09-17)
 ```
 
 That is what makes a later report answerable: "is the build in your title bar

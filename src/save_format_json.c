@@ -1045,7 +1045,7 @@ static const FieldDesc s_career_scalars[] = {
      * entry (= DIYCompetition.competitionType field). Saved explicitly so
      * Career_LoadCompetitionSlotStateFromBuffer dispatches to the right
      * branch on load. Previously this was inferred from currentCompetitionPtr
-     * (b20b070) which broke when the saved in-memory state disagreed with
+     * (e9a308b) which broke when the saved in-memory state disagreed with
      * the pointer; an explicit field is authoritative and survives any
      * future struct reshuffles. */
     FXC("primary_slot_type",              _primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
@@ -4969,7 +4969,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
          * (roadmap step 4) is incomplete: should a field stop being recomputed, or
          * be read before setup, the saved value is already correct cross-target.
          * Revisit (consider trimming) once the JSON format is the sole source of
-         * truth — tracked in docs/SAVE_FORMAT_TRIM_CANDIDATES.md. (Trim cf5ad7e
+         * truth — tracked in docs/SAVE_FORMAT_TRIM_CANDIDATES.md. (Trim 02e7810
          * reverted on this basis 2026-06-10.) See
          * project_compslot_cup_uint16_crosstarget. */
         mjson_printf(fn, fnd,
@@ -6861,7 +6861,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * the re-sort on group switch are correct cross-target. Gated to
          * LEAGUE/group stages (slot isLeagueFormat != 0): a KNOCKOUT stage has no
          * league table — its bracket lives separately in bracketScratch
-         * (post-8f14738 leagueStandings no longer overlays it), so leagueStandings
+         * (post-44e6f81 leagueStandings no longer overlays it), so leagueStandings
          * is unused/stale there and emitting these rows would just serialize
          * stale data. competitionType is 0 for both, so route off
          * the slot type. */

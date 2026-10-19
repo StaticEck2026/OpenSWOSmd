@@ -60,7 +60,7 @@ What went wrong before this existed (the first multiplayer weekend, 2026-09-26):
 
    ```json
    {"kind":"report","match":"4d33222c0192d2f4","at":"2026-09-27T21:31:07","player":2,
-    "name":"ELSHEIMY","peer":"PREDICADOR","build":"ac2a161","rating":2,
+    "name":"ELSHEIMY","peer":"PREDICADOR","build":"7e9b925","rating":2,
     "comment":"froze twice","bytes":4898,"from":"81.2.3.4:51240",
     "file":"reports/4d33222c0192d2f4/player2.zip"}
    ```

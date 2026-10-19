@@ -30,7 +30,7 @@ fields in the DOS files are **little-endian** (read natively on x86).
 | `SCORE.DAT` | planar sprite `.dat`, 114 sprites | DOS idx 227.. |
 | `GOAL1.DAT` | planar sprite `.dat`, 116 sprites (loaded twice) | DOS idx 947.. and 1063.. |
 | `BENCH.DAT` | planar sprite `.dat`, 155 sprites | DOS idx 1179.. |
-| `TEAM1.DAT`/`TEAM2.DAT`/`TEAM3.DAT` | planar player sprites, 303 each — now present in `grafs_dos`. They are kit PATTERNS (vertical stripes / coloured sleeves / horizontal stripes), not per-team sets: each team's range takes the file for its shirt type (`dos_kit_file`, f2d7e31) | DOS idx 341.. / 644.. |
+| `TEAM1.DAT`/`TEAM2.DAT`/`TEAM3.DAT` | planar player sprites, 303 each — now present in `grafs_dos`. They are kit PATTERNS (vertical stripes / coloured sleeves / horizontal stripes), not per-team sets: each team's range takes the file for its shirt type (`dos_kit_file`, 516c125) | DOS idx 341.. / 644.. |
 | `FILL.256` | `.256` image: 64000 chunky px (320×200) **+ 768-byte trailing 6-bit palette** = 64768 B | menu bg / palette |
 
 ### Sprite `.dat` record = `[24-byte header][planar pixels]`, concatenated
@@ -130,7 +130,7 @@ the DOS data into the exact buffer our renderer already consumes:
    DOS-start indices (from the reference `loadAllGameSprites`): team 1's kit file
    `303@341` (→amiga 227), team 2's kit file `303@644` (→530) — originally
    hard-coded `team1.dat`/`team3.dat`, which put every team in stripes (fixed
-   f2d7e31, above), `goal1.dat 116@947` (→833),
+   516c125, above), `goal1.dat 116@947` (→833),
    `goal1.dat 116@1063` (→949), `bench.dat 155@1179` (→1065). Built once
    (file-load + decode persist); the table slots are re-pointed every call because
    the Amiga load+convert path overwrote them earlier in the same function. The
@@ -164,7 +164,7 @@ the DOS data into the exact buffer our renderer already consumes:
 - Done: hook **3 (sprites, players/keepers/bench)** — `color_sprites.c::
   dos_prepare_sprites` (was `_DosOverlaySprites`) overlays the two teams' kit
   files + goal1×2 + bench at amiga 227..1219.
-- Done: kit PATTERN per team (`f2d7e31`) — TEAM1/2/3.DAT chosen by shirt type.
+- Done: kit PATTERN per team (`516c125`) — TEAM1/2/3.DAT chosen by shirt type.
 - Done: **DOS per-team kit-colour recolour** (`2569105`) — `dos_prepare_sprites()`
   loads the DOS sprites into the table *before* the Amiga kit conversions, so both
   teams recolour correctly (pristine-decode reset per match).

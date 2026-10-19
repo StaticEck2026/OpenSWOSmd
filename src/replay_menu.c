@@ -206,7 +206,7 @@ void ReplayExitMenuAfterFriendly(void)
              * main thread — without this the user can't move the
              * cursor on Windows. Same fix pattern as the other
              * site in this file and the season-transition debounce
-             * loops in commit f6a0a47. */
+             * loops in commit b0e5326. */
             WaitForVSync();
 
             /* Draw shining frame on selected item */

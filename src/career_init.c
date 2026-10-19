@@ -815,7 +815,7 @@ static int Career_TeamInEuroCup(uint8_t *cupCopy)
  * `CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
  * consistent with `FindTeamInDIY`: gate-pass => `FindTeamInDIY(team, buffer)`
  * also finds the team (no 0x6006); gate-fail => slot stays inactive (preserves
- * 940603f's protection — a true non-participant is in neither buffer nor
+ * 1da09fa's protection — a true non-participant is in neither buffer nor
  * template). Mirrors `FindTeamInDIY`'s per-type search but returns found/
  * not-found instead of panicking. */
 static int Career_TeamInLoadedEuroSlot(DIYCompetition *comp)

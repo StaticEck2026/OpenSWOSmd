@@ -1,8 +1,8 @@
 # Phase 1A — `base + offset` access audit
 
 > **Status (2026-09-30): complete — kept as the record of how.** Phases 1B–1F
-> landed 2026-05-23 (`4312556` 1B/1C, `26d3e71` 1D/1E, `101e464` 1E,
-> `397302b` 1F TeamSelectionKeyCache), followed by Phase 2 (type fixes) and the
+> landed 2026-05-23 (`4312556` 1B/1C, `83478e1` 1D/1E, `42e18bf` 1E,
+> `334c7ea` 1F TeamSelectionKeyCache), followed by Phase 2 (type fixes) and the
 > 64-bit bring-up (docs/64BIT_TRANSITION.md). The `careerFileBufferBuf` overlay
 > Bucket 4 refers to is retired, and `CompetitionCup2_*` variants are now the merged
 > `CompetitionTournament` (docs/STRUCT_CONSOLIDATE.md). The tally and

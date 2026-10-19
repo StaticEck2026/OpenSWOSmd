@@ -26,8 +26,8 @@ of truth** (legacy `.CAR` raw-dump path retired, `opaque_data` gone for every
 save type). At that point, work through this list, re-verifying each field
 before removing it.
 
-History: the cup scalars below were trimmed once (`cf5ad7e`) and deliberately
-restored (`a62b1b2`, 2026-06-10) under this policy.
+History: the cup scalars below were trimmed once (`02e7810`) and deliberately
+restored (`54a0003`, 2026-06-10) under this policy.
 
 ## Before trimming any field — re-verify
 

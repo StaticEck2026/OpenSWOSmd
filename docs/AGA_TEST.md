@@ -127,7 +127,7 @@ smooth.
 **Ruled out (do not re-investigate):**
 - The fine-scroll display geometry (BPLCON1 delay / DDFSTRT / the `-4` pull-back). *Static*
   shot.sh captures at frac 15/16/17/31/0 move the touchline proportionally — smooth, no jump.
-  (My earlier "confirmed 41aace1 geometry" arithmetic was WRONG.)
+  (My earlier "confirmed 48a827a geometry" arithmetic was WRONG.)
 - The deferred mirror / block-B elimination. Forcing the mirror immediate changed NOTHING and
   produced no strip — mirror timing is irrelevant to this bug.
 
@@ -154,11 +154,11 @@ HW-sprite band path (`g_pstForceBobs=0`) and the bob path (`g_pstForceBobs=1`). 
 (§ rig controls). Perf profiling via `dma_profile.py` on the BOB path works; the BAND path
 stalls the cycle-exact recorder (fs-uae-side, deferred — bob path serves all measurements).
 
-### 5c. Sprite colour loss (last-column HW sprites white/black) — RESOLVED (committed 219d788)
+### 5c. Sprite colour loss (last-column HW sprites white/black) — RESOLVED (committed 6136e4f)
 The rightmost HW-sprite column rendered white/black because the **plane23 band uses spr3, whose
 DMA slot (0x25/0x27) is stolen** by the FMODE=1 8-plane bitplane fetch at DDFSTRT=$20
-(`fetch_start=DDFSTRT+4=0x24`, ≤ spr3's slot). Two prior fixes are also in: `41aff36` BPLCON4
-ESPRM/OSPRM=0 (sprites index kit palette 0-15, not 16-31), `9eb2df2` no-wrap contiguous bob draw.
+(`fetch_start=DDFSTRT+4=0x24`, ≤ spr3's slot). Two prior fixes are also in: `3ca702d` BPLCON4
+ESPRM/OSPRM=0 (sprites index kit palette 0-15, not 16-31), `191dc7f` no-wrap contiguous bob draw.
 
 **The steal itself is fundamentally unfixable at DDFSTRT** (proven — do NOT re-try): three
 constraints have empty intersection — smooth per-pixel scroll needs DDFSTRT on the 16-CCK grid
@@ -188,7 +188,7 @@ does it, at the swap — the correct time), so **the shipped game is not affecte
 **Fix (final).** REMOVE the rig's explicit `UpdatePlanePtrsAndBlitParams()` from the loop entirely
 and rely on the **VBlank ISR** (interrupts.c) to call it at the buffer swap — exactly what the real
 `game_loop.c` does (it never calls it between scroll and draw). The ISR points the copper at a
-COMPLETE buffer, at the swap, always on time. (An intermediate fix, commit 9c681ac, instead *moved*
+COMPLETE buffer, at the swap, always on time. (An intermediate fix, commit ad39341, instead *moved*
 the call to after `DrawSprites` — that also killed the tear, but on heavy all-bob frames the render
 can run past the VBLANK, landing the copper scroll-update a frame late = extra stutter on the
 DMA-bound bob path; dropping the call avoids that. Superseded.) Confirmed: a debug counter of "copper

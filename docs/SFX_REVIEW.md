@@ -1,6 +1,6 @@
 # SWOS Amiga SFX bank — expert review checklist
 
-> **Status (2026-09-30):** a tester's by-ear pass (`987705e`, 2026-05-05) has
+> **Status (2026-09-30):** a tester's by-ear pass (`3ebb0ee`, 2026-05-05) has
 > since renamed most ids in `include/sfx_ids.h` (e.g. `SFX_CROWD_BG_1`,
 > `SFX_WHISTLE_FOUL_1`, `SFX_BALL_KEEPER_SAFE_2`, `SFX_CROWD_CHANT_1..4`). The
 > **Macro** column below still shows the pre-review placeholder names, which no

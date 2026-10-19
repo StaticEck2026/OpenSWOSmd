@@ -1545,7 +1545,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
 
         /* qIdx pair stream is BE on m68k (`move.w (a2)+,d0`) — keep
          * BE_READ_U16 to recover the value on LE hosts. diyQualifiedTeamIndices
-         * is BE-packed (4e5f378) and the destination unk2 is also read by
+         * is BE-packed (295c9f3) and the destination unk2 is also read by
          * downstream code with BE_READ_U16 — write BE to match. */
         for (int16_t i = cnt; i >= 0; i--) {
             uint16_t qIdx = BE_READ_U16(teamIdxList);

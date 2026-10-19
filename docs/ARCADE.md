@@ -58,7 +58,7 @@ When idle (no credits, no game in progress) the cabinet runs an **attract loop**
 - Pick the `.HIL` set by gameplay mode: 70 FPS DOS reels when DOS gameplay is on,
   50 FPS Amiga reels otherwise (a reel recorded at one rate plays back wrong at
   the other — see DOS_GAMEPLAY.md timing notes).
-  *(Superseded: each reel now self-describes its rate and plays at it, `c396c60`,
+  *(Superseded: each reel now self-describes its rate and plays at it, `b3ebe2b`,
   so one flat reel folder serves both modes — see "Current implementation
   decisions".)*
 - **`.SRP` reels are accepted too** (`docs/REPLAY_FORMAT_V2.md`): drop a recording
@@ -410,7 +410,7 @@ contexts:
   during the demo can't start a real game. SDL-only, no shared files touched.
 
 ### Build phasing (this implementation)
-1. ✅ DONE (`f2f3ccc`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip
+1. ✅ DONE (`f852e03`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip
    intro/menu) + attract skeleton (flashing INSERT COIN bottom corners, coin keys
    5/6, F2 stub).
 2. ✅ DONE: **Attract reels** — scan `attract_mode/`, random HIL/RPL playback

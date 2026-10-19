@@ -176,7 +176,7 @@ void Replay_ResetBallCamera(void) { s_replayBallValid = 0; s_replayCamXSet = 0; 
  * is the re-anchor that used to sit beside it (the decode rebuilds world
  * positions instead, see s_replayRecCamY).
  *
- * What changed underneath it (97dd23a) is that `_cameraX` is now the
+ * What changed underneath it (be8051e) is that `_cameraX` is now the
  * SIMULATION camera and the renderer derives its own origin,
  * `Render_CameraX() = clamp(_cameraX - WIDE_MARGIN, 0, 0x2A0 - _screen_width)`.
  * Handing a render-space value straight to the camera therefore had the margin
@@ -221,7 +221,7 @@ static int16_t ReplayCameraX(int16_t recordedX)
          *
          * This used to return `recordedX` verbatim and was RIGHT to, because
          * game_loop.c stored `_cameraX.s.i` — already a simulation X — and
-         * 314bc32 broke it by converting. That is no longer what is stored: the
+         * 29b99da broke it by converting. That is no longer what is stored: the
          * recorder now writes Render_CameraX(), a RENDER origin, so the
          * conversion is exactly what belongs here, the same as the two returns
          * below. It is not a second WIDE_MARGIN either way; the decode no longer
@@ -326,7 +326,7 @@ static int16_t ReplayCameraY(int16_t recordedY)
      * rather than shifting by the clamp -- which is the point of the rewrite.
      *
      * NOTE 0x260 is still a constant while the visible height became runtime in
-     * f860c9a. That is a FRAMING choice now, not a correctness one, but it is
+     * 062ba03. That is a FRAMING choice now, not a correctness one, but it is
      * wrong for the DOS view's 200 lines and wants revisiting. */
     /* The picture's own range, [0x10, 880 - its height]: 0x260 at 272 lines, as the
      * literal was, and the 680 a 200-line DOS picture reaches (the NOTE above). Then back
@@ -1022,7 +1022,7 @@ void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
      * kick-off centre as a render origin: away from 336 the camera started in the
      * wrong place and slid back over the first second, jumped again after every
      * instant replay, and left a width-dependent fraction in `_cameraX`. Caught by
-     * scripts/replay_v2_test.sh at 484, broken since cb5602c. */
+     * scripts/replay_v2_test.sh at 484, broken since 14eabae. */
     SetCameraCoordinates(targetX, targetY);
     InitCameraMoveView(targetX, targetY);
     MirrorFrontbuffer();

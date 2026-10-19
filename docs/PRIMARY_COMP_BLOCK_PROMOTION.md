@@ -334,7 +334,7 @@ Save layout debt: `primary_comp_block` was sized 154 bytes (32-bit
 literal). After the May 2026 `+4 namePtr gap` and `+320 SI pad`
 overlay fixes, the bytes for `competitionFileBuffer` reach 158 on
 64-bit. We added a conditional `#if UINTPTR_MAX` 154/158 size in
-`save_format_json.c` (commit `dccc5c1`). That makes same-target
+`save_format_json.c` (commit `06fbcaf`). That makes same-target
 saves work; cross-target still breaks because the bytes encode each
 host's struct layout.
 
@@ -356,19 +356,19 @@ misreads them.
 
 Recent commits worth knowing about:
 
-- `fad683d` — Remove `panic6006Snapshot` diagnostic globals. Done; on
+- `3e843f8` — Remove `panic6006Snapshot` diagnostic globals. Done; on
   Amiga via sync_to_amiga_port.sh.
-- `0ea44ea` then `606746a` — Tried routing `SWOS_DBG → KPrintF` on
+- `d06a73d` then `f8a2834` — Tried routing `SWOS_DBG → KPrintF` on
   Amiga, reverted because `KPrintF` lives in `gcc8_c_support.c`
   which the Amiga Makefile filters out. Replaced with a fixed-global
   snapshot pattern (also now reverted).
-- `138c3f7` — Walk-once dispatch (FLD_BYTES fast walker +
+- `6f4193e` — Walk-once dispatch (FLD_BYTES fast walker +
   fast_object_next + fast_array_next). Amiga career-load went from
   5+ minutes to ~71 seconds.
-- `dccc5c1` — `primary_comp_block` size 154/158 + address fix
+- `06fbcaf` — `primary_comp_block` size 154/158 + address fix
   (`&competitionFileBuffer`). The conditional size is what enables
   the same-target round-trip we have today.
-- `7b162fc` — overlay pointer-growth pads (the +4 namePtr gap, +320
+- `42e5416` — overlay pointer-growth pads (the +4 namePtr gap, +320
   SI pad, +8 per `*Copy` slot). These define the on-disk byte
   positions that the typed promotion will replace.
 

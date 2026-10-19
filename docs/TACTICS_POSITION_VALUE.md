@@ -355,7 +355,7 @@ original `SWOS2.s`.*
 
 > **Update (2026-06-29) — the "byte-identical to the Amiga" claims below are now
 > historical.** Since this analysis, tester-supplied `.TAC` fixes were applied
-> (commit `23f0c59`) to **4 Amiga formations — 4-4-2, Sweep, 4-3-3, 3-4-3** —
+> (commit `1828528`) to **4 Amiga formations — 4-4-2, Sweep, 4-3-3, 3-4-3** —
 > which had buggy ball-position coverage (central defenders / attackers flipping
 > sides instead of holding position). So this port's `442`/`Sweep`/`433`/`343`
 > now **intentionally diverge** from the pristine Amiga data. The byte counts in
@@ -490,7 +490,7 @@ Two things follow that §9's original conclusion could not see:
   the DOS snapshot in `docs/tactics_amiga_vs_dos/` is **not** the table that
   produced the recordings. See docs/TESTS.md, "The recording grades our
   formation data" — that section also grades the four formations this port
-  edited in `23f0c59`: the 4-4-2 and 4-3-3 fixes are confirmed against the
+  edited in `1828528`: the 4-4-2 and 4-3-3 fixes are confirmed against the
   reference (the 4-3-3 forward fix is byte-identical to DOS), and one byte of
   the Sweep fix — rows 1/2 at ball position 15 — is contradicted by it.
 

@@ -1,6 +1,6 @@
 # SLOT_ALIAS S6 — discovery + classification (slot 0 / primary)
 
-> Status (2026-09-30): **complete** -- S6 landed (`6f2ab40`, follow-ups `27cb59b`, `9793b17`). The 18 slot-0 aliases no longer exist, and the `.equ` lines this doc cites at `src/swos_competition_slots.c:71-88` are gone. Kept as the record of how.
+> Status (2026-09-30): **complete** -- S6 landed (`b533c57`, follow-ups `b3a113d`, `4fc8f33`). The 18 slot-0 aliases no longer exist, and the `.equ` lines this doc cites at `src/swos_competition_slots.c:71-88` are gone. Kept as the record of how.
 
 Status: **DISCOVERY ONLY — no code changed.** Read-only classification of every
 slot-0 alias reference, produced before any migration edit. Pairs with
@@ -223,5 +223,5 @@ Single S6 commit (per plan §6 step 5): struct-prep (D-W1 field + asserts) → r
 the 18 SLOT_ALIAS lines → convert the 11 consumer files → rewrite the 17 FX/FA
 descriptors → build x86_64/armhf/aarch64 (asserts pin offsets) → VERIFY=0 on a
 re-saved career → cross-target Amiga test. Delegate the mechanical edit to a fork
-that names `c2c4d0b` (S4) as the template and is handed §2/§3/§5 verbatim plus the
+that names `30f7aa7` (S4) as the template and is handed §2/§3/§5 verbatim plus the
 BE-array DO-NOT-retype-access warning.

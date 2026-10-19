@@ -1,6 +1,6 @@
 # bracketScratch / league-standings overlay untangle (roadmap step 3)
 
-> Status (2026-09-30): **complete** -- Stages 1-3 landed (`8f14738`, `2101ac1`, `18d00be`, `d88da82`), Stage 4 was moot, and Stage 5 (back-port) no longer applies because the trees merged on 2026-08-12. Kept as the record of how.
+> Status (2026-09-30): **complete** -- Stages 1-3 landed (`44e6f81`, `8ccda75`, `1776ac6`, `bbe2b2b`), Stage 4 was moot, and Stage 5 (back-port) no longer applies because the trees merged on 2026-08-12. Kept as the record of how.
 
 Status: **STAGE 1 LANDED (2026-06-13).** The league standings are now the real
 trailing `DIYCompetitionEx.leagueStandings[64]` field (offset 0x5C8 / 0x5D0),
@@ -20,25 +20,25 @@ either WOULD change):
 
 | rebuild | site | verdict |
 |---|---|---|
-| `3ac95cf` | `_DIY_RecordCupBracketProgress` (hybrid choke point) | REMOVED `2101ac1` — probe 6/6, re-test 10/10 clean |
-| `be8ac25` | `career_status.c` season-keycache fill | REMOVED `18d00be` — probe 14/14 (incl roundIterator) |
-| cup-menu | `career_teams.c` `_Career_OpenCompetitionSlotMenuAndApplyChanges` | REMOVED `d88da82` — re-test 8/8 clean |
-| `34828ff` | `_DIYCupFinish` | **KEPT** `d88da82` — re-test caught it STILL load-bearing |
+| `8c660f4` | `_DIY_RecordCupBracketProgress` (hybrid choke point) | REMOVED `8ccda75` — probe 6/6, re-test 10/10 clean |
+| `d16ad5b` | `career_status.c` season-keycache fill | REMOVED `1776ac6` — probe 14/14 (incl roundIterator) |
+| cup-menu | `career_teams.c` `_Career_OpenCompetitionSlotMenuAndApplyChanges` | REMOVED `bbe2b2b` — re-test 8/8 clean |
+| `93b8cfd` | `_DIYCupFinish` | **KEPT** `bbe2b2b` — re-test caught it STILL load-bearing |
 
 **Root finding:** all three removed rebuilds guarded the **selTeams-index
 staleness** ("the careerFileBuffer overlay reorders selTeams between a cup slot
 store and load") — and **Part B retired that overlay**, so the staleness is gone.
-**`34828ff` is different:** it re-derives teamOffsetTable to match the *current*
+**`93b8cfd` is different:** it re-derives teamOffsetTable to match the *current*
 cup at finish time (a secondary cup finishing during next-season processing; the
 check observed 31/64 entries differ) — a real re-sync, not a staleness artefact,
 so it stays. The legit cache builds (`_DIY_InitCupBracketState` 1655,
 `_DIY_RebuildCompetitionAndTeamSelectionCaches`) were never band-aids and are
-untouched. `b5cafcb`'s play_match_menu.c rebuild was already gone; `773827f` is a
+untouched. `269deff`'s play_match_menu.c rebuild was already gone; `37d4bab` is a
 64-bit copy-*size* fix, not a rebuild (stays).
 
 **=> Stage 4 (re-apply stable-id) is MOOT.** Its sole purpose was to kill the
 selTeams-index staleness; Part B already did, proven by the three clean removals.
-(Stable-id wouldn't remove `34828ff` either — that's a context re-sync, not
+(Stable-id wouldn't remove `93b8cfd` either — that's a context re-sync, not
 staleness.) The reverted stable-id reconstruction is therefore not worth doing.
 
 **STAGE 2 DONE (2026-06-18).** Save round-trip + cross-target verify of the
@@ -75,7 +75,7 @@ sub-slots in one block. Processing a **league sub-slot** writes standings that
 **zero the cup sub-slot's `teamGridPairings` and `teamOffsetTable`** (slots
 62/63 observed as 0; run-2's overflow was `compId=2`). The current rebuilds
 (`_DIY_BuildTeamSelectionPointerCache` at `career_teams.c:1812`,
-`career_status.c:4402`, the fill choke point `3ac95cf`, and the auto-sim path)
+`career_status.c:4402`, the fill choke point `8c660f4`, and the auto-sim path)
 re-derive `teamOffsetTable` from `cupTeamIds` to paper over the clobber.
 
 ## 2. Why the obvious fix (move the cup scratch) is the WRONG cut
@@ -133,7 +133,7 @@ Move `bracketScratch` + `teamGridPairings` to the 0x734+ slack (keep
 With the standings no longer clobbering the cup scratch:
 
 1. **Remove the rebuild band-aids**: the choke-point rebuild in
-   `_DIY_RecordCupBracketProgress` (revert `3ac95cf`), the auto-sim-path rebuild,
+   `_DIY_RecordCupBracketProgress` (revert `8c660f4`), the auto-sim-path rebuild,
    and the gated ones at `career_teams.c:1812` / `career_status.c:4402`. Verify
    `teamOffsetTable` stays valid through hybrid league→cup transitions with NO
    rebuild (re-instrument the 62/63 check).
@@ -184,5 +184,5 @@ model — it only changes one offset constant and the copy/buffer sizes.
 ## 7. Separate, unrelated bug (already FIXED — do not conflate)
 
 Season-transition panic **0x4459** in `_DIY_SelectCompetitionSlot4FromCurrentDivision`
-— FIXED 2026-06-13 (`5b89386`): typed `englishLeaguesBlock` walk replacing the
+— FIXED 2026-06-13 (`f6bed18`): typed `englishLeaguesBlock` walk replacing the
 self-relative byte offset. Kept here only as a pointer; not part of this plan.

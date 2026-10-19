@@ -10,7 +10,7 @@ pushed `teamOffsetTable[62]` (0x444) and `[63]` (0x448) **past** that boundary, 
 store dropped them and load left the destination's stale `0` → those cup slots
 resolved to `selTeams[0]` (the player) → double-booked fixture → phantom PLAY
 MATCH menu. Fixed by deriving the length from `offsetof` (`DIY_CUP_COPY_WORDS` in
-`game_types.h`, commit `773827f`; `0x222` on 32-bit/Amiga unchanged, `0x226` on 64-bit). Validated:
+`game_types.h`, commit `37d4bab`; `0x222` on 32-bit/Amiga unchanged, `0x226` on 64-bit). Validated:
 4 full seasons clean. The investigation notes below are kept as the record of
 what was ruled out (selTeams content was NOT the problem).
 
@@ -63,7 +63,7 @@ player double-booked → phantom PLAY MATCH menu opened mid-auto-play
 (`AutoPlayCupLoop → PlayCupMatchAndAdvance → SetupPlayers → ShowPlayMatchMenu`)
 → career can't progress → "inputs dead".
 
-**Stage 1 (leagueStandings relocation, 8f14738) already removed the standings
+**Stage 1 (leagueStandings relocation, 44e6f81) already removed the standings
 clobber** of `teamOffsetTable` — so this residual is NOT that. It is the
 cumulative-`selTeams` shrink/reorder.
 

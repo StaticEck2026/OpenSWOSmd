@@ -1,6 +1,6 @@
 # DIYCompetitionEx offset audit
 
-> Status (2026-09-30): **complete** -- the refactor this audit drove has landed: `DIYCompetitionEx` in `include/game_types.h` was rewritten to the SWOS2.s layout (with `DIYTournamentSlot`, `DIYTeamStats`, the `bracketScratch` union, and later the trailing `leagueStandings[64]`), and the raw offsets in `src/diy_competition.c` became typed fields (`f14ce73`, `a01ab60`, `8f14738`). Kept as the record of the investigation.
+> Status (2026-09-30): **complete** -- the refactor this audit drove has landed: `DIYCompetitionEx` in `include/game_types.h` was rewritten to the SWOS2.s layout (with `DIYTournamentSlot`, `DIYTeamStats`, the `bracketScratch` union, and later the trailing `leagueStandings[64]`), and the raw offsets in `src/diy_competition.c` became typed fields (`7134415`, `4d6f653`, `44e6f81`). Kept as the record of the investigation.
 
 This is the source-of-truth investigation for refactoring the ~400 raw
 `*(uintNN_t *)(p + offset)` accesses in `src/diy_competition.c` into

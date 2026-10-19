@@ -1,7 +1,7 @@
 # SWOS SFX research
 
 > **Status (2026-09-30): research log, partly superseded.** A tester's by-ear
-> pass (`987705e`, 2026-05-05) renamed the ids, so the **current names and
+> pass (`3ebb0ee`, 2026-05-05) renamed the ids, so the **current names and
 > meanings are the `#define`s in `include/sfx_ids.h`** (e.g. `0x0F` =
 > `SFX_CROWD_KEEPERSAVES`, `0x25` = `SFX_BALL_KEEPER_SAFE_2`); the guesses below
 > predate it. The debug SFX-test mode (number keys at the menu) described below

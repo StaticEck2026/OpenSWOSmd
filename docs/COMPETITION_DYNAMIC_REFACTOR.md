@@ -1,6 +1,6 @@
 # Competition System — Dynamic / Pointer-Free Refactor (HANDOFF)
 
-> Status (2026-09-30): **complete** -- engine Steps 1-7 (`cf4017c`, `5c0070f`; `include/comp_identity.h`, `Comp_ById`/`Comp_AppendCareerContest`) and Copa Libertadores incl. the Step-8 Amiga bake (`e99d40b`, `955476e`, `ca2dedc`) and the interactive CONMEBOL-club play path listed as remaining in §8e (`f88b062`) all landed. Kept as the record of how. Mentions of `sync_to_amiga_port.sh` / "the Amiga port" as a separate tree predate the 2026-08-12 merge (the script is now a tombstone; one tree builds both targets).
+> Status (2026-09-30): **complete** -- engine Steps 1-7 (`cc75dcf`, `061e979`; `include/comp_identity.h`, `Comp_ById`/`Comp_AppendCareerContest`) and Copa Libertadores incl. the Step-8 Amiga bake (`a6f0c31`, `d66453a`, `580ca70`) and the interactive CONMEBOL-club play path listed as remaining in §8e (`206ffd3`) all landed. Kept as the record of how. Mentions of `sync_to_amiga_port.sh` / "the Amiga port" as a separate tree predate the 2026-08-12 merge (the script is now a tombstone; one tree builds both targets).
 
 > Fresh-session handoff. Goal of this project: **break competitions free of
 > hardcoded compiled addresses** so they are identified by id/index (not by the
@@ -16,8 +16,8 @@
   `_dataCompPool[]` + `_careerContests[43]` spares) was **reverted** this session —
   do not look for it; it's gone. Start from a clean tree on `main`.
 - **Committed + pushed earlier this session** (unrelated to this refactor): arcade
-  DOS logo (`4692a07`), Cygwin SIGHUP / VS Code gdb launch fix (`f452634`),
-  `bin/data_json` now tracked (`112f93c`), `grafs_aga` removed (`5459229`).
+  DOS logo (`2bfe820`), Cygwin SIGHUP / VS Code gdb launch fix (`5785a74`),
+  `bin/data_json` now tracked (`88def1a`), `grafs_aga` removed (`5459229`).
 - `bin/data_json` is the data-drive source of truth (user keeps a `data_json.zip`
   backup and will **re-baseline it before any Copa data goes in**).
 - **Motivating test case:** Copa Libertadores (a brand-new tournament). Spec in

@@ -10,52 +10,52 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BASE=7eaaa63          # docs: recorded-game replay testing — the first TESTS.md
+BASE=0aa8bf2          # docs: recorded-game replay testing — the first TESTS.md
 EXCL=(-- src include ':!src/replay_test.c' ':!include/replay_test.h')
 
 # hash|class|note   — class: AMIGA (changes shipped play), DOS (gated, Amiga arm
 # unchanged), RIG (inert unless --replay-test), FLAG (opt-in -D), VIEW (f(view),
 # identical at 336x272), NOOP.
 CLASS=$(cat <<'TSV'
-43fa201|DOS+RIG|DOS constants + rig hooks; Amiga values and paths unchanged
-3399d34|VIEW|introduces _sim_view_*; defaults to the render width, so a no-op then
-22f370a|AMIGA|splits onScreen from the render cull and pins the sim view to 336
-47bb535|FLAG|SWOS_ORIGINAL_TACTICS variants; default build unchanged
-0aa401f|VIEW|bench-slide window as f(view); identical at 272 lines
-f2195e8|FLAG|SWOS_DOS_TACTICS variants; default build unchanged
-bb88140|DOS|goalkeeper-sub cursor; Amiga arm unchanged
-af8fd04|DOS|extra ApplyGameStyle call; writes the same constants on Amiga
-2247d74|AMIGA|ball-quadrant leading bound + clr.w on sprite z (SetBallPosition)
-f3e9bc5|DOS|bench comment/constant; Amiga arm unchanged
-beb74a9|DOS|IsThisPlayerOkToSelect offset + DOS bench camera 55
-cbb2d2a|DOS|player-down timer 55 on DOS, 50 on Amiga
-6ce24b7|AMIGA|five nearest-player scans now walk the table forwards
-e24f55f|AMIGA|goalie catch reads GoalieSkill 0x2A/0x2C; tackling timer >= -2
-f337e13|AMIGA|InitUserTactics writes through _teamTacticsTable; no-op by default
-04f8f01|AMIGA|AI fire gates, angle tolerance, dead $FFFF arm, 478 bound
-3e4a754|RIG|replay runs silent; no gameplay path
-d355a28|DOS|goalie reach index differs per release
-f343cca|DOS|throw-in hide-result gate 55 on DOS, 50 on Amiga
-5e058fe|DOS|goalie/header recompilation differences
-41ba466|DOS|second stoppage gate 55 on DOS, 50 on Amiga
-25b90e6|DOS|--dos-gameplay switches the formation set
-b5b850c|AMIGA|a2 is the ball (parameter, not a local); CPU-only position block
-9a7bc65|AMIGA|tst.l spans longPass+longSpinPass in three tests
-24159a6|AMIGA|near-goal slowdown is four shifts (/16), not five
-6155a4a|DOS+VIEW|stoppage reloads scale on DOS; referee entry as f(view)
-7a08d16|AMIGA|an AI tackle clears pl1FireCounter (shared asm tail)
-6c1aa1a|AMIGA|unmatched end-game state falls through to the stoppage countdown
-a535e50|VIEW|end-of-game / highlights camera as f(view); identical at 336x272
-757b933|DOS|stats overlay freezes the clock on Amiga only; Amiga arm unchanged
-a58a2a1|DOS|DOS alternates teams on its own counter; Amiga keeps frameCount
-59a65a1|AMIGA|goalpost deflection has three arms
-98bb0e3|NOOP|drops three includes left over from tracing
-6f59733|DOS|penalty keeper frames scale; DOS ends a shoot-out differently
-75abd23|DOS|final-whistle freeze; Amiga arm unchanged
-91dd1e3|DOS|DOS second-yellow table runs off its end
-310c1a6|AMIGA|animation follows the render view (widescreen only)
-28f8204|AMIGA|camera pan range is the simulation constant, not the render width
-97dd23a|AMIGA|render origin split from the game camera (widescreen only)
+0db8430|DOS+RIG|DOS constants + rig hooks; Amiga values and paths unchanged
+908336c|VIEW|introduces _sim_view_*; defaults to the render width, so a no-op then
+90285a2|AMIGA|splits onScreen from the render cull and pins the sim view to 336
+82e5c85|FLAG|SWOS_ORIGINAL_TACTICS variants; default build unchanged
+6d3e009|VIEW|bench-slide window as f(view); identical at 272 lines
+36a1c69|FLAG|SWOS_DOS_TACTICS variants; default build unchanged
+36eb0b8|DOS|goalkeeper-sub cursor; Amiga arm unchanged
+6a380c5|DOS|extra ApplyGameStyle call; writes the same constants on Amiga
+9e1367a|AMIGA|ball-quadrant leading bound + clr.w on sprite z (SetBallPosition)
+a7dcdd9|DOS|bench comment/constant; Amiga arm unchanged
+8a71374|DOS|IsThisPlayerOkToSelect offset + DOS bench camera 55
+78c6da1|DOS|player-down timer 55 on DOS, 50 on Amiga
+0ba6e4a|AMIGA|five nearest-player scans now walk the table forwards
+6abc868|AMIGA|goalie catch reads GoalieSkill 0x2A/0x2C; tackling timer >= -2
+bb5d76b|AMIGA|InitUserTactics writes through _teamTacticsTable; no-op by default
+64c6be4|AMIGA|AI fire gates, angle tolerance, dead $FFFF arm, 478 bound
+89dd290|RIG|replay runs silent; no gameplay path
+0863fb6|DOS|goalie reach index differs per release
+0458a23|DOS|throw-in hide-result gate 55 on DOS, 50 on Amiga
+260f234|DOS|goalie/header recompilation differences
+4a40e68|DOS|second stoppage gate 55 on DOS, 50 on Amiga
+06ec99b|DOS|--dos-gameplay switches the formation set
+be0c995|AMIGA|a2 is the ball (parameter, not a local); CPU-only position block
+189302e|AMIGA|tst.l spans longPass+longSpinPass in three tests
+07e3334|AMIGA|near-goal slowdown is four shifts (/16), not five
+e8ae254|DOS+VIEW|stoppage reloads scale on DOS; referee entry as f(view)
+0c606ff|AMIGA|an AI tackle clears pl1FireCounter (shared asm tail)
+db5057f|AMIGA|unmatched end-game state falls through to the stoppage countdown
+853cbd9|VIEW|end-of-game / highlights camera as f(view); identical at 336x272
+f32856d|DOS|stats overlay freezes the clock on Amiga only; Amiga arm unchanged
+b2ce48e|DOS|DOS alternates teams on its own counter; Amiga keeps frameCount
+23442af|AMIGA|goalpost deflection has three arms
+47bb9e8|NOOP|drops three includes left over from tracing
+3ab76c7|DOS|penalty keeper frames scale; DOS ends a shoot-out differently
+e2afd0b|DOS|final-whistle freeze; Amiga arm unchanged
+41f17ee|DOS|DOS second-yellow table runs off its end
+6bb54d9|AMIGA|animation follows the render view (widescreen only)
+a10bddd|AMIGA|camera pan range is the simulation constant, not the render width
+be8051e|AMIGA|render origin split from the game camera (widescreen only)
 0624126|AMIGA|HUD + bench menus anchor on the render origin (widescreen only)
 TSV
 )

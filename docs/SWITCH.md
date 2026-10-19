@@ -218,7 +218,7 @@ not do it. Without the commit a save looks written, reads back correctly for
 the rest of the session, and is simply absent next launch. `swos_save_commit()`
 calls `SDL_NintendoSwitch_CommitSaveData("save")` and is called, always **after**
 the file is closed (which the commit requires), from every write to the save
-mount (`20998f9`): `rob_save()`/`rob_delete()` in `resload.c` — the path careers,
+mount (`317b964`): `rob_save()`/`rob_delete()` in `resload.c` — the path careers,
 tactics, edited teams and options actually take — plus `swos_io_save()`,
 `Settings_Save()` and the first-launch `SWOS.ini`, the `.SRP` replays
 (`replay_v2.c`), the arcade high-score table and the match-report zip.

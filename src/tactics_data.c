@@ -290,7 +290,7 @@ extern TeamTactics _teamTacticsUSERF;
  * ======================================================================
  *
  * WHAT: 4-4-2, 4-3-3, 3-4-3 and Sweep ship with tester-supplied corrections
- * (commit 23f0c59, 2026-06-29) rather than the pristine Amiga data. The
+ * (commit 1828528, 2026-06-29) rather than the pristine Amiga data. The
  * originals have buggy ball-position coverage — the two central-defender slots
  * (and, in 4-3-3/Sweep, a forward pair) SWAP SIDES at certain ball positions
  * instead of holding station, so a CD would cross the pitch to cover a man his

@@ -731,7 +731,7 @@ GameFrameResult GameLoop_Frame(void)
     /* Record the camera in the SAME space the per-sprite coordinates are written
      * in. Those come off the draw path (sprites.c), which measures from
      * Render_CameraX() -- the RENDER camera. `_cameraX` is the SIMULATION one,
-     * and since 97dd23a the two are not a shift apart but a SCALE, so storing
+     * and since be8051e the two are not a shift apart but a SCALE, so storing
      * `_cameraX` here made `sprite_x + cam_x` mean nothing: it was a world
      * position plus cam * (1 - max/pan), drifting further the more the camera had
      * moved. Every stationary object -- the goal overlay most visibly -- slid
@@ -1069,7 +1069,7 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
      * InitGameSaveTeams has just faded the screen to black, and nothing has
      * drawn the pitch yet — the frontbuffer still holds the pre-match team
      * line-up screen. A WriteCopperPitchPalette() here (added with AGA mode,
-     * 77fa5d9) wrote the full-brightness gamePalette straight into the copper,
+     * 1c48b69) wrote the full-brightness gamePalette straight into the copper,
      * which un-blacks the display and shows that stale menu image in the
      * PITCH palette for the few frames until GameLoop draws and fades in:
      * colour 0 goes dark-blue -> green and the whole upper 240 entries change,

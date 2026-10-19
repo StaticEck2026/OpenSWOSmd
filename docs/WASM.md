@@ -4,7 +4,7 @@ Goal: build SWOS to WebAssembly so it runs in a browser from the existing SDL2
 codebase, with as little divergence from the native SDL build as possible.
 
 > **Status (2026-09-30): LIVE.** The plan below landed as designed (ASYNCIFY,
-> `emscripten_sleep` in `Platform_VBlank`, IDBFS saves) in `4ff54c9`
+> `emscripten_sleep` in `Platform_VBlank`, IDBFS saves) in `dc33557`
 > (2026-06-28). `make WASM=1` (with `<emsdk>/emsdk_env.sh` sourced; emsdk lives at
 > `/mnt/c/Projects/Linux/emsdk` here, `EMSDK_DIR` in `scripts/build_dist.sh`)
 > writes `dist/web/SWOS.{html,js,wasm,data}` — not `bin/`. Two things this plan
@@ -323,7 +323,7 @@ files + `project_wasm_target` memory):
    carriers get it automatically; raw asm `.skip` symbols don't.)
 
 **NEXT = the actual WASM build (§2–3): Makefile emcc branch + ASYNCIFY.**
-*(Done the same day — `4ff54c9`; see the status note at the top.)*
+*(Done the same day — `dc33557`; see the status note at the top.)*
 
 The historical plan that produced this is kept below for reference.
 

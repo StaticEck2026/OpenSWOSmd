@@ -3,11 +3,11 @@
 > **Status (2026-09-30): implemented.** Written as the research + porting plan;
 > the plan has landed. `src/dos_gameplay.c` (`ApplyGameStyle`,
 > `DosGameplay_TargetFps`) switches the §3 constants, the formations
-> (`TacticsData_SelectRelease`, 25b90e6) and the §8.3 movement scale
+> (`TacticsData_SelectRelease`, 06ec99b) and the §8.3 movement scale
 > (`_gMoveDeltaScaleNum/Den` = 41/64); `platform_sdl.c` paces at
 > `Platform_ActivePacingFps()` (70 Hz in DOS mode). It is selected by
 > `[gameplay] style = amiga | dos` in SWOS.ini (or `--dos-gameplay=on|off`), and
-> since a4f2689 the style sets the **view** too (the DOS 320x200 view with DOS
+> since c58d1a8 the style sets the **view** too (the DOS 320x200 view with DOS
 > gameplay; `[gameplay] view` is gone, `--view=amiga|dos` still pins one). Online,
 > a match plays the HOST's style (`GameplayStyle_Borrow`). The "plan" wording
 > below is kept as the record of how.
@@ -47,7 +47,7 @@ reference points. The style→FPS map (`render.cpp::getTargerFPS()` 4620-4640,
 **For our port:** `_gDosGameplay` (`include/dos_mode.h`) selects DOS(70) vs
 Amiga(50). It is **independent of `gDosGraphics`** (`[graphics] style`) — you
 can run DOS gameplay with Amiga graphics or vice-versa — but NOT of the view:
-since a4f2689 the gameplay style also picks the DOS/Amiga view. Recommend a single
+since c58d1a8 the gameplay style also picks the DOS/Amiga view. Recommend a single
 internal "game style" enum so 60 FPS modes can be added later.
 
 ## 2. Frame pacing (the game loop)
@@ -135,12 +135,12 @@ on one side and spelled out on the other.
   1536→2218. Only styles ≥3 (60 FPS) apply a ×1.2 boost. Do **not** rescale
   kick/pass power between 50 and 70.
 
-### Differentiated — the formations (switched by `ApplyGameStyle` since 25b90e6)
+### Differentiated — the formations (switched by `ApplyGameStyle` since 06ec99b)
 The DOS release re-tuned three of the twelve built-in formations, and
 `GetPlayerPrice` walks the tactics table for every player, so this is a
 gameplay difference that reaches player values and in-game skill nibbles as
 well as where men stand. When this section was written `ApplyGameStyle` swapped
-only the physics and timer constants; since 25b90e6 ("tactics: --dos-gameplay
+only the physics and timer constants; since 06ec99b ("tactics: --dos-gameplay
 switches the formations too") it also calls `TacticsData_SelectRelease(dos)`
 (`src/tactics_data.c`), because the replay corpus showed the DOS formations are
 part of what DOS gameplay means. The build flag below still pins a set.
@@ -151,7 +151,7 @@ SWOS_DOS_TACTICS=1` bakes the DOS coverage
 It was at first not wired to `--dos-gameplay=on` — a deliberate hold, because
 the recorded-game corpus disagrees with the DOS data's two forward slots
 (docs/TACTICS_POSITION_VALUE.md §9.6; sizes and the caveat are there). It is
-wired now (25b90e6, above); a `-DSWOS_DOS_TACTICS` build keeps its set either way.
+wired now (06ec99b, above); a `-DSWOS_DOS_TACTICS` build keeps its set either way.
 
 ## 4. Match clock
 

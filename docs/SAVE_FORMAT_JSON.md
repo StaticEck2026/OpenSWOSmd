@@ -187,8 +187,8 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       (binary read is always compiled); see the refreshed Makefile comment.
       Not removing the toggle — it's the `.HIL`/`.TAC` binary-write opt-out.
 - [x] Delete legacy bodies of the big overlay-dump saves —
-      `_SaveCareerFile`/`_LoadCareerFile` (f1a5146),
-      `_LoadPresetFile`/`_LoadDIYFile` (081c843),
+      `_SaveCareerFile`/`_LoadCareerFile` (5a78f4f),
+      `_LoadPresetFile`/`_LoadDIYFile` (7ef6da4),
       `_SavePresetCompetitionFile`/`_SaveDIYFile` (this change, JSON-only);
       `_SaveCompetitionFile` + the save-header magic externs went with them.
       **NOT** `_DoSaveHighlights`/`_LoadHilFile`/`_ReadTacticsFile`/
@@ -201,7 +201,7 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       semantic identities, so no address LUT is needed.
 - [x] Delete the cross-build pointer-fixup parts of
       `_RebuildPointersAfterLoad` — done by removing `save_pointer_lut.c` /
-      `_TranslateAmigaAddressesAfterLoad` (903df34). `_RebuildPointersAfterLoad`
+      `_TranslateAmigaAddressesAfterLoad` (533ca17). `_RebuildPointersAfterLoad`
       itself is the KEEP path: it re-derives every pointer from a stable JSON
       IDENTITY (competition ID, buffer index), never an Amiga absolute address,
       so there were no legacy-fixup branches left inside it to remove.

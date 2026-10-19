@@ -980,7 +980,7 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY)
          * is measured from `_cameraX` (sprites.c) and `UpdateControlledPlayer`
          * will not auto-select a player whose flag is clear.
          *
-         * Since 22f370a pinned the simulation view to 336 while the render
+         * Since 90285a2 pinned the simulation view to 336 while the render
          * stayed at the display width, the two clamps disagreed: `MoveCamera`
          * aims at `0x2A0 - _sim_view_width` = 336, and this line then cut it
          * to `0x2A0 - 484` = 188 on a 16:9 display. The camera simply stopped
