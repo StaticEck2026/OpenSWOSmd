@@ -220,7 +220,21 @@ if(SD_WITH_APP)
         set_property(TARGET slint_cpp-static APPEND PROPERTY
                      INTERFACE_LINK_LIBRARIES
                      opengl32 imm32 ws2_32 ntdll shlwapi userenv dbghelp)
-      elseif(NOT APPLE)
+      elseif(APPLE)
+        # rustc --print native-static-libs, Slint 1.17.1 (winit, FemtoVG,
+        # accessibility), libc / libSystem left to the toolchain.
+        set_property(TARGET slint_cpp-static APPEND PROPERTY
+                     INTERFACE_LINK_LIBRARIES
+                     "-framework Accessibility" "-framework AppKit"
+                     "-framework ApplicationServices" "-framework Carbon"
+                     "-framework CloudKit" "-framework CoreData"
+                     "-framework CoreFoundation" "-framework CoreGraphics"
+                     "-framework CoreImage" "-framework CoreServices"
+                     "-framework CoreText" "-framework CoreVideo"
+                     "-framework Foundation" "-framework OpenGL"
+                     "-framework QuartzCore" objc iconv)
+        target_link_options(openswos-setup PRIVATE -Wl,-dead_strip)
+      else()
         set_property(TARGET slint_cpp-static APPEND PROPERTY
                      INTERFACE_LINK_LIBRARIES fontconfig freetype)
         target_link_options(openswos-setup PRIVATE -Wl,--gc-sections)

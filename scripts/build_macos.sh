@@ -143,9 +143,10 @@ make macos-app $FLAGS -j"$JOBS" || { echo "!! make macos-app failed"; exit 1; }
 echo "== lipo: $(lipo -info bin/SWOS.app/Contents/MacOS/SWOS 2>&1)"
 
 # The data setup (tools/swosdata): OpenSWOS ships none of the original game's
-# data, so a Mac player needs it to play at all. The window, "OpenSWOS Setup.app",
-# links the prebuilt Slint (arm64 only; its dylib goes in the app's Frameworks);
-# the command line, swosdata, is plain C and goes universal.
+# data, so a Mac player needs it to play at all. Both halves are universal, like
+# the game: the window, "OpenSWOS Setup.app", links a static Slint built for arm64
+# and x86_64 (tools/swosdata/build_slint_macos.sh, once per Mac); the command line,
+# swosdata, is plain C, built per slice and joined with lipo.
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
 echo "== data setup: swosdata (universal) + OpenSWOS Setup.app"
 for a in arm64 x86_64; do
@@ -156,9 +157,14 @@ mkdir -p tools/swosdata/build &&
     lipo -create -output tools/swosdata/build/swosdata-universal \
          tools/swosdata/build-arm64/swosdata tools/swosdata/build-x86_64/swosdata ||
     { echo "!! lipo swosdata failed"; exit 1; }
-( cd tools/swosdata && ./build.sh >/dev/null ) || { echo "!! OpenSWOS Setup.app failed"; exit 1; }
-SETUP_APP="tools/swosdata/build-app/bin/OpenSWOS Setup.app"
+( cd tools/swosdata && ./build.sh static >/dev/null ) || { echo "!! OpenSWOS Setup.app failed"; exit 1; }
+SETUP_APP="tools/swosdata/build-app-static/bin/OpenSWOS Setup.app"
 [ -d "$SETUP_APP" ] || { echo "!! $SETUP_APP was not produced"; exit 1; }
+echo "== setup lipo: $(lipo -archs "$SETUP_APP/Contents/MacOS/OpenSWOS Setup" 2>&1)"
+case "$(lipo -archs "$SETUP_APP/Contents/MacOS/OpenSWOS Setup" 2>/dev/null)" in
+    *arm64*x86_64*|*x86_64*arm64*) ;;
+    *) echo "!! OpenSWOS Setup is not universal"; exit 1 ;;
+esac
 
 mkdir -p dist
 echo "== packing dist/$ZIP (ditto — preserves the frameworks' symlinks)"
@@ -223,6 +229,7 @@ printf '  save-format verify : off\n'
 printf '  flag in build      : %s compile lines with -DSWOS_TEST_RULES=1\n' \
     "$(grep -c -- '-DSWOS_TEST_RULES=1' "$LOG")"
 printf '  slices             : %s\n' "$(grep -m1 '^== lipo:' "$LOG" | sed 's/^== lipo: //')"
+printf '  setup slices       : %s\n' "$(grep -m1 '^== setup lipo:' "$LOG" | sed 's/^== setup lipo: //')"
 printf '  symlinks preserved : %s (0 would mean SDL2.framework is broken)\n' \
     "$(sed -n 's/.*SYMLINKS_IN_ZIP=//p' "$LOG" | head -1)"
 echo ""

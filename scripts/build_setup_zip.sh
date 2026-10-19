@@ -14,7 +14,7 @@
 #                             found ABOVE each program by both of them
 #     Windows/                openswos-setup.exe, swosdata.exe (static, no DLLs)
 #     Linux/                  openswos-setup + libslint_cpp.so ($ORIGIN), swosdata
-#     macOS/                  OpenSWOS Setup.app (Apple silicon), swosdata (universal)
+#     macOS/                  OpenSWOS Setup.app, swosdata (both universal)
 #
 # A PACKAGING step like build_installer.sh, run after build_dist.sh and
 # build_macos.sh: the Mac's part comes from build_macos.sh

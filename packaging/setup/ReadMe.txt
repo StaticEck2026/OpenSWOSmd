@@ -28,9 +28,8 @@
  in the folder above them.
 
  Windows   Windows\openswos-setup.exe
- macOS     macOS/OpenSWOS Setup.app (a Mac with Apple silicon). The first
-           time, right-click it and choose Open: it is not signed. On an
-           Intel Mac use macOS/swosdata from Terminal (below).
+ macOS     macOS/OpenSWOS Setup.app (Apple silicon and Intel Macs). The
+           first time, right-click it and choose Open: it is not signed.
  Linux     Linux/openswos-setup (x86-64), or Linux/swosdata
 
  Press "Choose a folder..." and pick a folder your game is in: the setup

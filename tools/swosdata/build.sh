@@ -3,7 +3,8 @@
 #
 #   ./build.sh          configure and build -> build-app/bin/openswos-setup
 #   ./build.sh static   link Slint statically: one binary, no libslint_cpp.so
-#                       -> build-app-static/bin/openswos-setup
+#                       -> build-app-static/bin/openswos-setup (on a Mac,
+#                       "OpenSWOS Setup.app", universal: arm64 + x86_64)
 #   ./build.sh clean    remove both build directories
 #
 # Slint is needed at BUILD time (slint-compiler turns the .slint files into
@@ -31,11 +32,21 @@ esac
 # cached, so pointing SLINT_ROOT at another SDK in a configured tree is ignored.
 if [ "$MODE" = static ]; then
   : "${BUILD_DIR:=build-app-static}"
-  : "${SLINT_STATIC_ROOT:=$PWD/../../../slint/install/linux-x86_64-static}"
+  if [ "$(uname -s)" = Darwin ]; then
+    # One app for both kinds of Mac: Slint built for arm64 and x86_64, its two
+    # libslint_cpp.a joined with lipo (the slint-compiler is the arm64 one).
+    : "${SLINT_STATIC_ROOT:=$PWD/../../../slint/install/macos-universal-static}"
+  else
+    : "${SLINT_STATIC_ROOT:=$PWD/../../../slint/install/linux-x86_64-static}"
+  fi
   if [ ! -f "$SLINT_STATIC_ROOT/lib/libslint_cpp.a" ]; then
     echo "No static Slint at $SLINT_STATIC_ROOT." >&2
-    echo "Build one from a Slint 1.17.1 checkout with BUILD_SHARED_LIBS=OFF (see" >&2
-    echo "StorageAgent's docs/SLINT_STATIC.md), or set SLINT_STATIC_ROOT." >&2
+    if [ "$(uname -s)" = Darwin ]; then
+      echo "Build it with ./build_slint_macos.sh (once per Mac), or set SLINT_STATIC_ROOT." >&2
+    else
+      echo "Build one from a Slint 1.17.1 checkout with BUILD_SHARED_LIBS=OFF (see" >&2
+      echo "StorageAgent's docs/SLINT_STATIC.md), or set SLINT_STATIC_ROOT." >&2
+    fi
     exit 1
   fi
   SLINT_ROOT="$SLINT_STATIC_ROOT"
@@ -45,6 +56,8 @@ fi
 
 set -- -DCMAKE_BUILD_TYPE=Release
 [ -n "$SLINT_ROOT" ] && set -- "$@" "-DSLINT_ROOT=$SLINT_ROOT"
+# A static Slint on a Mac is universal, so the app is too.
+[ "$MODE" = static ] && [ "$(uname -s)" = Darwin ] && set -- "$@" "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
 
 cmake -S . -B "$BUILD_DIR" "$@"
 cmake --build "$BUILD_DIR" -j "$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"

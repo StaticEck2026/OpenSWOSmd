@@ -239,7 +239,7 @@ beside it.
 | `dist/SWOS-Setup.exe` | 14 MB | Inno Setup installer — the Windows half of the full zip, for a tester who'd rather double-click |
 | `dist/SWOS.nsp` | 84 MB | the Switch package (`scripts/build_switch.sh`) |
 | `dist/SWOS-macOS*.zip` | 19 / 1.4 MB | from `scripts/build_macos.sh` — see below |
-| `dist/OpenSWOS-Setup.zip` | ~30 MB | the data setup ALONE for Windows, macOS and Linux (`scripts/build_setup_zip.sh`, after `build_macos.sh`, which brings back the Mac's part): how an Amiga player gets it -- the setup cannot run on the Amiga, it fills the drawer on a PC or Mac. Its programs find `setup/` and `data/` in the folder ABOVE them |
+| `dist/OpenSWOS-Setup.zip` | ~30 MB | the data setup ALONE for Windows, macOS and Linux (`scripts/build_setup_zip.sh`, after `build_macos.sh`, which brings back the Mac's part): how an Amiga player gets it -- the setup cannot run on the Amiga, it fills the drawer on a PC or Mac. Its programs find `setup/` and `data/` in the folder ABOVE them. The Mac window is UNIVERSAL like the game: a static Slint built for both slices by `tools/swosdata/build_slint_macos.sh` (once per Mac; the published Slint SDK is arm64-only) |
 
 The full dist keeps everything at the zip root because the SDL binary chdir's to
 its own directory. Its data list mirrors what `make macos-app` bundles (the
