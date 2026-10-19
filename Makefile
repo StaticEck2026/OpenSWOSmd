@@ -555,9 +555,20 @@ endif
 # scalar loads cope with misaligned pointers correctly. This keeps the
 # struct layout identical across all 64-bit targets (Linux aarch64
 # already builds + runs with the same packed structs).
+
 ifeq ($(UNAME_S),Darwin)
 LDFLAGS += -Wl,-ld_classic
 endif
+
+# The original game's data is not in this repo: the data setup (tools/swosdata)
+# builds it from the player's own copy into the assets folder, the same folder
+# the game reads at run time (swos_assets_dir() in src/swos_io.c). The web build
+# bakes both into SWOS.data: the project's own files from bin/, the game's from
+# here. Override with SWOS_ASSETS=/path (also what the game reads).
+ifeq ($(origin SWOS_ASSETS),undefined)
+SWOS_ASSETS := $(HOME)/.swos/assets
+endif
+WASM_DATA_DIRS := data grafs grafs_aga grafs_jag sound data_json
 
 # Emscripten link flags. ASYNCIFY lets the blocking game loop yield to the
 # browser at the one Platform_VBlank choke-point (emscripten_sleep — docs/WASM.md
@@ -586,12 +597,8 @@ LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
            -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 \
            -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS -lidbfs.js \
            --pre-js wasm/pre.js --shell-file $(WASM_SHELL) \
-           --preload-file bin/data@/data \
-           --preload-file bin/grafs@/grafs \
-           --preload-file bin/grafs_aga@/grafs_aga \
-           --preload-file bin/grafs_jag@/grafs_jag \
-           --preload-file bin/sound@/sound \
-           --preload-file bin/data_json@/data_json
+           $(foreach d,$(WASM_DATA_DIRS),$(foreach r,bin $(SWOS_ASSETS),\
+               $(if $(wildcard $(r)/$(d)),--preload-file $(r)/$(d)@/$(d))))
 # Re-link when the pre-js or shell HTML changes (both embedded at link time).
 WASM_LINK_DEPS := wasm/pre.js $(WASM_SHELL)
 # The --preload-file dirs are baked into SWOS.data AT LINK TIME, but nothing above
@@ -600,9 +607,10 @@ WASM_LINK_DEPS := wasm/pre.js $(WASM_SHELL)
 # real when bin/data_json/teams landed: SWOS.data stayed 2.8MB until the target was
 # deleted by hand, then jumped to 21MB.) List the preloaded files so a data change
 # forces the relink.
-WASM_PRELOAD_FILES := $(wildcard bin/data/* bin/grafs/* bin/grafs_aga/* bin/grafs_jag/* bin/sound/* \
-                                 bin/data_json/*.json bin/data_json/*/*.json \
-                                 bin/data_json/*/*/*.json)
+WASM_PRELOAD_FILES := $(wildcard $(foreach r,bin $(SWOS_ASSETS),\
+                                 $(r)/data/* $(r)/grafs/* $(r)/grafs_aga/* $(r)/grafs_jag/* $(r)/sound/* \
+                                 $(r)/data_json/*.json $(r)/data_json/*/*.json \
+                                 $(r)/data_json/*/*/*.json))
 WASM_LINK_DEPS += $(WASM_PRELOAD_FILES)
 endif
 
@@ -922,12 +930,8 @@ macos-app: macos-universal
 	  else \
 	    echo "    WARNING: SDL2.framework not found — user will need to install it system-wide" >&2; \
 	  fi; \
-	  for d in data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json; do \
-	    if [ -d "$(BINDIR)/$$d" ]; then \
-	      echo "    copying $$d/"; \
-	      cp -R "$(BINDIR)/$$d" $$APP/Contents/MacOS/; \
-	    fi; \
-	  done; \
+	  echo "    copying $$(scripts/stage_runtime.sh $$APP/Contents/MacOS \
+	        data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json setup)"; \
 	  if   [ -f SWOS.icns ];           then cp SWOS.icns           $$APP/Contents/Resources/; \
 	  elif [ -f $(BINDIR)/SWOS.icns ]; then cp $(BINDIR)/SWOS.icns $$APP/Contents/Resources/; \
 	  else echo "    (no SWOS.icns — Finder will use the default app icon)"; fi; \

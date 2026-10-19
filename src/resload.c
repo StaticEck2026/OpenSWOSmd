@@ -125,20 +125,14 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
      * resolve, and dropping an AGA version into grafs_aga later just takes over.
      * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_').
      *
-     * `path` arrives ALREADY ANCHORED at the data root (resolve_path ->
-     * swos_data_path). That is identity on every target that chdir()s, but on
-     * the Switch it is "rom:/grafs/FILE" — so testing the prefix at offset 0
-     * matched nothing there, the whole redirect no-opped, and the console
-     * loaded the 4bpp OCS set for the entire game. Strip the root before
-     * testing, and re-anchor each candidate through swos_data_path so both
-     * arms are opened the same way the caller's path was built. */
-    const char *root = swos_data_root();        /* "" off-Switch, "rom:" on it */
-    const char *rel = path;
-    size_t rootlen = strlen(root);
-    if (rootlen && strncmp(path, root, rootlen) == 0) {
-        rel = path + rootlen;
-        while (*rel == '/') rel++;
-    }
+     * `path` arrives ALREADY ANCHORED (resolve_path -> swos_data_path): at
+     * rom:/ on the Switch, and at the assets folder on the desktops when the
+     * file is there. Testing the prefix at offset 0 matched nothing on the
+     * Switch, the whole redirect no-opped, and the console loaded the 4bpp OCS
+     * set for the entire game. Strip the root before testing, and re-anchor
+     * each candidate through swos_data_path so each one is looked for in the
+     * assets folder and beside the binary alike. */
+    const char *rel = swos_data_relative(path);
 
     const char *base = NULL;
     if (strncmp(rel, "grafs_aga/", 10) == 0)  base = rel + 10;

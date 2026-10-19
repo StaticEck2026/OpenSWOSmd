@@ -669,6 +669,11 @@ void AudioBeepAllShort(void)
 __attribute__((used, externally_visible))
 void InitMenuMusic(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* No Amiga music installed (main.c): the PC game's plays instead. */
+    { extern int _gNoAmigaSound;
+      if (_gNoAmigaSound) { _audioBankLoaded = 0; _audioActive = 0; return; } }
+#endif
 retry:
     _audioBankLoaded = 0;
     _audioActive = 0;
@@ -780,6 +785,11 @@ void StopAudioAndClearFlags(void)
 __attribute__((used, externally_visible))
 void LoadSfxResources(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* No Amiga effects installed (main.c): the PC game's are used instead. */
+    { extern int _gNoAmigaSound;
+      if (_gNoAmigaSound) { StopAllAudioChannels(); _audioBankLoaded = 0; return; } }
+#endif
 retry:
     StopAllAudioChannels();
     _audioBankLoaded = 0;

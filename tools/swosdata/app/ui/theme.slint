@@ -1,0 +1,87 @@
+// OpenSWOS Setup's look: StorageAgent's dark palette and buttons, cut down to
+// what a one-page setup window uses.
+export global Theme {
+    out property <color> chrome:   #0d1014;
+    out property <color> panel:    #1a1f27;
+    out property <color> sunken:   #39414d;
+    out property <color> line:     #2e3641;
+    out property <color> hover:    #232a34;
+    out property <color> field:    #14181e;
+    out property <color> text:     #e4eaf2;
+    out property <color> text-dim: #8592a2;
+    out property <color> accent:   #3d7ddb;
+    out property <color> ok:       #4cb87a;
+    out property <color> danger:   #e5534b;
+    out property <color> link:     #6ea8ff;
+}
+
+export component TextButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> primary: false;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 28px;
+    min-width: t.preferred-width + 24px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: root.primary && root.enabled ? Theme.accent : Theme.sunken;
+    background: !root.enabled ? Theme.panel
+        : root.primary ? (area.pressed ? Theme.accent.darker(0.25)
+                          : area.has-hover ? Theme.accent.brighter(0.15) : Theme.accent)
+        : area.pressed ? Theme.line
+        : area.has-hover ? Theme.hover
+        : Theme.panel;
+
+    t := Text {
+        text: root.label;
+        font-size: 13px;
+        font-weight: root.primary ? 700 : 400;
+        color: !root.enabled ? Theme.sunken : root.primary ? #ffffff : Theme.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: 100%;
+        height: 100%;
+    }
+    area := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}
+
+// A link: underlined on hover, opens through the host.
+export component Link inherits Text {
+    in property <string> url;
+    callback open(string);
+    color: ta.has-hover ? Theme.link.brighter(0.2) : Theme.link;
+    font-size: 13px;
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.open(root.url); }
+    }
+    Rectangle {
+        y: parent.height - 2px;
+        height: 1px;
+        background: ta.has-hover ? Theme.link : transparent;
+    }
+}
+
+export component Card inherits Rectangle {
+    in property <string> title;
+    background: Theme.panel;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: Theme.line;
+    VerticalLayout {
+        padding: 10px;
+        spacing: 6px;
+        if root.title != "": Text {
+            text: root.title;
+            font-size: 14px;
+            font-weight: 700;
+            color: Theme.text;
+        }
+        @children
+    }
+}

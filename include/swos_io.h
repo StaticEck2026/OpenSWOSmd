@@ -64,16 +64,43 @@ void swos_save_dir_init(void);
 /* Resolve a path that is relative to the game's DATA root (data/, grafs/,
  * sound/, data_json/, …).
  *
- * On every desktop target the game chdir()s to the binary's directory at
- * startup, so a relative path is already correct and this returns `rel`
- * untouched — no copy, nothing to get wrong. The Switch is the one target
- * with no chdir and a read-only content mount at rom:/, so the prefix is
- * added here, at the handful of places that open game data, rather than at
- * every fopen in the tree. `buf` is only written on that target.
+ * The game data lives in two places on the desktops. The original game's files
+ * are not shipped: the data setup (tools/swosdata) builds them from the
+ * player's own copy into the ASSETS folder, swos_assets_dir(). The project's
+ * own files (menus, translations, LOADER76, the credits photos, ...) sit beside
+ * the binary, which the game chdir()s to. So a path that exists in the assets
+ * folder -- matched without regard to case, as the game asks for
+ * "grafs/menus.raw" and the setup writes MENUS.RAW -- comes back anchored
+ * there in `buf`; anything else comes back as `rel`, relative to the binary.
+ *
+ * The Switch has no chdir and a read-only content mount at rom:/, so there the
+ * prefix is always added. WASM preloads both trees into one file system and
+ * returns `rel`.
  *
  * The returned pointer is either `rel` or `buf`; it is valid for as long as
  * whichever of those the caller owns. */
 const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz);
+
+/* The other way: the part of an anchored data path below its root ("grafs/X"
+ * for ".../assets/grafs/X" or "rom:/grafs/X"), or `path` itself when it has
+ * no root. For code that reasons about a path swos_data_path() has built. */
+const char *swos_data_relative(const char *path);
+
+/* Whether a data file is there at all, in the assets folder or beside the
+ * binary, any case. Always 1 on the targets with no assets folder. */
+int swos_data_exists(const char *rel);
+
+/* Set at startup when the data setup was given the PC game but not the Amiga
+ * disks (main.c): no Amiga music or effects (sound/) and no Amiga loading and
+ * disk screens. The game then uses the PC game's sound and music and skips
+ * those screens, rather than asking for the files for ever. SDL only. */
+extern int _gNoAmigaSound;
+extern int _gNoAmigaScreens;
+
+/* The assets folder: $SWOS_ASSETS when it is set, else "assets" in the user's
+ * game folder (swos_user_dir()). "" before swos_save_dir_init() and on targets
+ * that have none (WASM, the Switch, the Amiga). No trailing slash. */
+const char *swos_assets_dir(void);
 
 /* The prefix swos_data_path() adds, with no trailing separator: "" on every
  * target that chdir()s, "rom:" on the Switch. Exists so code that receives an

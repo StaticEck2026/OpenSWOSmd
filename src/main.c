@@ -1052,6 +1052,27 @@ int main(int argc, char **argv)
       if (e) opts.music_style = strcmp(e, "pc") == 0;
       e = getenv("SWOS_COMMENTARY");
       if (e) opts.commentary = strcmp(e, "auto") == 0 ? 2 : strcmp(e, "off") != 0; }
+    /* The data setup (tools/swosdata) given the PC game but not the Amiga disks
+     * makes no Amiga music, effects or loading screens: play the PC game's sound
+     * and music whatever SWOS.ini says, and skip the screens. Without this the
+     * loaders ask for the missing files for ever. */
+    {
+        extern int swos_data_exists(const char *rel);
+        extern int _gNoAmigaSound, _gNoAmigaScreens;
+        extern volatile uint8_t _skipLoaderIntro;
+        if (!swos_data_exists("sound/SFX.SNG")) {
+            _gNoAmigaSound = 1;
+            opts.sound_style = 1;
+            opts.music_style = 1;
+            fprintf(stderr, "[assets] no Amiga music or effects (sound/): "
+                            "playing the PC game's sound and music\n");
+        }
+        if (!swos_data_exists("grafs_aga/LOADER1.RAW") && !swos_data_exists("grafs/LOADER1.RAW")) {
+            _gNoAmigaScreens = 1;
+            _skipLoaderIntro = 1;
+            fprintf(stderr, "[assets] no Amiga loading screens: skipping the intro\n");
+        }
+    }
     DosSound_SetCommentaryDir(opts.commentary_dir);
     DosSound_SetStyle(opts.sound_style);
     DosMusic_SetStyle(opts.music_style);

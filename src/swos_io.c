@@ -175,6 +175,8 @@ static char s_save_dir[1024] = "save";
  * (= the exe's cwd) so a dev/CLI run and the WASM build keep the old relative
  * "./SWOS.ini". swos_save_dir_init() overwrites it with the real per-user dir. */
 static char s_user_dir[1024] = ".";
+/* Where the data setup put the original game's files (swos_assets_dir()). */
+static char s_assets_dir[1024] = "";
 #ifdef SWOS_SWITCH_BUILD
 /* The read-only content root, from SDL_GetBasePath() — which also mounts it.
  * "rom:" until resolved so a read before init fails visibly rather than
@@ -392,6 +394,26 @@ void swos_save_dir_init(void)
 #endif  /* !SWOS_WASM_BUILD */
 }
 
+#if !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
+/* SWOS_ASSETS, else <user dir>/assets. Read here rather than in
+ * swos_save_dir_init so it is right even when that returned early (no HOME):
+ * then the user dir is "." and the assets folder "./assets". */
+static void assets_dir_init(void)
+{
+    static int s_done;
+    if (s_done) return;
+    s_done = 1;
+    const char *env = getenv("SWOS_ASSETS");
+    if (env && *env)
+        snprintf(s_assets_dir, sizeof s_assets_dir, "%s", env);
+    else
+        snprintf(s_assets_dir, sizeof s_assets_dir, "%s/assets", s_user_dir);
+    size_t n = strlen(s_assets_dir);
+    while (n > 1 && (s_assets_dir[n - 1] == '/' || s_assets_dir[n - 1] == '\\'))
+        s_assets_dir[--n] = '\0';
+}
+#endif
+
 static void resolve_save_path(const uint8_t *name, char *out, uint32_t out_sz)
 {
     const char *src = (const char *)name;
@@ -441,6 +463,48 @@ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
 
 /* ---- Data root + save durability (see swos_io.h) -------------------- */
 
+#if !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
+#include <dirent.h>
+#include <strings.h>
+
+/* Find `rel` under `root` matching every component without regard to case,
+ * writing the real path to out. 0 when it is there. An exact stat first: that
+ * is the common case and costs one call. */
+static int find_nocase(const char *root, const char *rel, char *out, uint32_t cap)
+{
+    struct stat st;
+    snprintf(out, cap, "%s/%s", root, rel);
+    if (stat(out, &st) == 0) return 0;
+
+    char cur[1024];
+    snprintf(cur, sizeof cur, "%s", root);
+    const char *p = rel;
+    while (*p) {
+        while (*p == '/') p++;
+        const char *end = strchr(p, '/');
+        size_t len = end ? (size_t)(end - p) : strlen(p);
+        if (!len) break;
+        DIR *d = opendir(cur);
+        if (!d) return -1;
+        struct dirent *e;
+        int found = 0;
+        while ((e = readdir(d)) != NULL) {
+            if (strlen(e->d_name) == len && strncasecmp(e->d_name, p, len) == 0) {
+                size_t n = strlen(cur);
+                snprintf(cur + n, sizeof cur - n, "/%s", e->d_name);
+                found = 1;
+                break;
+            }
+        }
+        closedir(d);
+        if (!found) return -1;
+        p += len;
+    }
+    snprintf(out, cap, "%s", cur);
+    return 0;
+}
+#endif
+
 const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
 {
 #ifdef SWOS_SWITCH_BUILD
@@ -450,10 +514,56 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
     if (strchr(rel, ':')) return rel;                /* already anchored */
     snprintf(buf, buf_sz, "%s/%s", s_data_dir, rel);
     return buf;
-#else
+#elif defined(SWOS_WASM_BUILD)
     (void)buf; (void)buf_sz;
     return rel;
+#else
+    if (!rel || !buf || buf_sz == 0) return rel;
+    if (rel[0] == '/' || rel[0] == '\\' || strchr(rel, ':')) return rel;   /* already anchored */
+    assets_dir_init();
+    if (s_assets_dir[0] && find_nocase(s_assets_dir, rel, buf, buf_sz) == 0)
+        return buf;
+    return rel;
 #endif
+}
+
+const char *swos_data_relative(const char *path)
+{
+    const char *roots[2] = { swos_data_root(), swos_assets_dir() };
+    for (int i = 0; i < 2; i++) {
+        size_t n = strlen(roots[i]);
+        if (n && strncmp(path, roots[i], n) == 0 && (path[n] == '/' || path[n] == '\\')) {
+            path += n;
+            while (*path == '/' || *path == '\\') path++;
+            return path;
+        }
+    }
+    return path;
+}
+
+int _gNoAmigaSound;
+int _gNoAmigaScreens;
+
+int swos_data_exists(const char *rel)
+{
+#if defined(SWOS_WASM_BUILD) || defined(SWOS_SWITCH_BUILD)
+    (void)rel;
+    return 1;
+#else
+    char buf[1024], found[1024];
+    const char *p = swos_data_path(rel, buf, (uint32_t)sizeof buf);
+    if (p == buf)
+        return 1;                       /* in the assets folder */
+    return find_nocase(".", rel, found, (uint32_t)sizeof found) == 0;
+#endif
+}
+
+const char *swos_assets_dir(void)
+{
+#if !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
+    assets_dir_init();
+#endif
+    return s_assets_dir;
 }
 
 const char *swos_data_root(void)

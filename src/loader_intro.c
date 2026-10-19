@@ -169,6 +169,10 @@ static void loaderIntroStopMusicAndResetAudio(void)
  * ================================================================ */
 static void loaderIntroLoadHeroAudioBank(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* No Amiga music installed (main.c): nothing to stage. */
+    { extern int _gNoAmigaSound; if (_gNoAmigaSound) { _audioBankLoaded = 0; return; } }
+#endif
 retry:
     _audioBankLoaded = 0;
     if (AssetEnsureReadyWithRetry(_aSoundHeroSng, heroSongBuffer) != 0)

@@ -1,0 +1,31 @@
+// OpenSWOS Setup's Windows resources, configured by CMake (absolute icon path).
+// Icon id 1: Explorer shows the lowest id, and platform.cpp loads it for the
+// title bar at the sizes Windows asks for.
+1 ICON "@SD_ICON@"
+
+1 VERSIONINFO
+FILEVERSION     @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION  @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          0x40004L
+FILETYPE        0x1L
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription",  "@SD_DISPLAY_NAME@"
+            VALUE "FileVersion",      "@PROJECT_VERSION@.0"
+            VALUE "InternalName",     "openswos-setup"
+            VALUE "OriginalFilename", "openswos-setup.exe"
+            VALUE "ProductName",      "OpenSWOS"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

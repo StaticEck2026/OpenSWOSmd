@@ -439,6 +439,22 @@ void AssetLoaderInitAltPathAndBanks(void)
     }
 }
 
+#ifdef SWOS_SDL_BUILD
+/* A "sound/..." name while no Amiga music or effects are installed (main.c). */
+static int isMissingAmigaSound(const uint8_t *name)
+{
+    extern int _gNoAmigaSound;
+    static const char kPrefix[] = "sound/";
+    int i;
+    if (!_gNoAmigaSound)
+        return 0;
+    for (i = 0; kPrefix[i]; i++)
+        if ((name[i] | 0x20) != kPrefix[i] && name[i] != kPrefix[i])
+            return 0;
+    return 1;
+}
+#endif
+
 /* ---- Precache string tables (duplicated from asm data) ---- */
 
 static const uint8_t * const kCorePrecacheTable[] = {
@@ -484,6 +500,12 @@ void AssetPrecacheOneCore(const uint8_t *assetName)
 {
     int32_t result;
     int16_t status;
+
+#ifdef SWOS_SDL_BUILD
+    /* No Amiga music or effects installed (main.c): nothing to cache. */
+    if (isMissingAmigaSound(assetName))
+        return;
+#endif
 
     result = AssetCacheFindByName(assetName);
 
@@ -531,6 +553,12 @@ void AssetPrecacheOneMenu(const uint8_t *assetName)
 {
     int32_t result;
     int16_t status;
+
+#ifdef SWOS_SDL_BUILD
+    /* No Amiga music or effects installed (main.c): nothing to cache. */
+    if (isMissingAmigaSound(assetName))
+        return;
+#endif
 
     result = AssetCacheFindByName(assetName);
     if (result != (int32_t)0xFFFFFFFFu)

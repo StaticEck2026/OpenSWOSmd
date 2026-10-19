@@ -1,0 +1,319 @@
+// OpenSWOS Setup: one window, top to bottom -- what is needed, where it was
+// found, where it goes, what will be made, and the button that makes it.
+import { ListView, ProgressIndicator } from "std-widgets.slint";
+import { Theme, TextButton, Link, Card } from "theme.slint";
+
+export { Theme }
+
+export struct SourceRow {
+    label: string,
+    value: string,
+    found: bool,
+}
+
+export struct PlanStep {
+    name: string,
+    ready: bool,
+    needs: string,
+}
+
+component PlanColumn inherits VerticalLayout {
+    in property <[PlanStep]> steps;
+    horizontal-stretch: 1;
+    spacing: 4px;
+    alignment: start;
+    for step in root.steps: VerticalLayout {
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                text: step.ready ? "✓" : "–";
+                width: 14px;
+                color: step.ready ? Theme.ok : Theme.text-dim;
+            }
+            Text {
+                text: step.name;
+                horizontal-stretch: 1;
+                color: step.ready ? Theme.text : Theme.text-dim;
+                overflow: elide;
+            }
+            Text {
+                text: step.ready ? "ready" : "skipped";
+                color: step.ready ? Theme.ok : Theme.text-dim;
+            }
+        }
+        if !step.ready: Text {
+            x: 22px;
+            text: "needs " + step.needs;
+            font-size: 11px;
+            color: Theme.text-dim;
+            overflow: elide;
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "OpenSWOS Setup";
+    icon: @image-url("../../../../packaging/linux/hicolor/256x256/apps/openswos.png");
+    preferred-width: 820px;
+    preferred-height: 860px;
+    min-width: 700px;
+    background: Theme.chrome;
+    default-font-size: 13px;
+
+    in property <[SourceRow]> sources;
+    in property <string> notice;
+    in property <bool> notice-error;
+    in property <string> out-dir;
+    in property <string> out-note;
+    // The plan in two columns, so the window fits a 900-pixel screen.
+    in property <[PlanStep]> plan-left;
+    in property <[PlanStep]> plan-right;
+    in property <bool> can-install;
+    in property <bool> busy;
+    in property <bool> done;
+    in property <float> progress;
+    in property <string> status;
+    in property <bool> status-error;
+    in property <[string]> log;
+    in property <bool> can-play;
+    in property <string> drawer;
+    in property <string> drawer-status;
+    in property <bool> drawer-error;
+    in property <bool> can-pick: true;
+
+    callback browse-source(int);
+    callback search-folder();
+    callback change-out();
+    callback install();
+    callback play();
+    callback open-url(string);
+    callback browse-drawer();
+    callback fill-drawer();
+
+    // Each log line is one fixed-height row, so "scrolled to the bottom" is
+    // arithmetic rather than a measurement that lags a frame behind.
+    property <length> log-row: 16px;
+    property <int> log-count: root.log.length;
+    changed log-count => {
+        log-view.viewport-y = min(0px, log-view.visible-height - root.log-count * root.log-row);
+    }
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 10px;
+
+        // 1. What this is.
+        Card {
+            HorizontalLayout {
+                spacing: 12px;
+                Image {
+                    source: @image-url("../../../../packaging/linux/hicolor/64x64/apps/openswos.png");
+                    width: 48px;
+                    height: 48px;
+                    vertical-alignment: top;
+                }
+                VerticalLayout {
+                    spacing: 6px;
+                    Text {
+                        text: "OpenSWOS needs your own copy of Sensible World of Soccer";
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: Theme.text;
+                    }
+                    Text {
+                        text: "OpenSWOS does not include the original game's data. Point this at the copy you own — the PC version's game folder, the two Amiga floppy disk images (.adf) made from your disks, and the Atari Jaguar cartridge if you have it — and it builds the files the game reads. Nothing is downloaded.";
+                        wrap: word-wrap;
+                        color: Theme.text-dim;
+                    }
+                    HorizontalLayout {
+                        spacing: 16px;
+                        alignment: start;
+                        Link { text: "PC version on GOG"; url: "https://www.gog.com/en/game/sensible_world_of_soccer_9697"; open(u) => { root.open-url(u); } }
+                        Link { text: "PC CD version (archive.org)"; url: "https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996"; open(u) => { root.open-url(u); } }
+                        Link { text: "Jaguar cartridge (Atarimania)"; url: "https://www.atarimania.com/games/atari-jaguar-games-sensible-soccer-international-edition-30123"; open(u) => { root.open-url(u); } }
+                    }
+                }
+            }
+        }
+
+        // 2. Where the game is.
+        Card {
+            title: "Your copy of the game";
+            for row[i] in root.sources: HorizontalLayout {
+                spacing: 10px;
+                Text {
+                    text: row.label;
+                    width: 190px;
+                    color: Theme.text;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: row.found ? "✓" : "–";
+                    width: 14px;
+                    color: row.found ? Theme.ok : Theme.text-dim;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: row.value;
+                    horizontal-stretch: 1;
+                    color: row.found ? Theme.text : Theme.text-dim;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+                TextButton {
+                    label: "Browse…";
+                    width: 90px;
+                    enabled: !root.busy && root.can-pick;
+                    clicked => { root.browse-source(i); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                TextButton {
+                    label: "Search a folder…";
+                    enabled: !root.busy && root.can-pick;
+                    clicked => { root.search-folder(); }
+                }
+                Text {
+                    text: root.notice;
+                    horizontal-stretch: 1;
+                    color: root.notice-error ? Theme.danger : Theme.text-dim;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // 3 + 4. Where it goes, and what will be made.
+        Card {
+            title: "Install to";
+            HorizontalLayout {
+                spacing: 10px;
+                Text {
+                    text: root.out-dir;
+                    horizontal-stretch: 1;
+                    color: Theme.text;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+                TextButton {
+                    label: "Change…";
+                    width: 90px;
+                    enabled: !root.busy && root.can-pick;
+                    clicked => { root.change-out(); }
+                }
+            }
+            if root.out-note != "": Text {
+                text: root.out-note;
+                color: Theme.text-dim;
+                wrap: word-wrap;
+                font-size: 12px;
+            }
+            Text {
+                text: "What will be made";
+                color: Theme.text;
+                font-weight: 700;
+            }
+            HorizontalLayout {
+                spacing: 16px;
+                PlanColumn { steps: root.plan-left; }
+                PlanColumn { steps: root.plan-right; }
+            }
+        }
+
+        // 5. Make it.
+        Card {
+            vertical-stretch: 1;
+            HorizontalLayout {
+                spacing: 12px;
+                TextButton {
+                    label: root.busy ? "Installing…" : root.done ? "Install again" : "Install";
+                    primary: true;
+                    width: 130px;
+                    enabled: root.can-install && !root.busy;
+                    clicked => { root.install(); }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    ProgressIndicator {
+                        progress: root.progress;
+                        height: 6px;
+                    }
+                }
+                if root.done && root.can-play: TextButton {
+                    label: "Play OpenSWOS";
+                    primary: true;
+                    width: 140px;
+                    clicked => { root.play(); }
+                }
+            }
+            Text {
+                text: root.status;
+                color: root.status-error ? Theme.danger : root.done ? Theme.ok : Theme.text-dim;
+                font-weight: root.done ? 700 : 400;
+                wrap: word-wrap;
+            }
+            Rectangle {
+                background: Theme.field;
+                border-width: 1px;
+                border-color: Theme.line;
+                border-radius: 4px;
+                min-height: 110px;
+                vertical-stretch: 1;
+                log-view := ListView {
+                    x: 4px;
+                    y: 2px;
+                    width: parent.width - 8px;
+                    height: parent.height - 4px;
+                    for line in root.log: Text {
+                        text: line;
+                        height: root.log-row;
+                        font-family: "monospace";
+                        font-size: 11px;
+                        color: Theme.text-dim;
+                        overflow: elide;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // 6. The Amiga version's drawer.
+        Card {
+            title: "Amiga version";
+            Text {
+                text: "SWOS-Amiga.zip has the program but not the game's data: after installing above, pick the unpacked SWOS drawer and add the data to it.";
+                color: Theme.text-dim;
+                wrap: word-wrap;
+                font-size: 12px;
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                Text {
+                    text: root.drawer != "" ? root.drawer : "no drawer chosen";
+                    horizontal-stretch: 1;
+                    color: root.drawer != "" ? Theme.text : Theme.text-dim;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+                TextButton {
+                    label: "Browse…";
+                    width: 90px;
+                    enabled: !root.busy && root.can-pick;
+                    clicked => { root.browse-drawer(); }
+                }
+                TextButton {
+                    label: "Add the game data";
+                    enabled: !root.busy && root.drawer != "";
+                    clicked => { root.fill-drawer(); }
+                }
+            }
+            if root.drawer-status != "": Text {
+                text: root.drawer-status;
+                color: root.drawer-error ? Theme.danger : Theme.ok;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

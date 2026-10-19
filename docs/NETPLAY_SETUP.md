@@ -449,7 +449,9 @@ The web build can play online — against another browser, or against a native L
 Windows or macOS player. It is proven bit for bit: the same match ends on the same state
 hash in a browser as natively.
 
-**1. Build the web build.** Netplay is on by default for WASM:
+**1. Build the web build.** Netplay is on by default for WASM. It bakes in the game's data
+from the assets folder (`$SWOS_ASSETS`, default `~/.swos/assets`), which the data setup
+makes from a copy of the game -- see "The recordings player" in §12 for the command:
 
 ```bash
 make WASM=1                                             # -> dist/web/SWOS.html (+ .js .wasm .data)
@@ -701,6 +703,24 @@ moment a tester describes can be named by its frame (docs/PLAYBACK.md). Once:
 git clone https://github.com/emscripten-core/emsdk.git ~/emsdk     # as the service user
 cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
 ```
+
+**The game's data.** The player is the web build, which bakes the game's data into
+`SWOS.data` -- and OpenSWOS does not ship that data (README, "You need your own copy of the
+game"). Make it once on the server from a copy of the game, AS THE SERVICE USER (the build
+reads `~/.swos/assets` of whoever runs it; set `SWOS_ASSETS` in the service's environment to
+put it elsewhere):
+
+```bash
+make -C tools/swosdata                                   # -> tools/swosdata/build/swosdata
+tools/swosdata/build/swosdata --dos "/path/to/Sensible World of Soccer 96-97" \
+    --adf /path/to/disk1.adf --adf /path/to/disk2.adf \
+    --res bin --out ~/.swos/assets
+```
+
+The PC game's folder alone is enough (the Amiga disks add the Amiga graphics and music);
+copy it from a GOG install. Without the data the player still builds, but has no graphics:
+`make WASM=1` preloads `bin/` plus `$(SWOS_ASSETS)`, and `bin/` holds only the project's
+own files. Rerun it after a change to `tools/swosdata` -- it rewrites the same files.
 
 Then the admin page's Rebuild builds it with the server (`scripts/run_matchmaker.sh
 --build-only --with-playback`), and `scripts/swos-matchmaker-service.sh install` or `restart`

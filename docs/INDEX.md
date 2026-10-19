@@ -198,6 +198,8 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `scripts/` | build, release, test and tooling scripts; `scripts/amiga/amigascope/` the AmigaScope submodule |
 | `third_party/` | `ggpo-x/` (submodule, branch `openswos`), `matchmaker/` (the server), `enet/`, `miniz/` |
 | `tools/` | `matchmaker-admin/` (the server's admin page), `mm_refpeer/`, address/stub generators |
+| `tools/swosdata/` | the data setup: builds the original game's data (not in the repo) from the player's own copy into the assets folder. `lib/` (C: ADF reader, RNC pack/unpack, the SwosGfx conversions, team JSON, Jaguar), `cli/` (`swosdata`), `app/` (`openswos-setup`, Slint; `build.sh`/`build.bat static`) |
+| `bin/setup/` | the setup's own inputs: `glyphs.txt` (the extended font) and the hand-drawn Jaguar goal celebrations |
 | `packaging/` | `web/` (`changelog.html`, `swos.html` template), `windows/` (Inno Setup), `macos/`, `linux/`, `switch/`, icons |
 | `wasm/` | `shell.html` (the game page), `player.html` + `playback-index.html` (the recordings player), `pre.js` |
 | `SWOS.svg` | the master icon (`scripts/generate_icons.py`) |

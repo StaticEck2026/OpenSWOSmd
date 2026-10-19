@@ -1,0 +1,6 @@
+# CMake build trees (build.sh / build.bat) and the fetched Slint SDK.
+build-app/
+build-app-static/
+build_win/
+build_win_static/
+.deps/

@@ -284,6 +284,8 @@ void mainC(void)
     /* ---- Phase 5: Show title screens (skipped in arcade mode) ---- */
 #ifdef SWOS_SDL_BUILD
     { extern int _gArcadeMode; if (_gArcadeMode) goto skip_title_screens; }
+    /* No Amiga disk screens installed (main.c). */
+    { extern int _gNoAmigaScreens; if (_gNoAmigaScreens) goto skip_title_screens; }
 #endif
     DoubleBufferSwapSequence();
     _paletteIndex = 0;
