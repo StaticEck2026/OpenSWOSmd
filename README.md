@@ -29,6 +29,23 @@ function/variable/struct naming, sprite and menu formats, and the annotated
 > `docs/` that talk about "back-porting" or `sync_to_amiga_port.sh` describe
 > that historical workflow — there is no sync step any more.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![A goal from the stand camera](docs/images/screenshots/01_match_stand_goal.png) | ![Widescreen (16:9)](docs/images/screenshots/02_match_widescreen.png) |
+| A match from the stand | Widescreen (16:9) |
+| ![Match](docs/images/screenshots/03_match_stand.png) | ![Line-up](docs/images/screenshots/04_lineup.png) |
+| In play | Team line-up |
+| ![Team select](docs/images/screenshots/05_team_select.png) | ![Countries](docs/images/screenshots/06_countries.png) |
+| Choosing teams | Picking a country |
+| ![PC (DOS) graphics](docs/images/screenshots/07_dos_graphics.png) | ![Atari Jaguar sprites](docs/images/screenshots/08_jaguar_sprites.png) |
+| PC (DOS) graphics | Atari Jaguar sprites |
+| ![Credits](docs/images/screenshots/09_credits.png) | ![Amiga pitch](docs/images/screenshots/10_match_amiga_pitch.png) |
+| The credits | The Amiga pitch |
+| ![Amiga 1200 (AGA)](docs/images/screenshots/11_amiga_aga_match.png) | ![Amiga 1200 (AGA)](docs/images/screenshots/12_amiga_aga_corner.png) |
+| The Amiga 1200 (AGA) build in FS-UAE | The Amiga 1200 (AGA) build in FS-UAE |
+
 ## Goals
 
 1. **Keep both targets building.** A change to shared code has to compile for
