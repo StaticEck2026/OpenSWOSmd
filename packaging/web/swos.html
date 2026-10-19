@@ -85,12 +85,22 @@
     dl.credits dd { margin-bottom: .6rem; }
     body { padding-top: 1.25rem; }
   }
+  /* The logo is the page's title (alt text "OpenSWOS"). On a narrow screen the downloads
+     table is wider than the screen, so centring would put the logo off its right edge:
+     there it sits on the left like the text, no wider than the screen. */
+  h1.logo { margin: 0 0 .5rem; text-align: center; }
+  h1.logo img { max-width: 100%; height: auto; }
+  h1.logo + .build { text-align: center; }
+  @media (max-width: 34rem) {
+    h1.logo, h1.logo + .build { text-align: left; }
+    h1.logo img { max-width: calc(100vw - 2.5rem); }
+  }
 </style>
 </head>
 <body>
 <main>
 
-<h1>OpenSWOS</h1>
+<h1 class="logo"><img src="/images/OpenSWOS-Logo.png" alt="OpenSWOS" width="360" height="304"></h1>
 <p class="build">Build <code>@BUILD@</code> &middot; <time datetime="@STAMP_ISO@" title="@STAMP@">@STAMP@</time></p>
 
 <h2>Downloads</h2>

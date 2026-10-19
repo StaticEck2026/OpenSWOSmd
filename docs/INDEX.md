@@ -201,6 +201,7 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `packaging/` | `web/` (`changelog.html`, `swos.html` template), `windows/` (Inno Setup), `macos/`, `linux/`, `switch/`, icons |
 | `wasm/` | `shell.html` (the game page), `player.html` + `playback-index.html` (the recordings player), `pre.js` |
 | `SWOS.svg` | the master icon (`scripts/generate_icons.py`) |
+| `docs/images/openswos-logo.png` | the OpenSWOS logo (README, the itch.io cover) |
 
 ## On the owner's PC
 

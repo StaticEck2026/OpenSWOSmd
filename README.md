@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/openswos-logo.png" alt="OpenSWOS" width="420"></p>
+
 # OpenSWOS — Pure C port, Amiga + SDL2 from one source tree
 
 A pure C port of *Sensible World of Soccer* (Amiga, 1994). The original 68k
