@@ -5,7 +5,7 @@
 > `include/display.h`); the **simulation** view is pinned to 336x272 (320x200 for
 > the DOS view) whatever the render width, and the camera is split into a game
 > camera and a scaled render camera (see "Simulation vs render width" and
-> "Camera"); and `[video] widescreen` gained `stretch` (c58d1a8).
+> "Camera"); and `[video] widescreen` gained `stretch` (27c56b2).
 
 The SDL port renders at an aspect ratio that **matches the display**. On a 4:3
 monitor it shows 4:3, on 16:9 it shows 16:9, on a 21:9 ultrawide it fills the
@@ -298,5 +298,5 @@ Everything folds to a no-op on the Amiga build, where `_screen_width` is
 | `10f62ea` | Clamp the kickoff/intro camera to the pitch at `_SetCameraCoordinates` |
 | `ada4e0d` | Center the in-match score panel + clock |
 | `a6531f1` | Center the controlled-player name + end-of-game stats |
-| `90285a2` | Pin the simulation view to 336 (widescreen no longer changes CPU player selection) |
-| `c58d1a8` | `widescreen = stretch`; the view follows `[gameplay] style` |
+| `b4775f3` | Pin the simulation view to 336 (widescreen no longer changes CPU player selection) |
+| `27c56b2` | `widescreen = stretch`; the view follows `[gameplay] style` |

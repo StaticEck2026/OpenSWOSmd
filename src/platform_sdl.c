@@ -240,7 +240,7 @@ static int hud_layer_pending(void)
  * created at kVgaWidth * getFilterScalerSize(), and getScreenEnhancment() flips
  * SDL_HINT_RENDER_SCALE_QUALITY to "best") -- but it runs the pre-scale on the
  * CPU into a streaming texture, which multiplies the per-frame UPLOAD by N².
- * That is the regression 9e2c7fc just removed, so ours is a render target: the
+ * That is the regression 3b1c76f just removed, so ours is a render target: the
  * upload is untouched and pass 1 is one GPU blit.
  *
  * No bars, no cropped rows, and it costs nothing at a whole-number scale --
@@ -1461,7 +1461,7 @@ static void write_screenshot(const uint32_t *argb)
  * write_screenshot() reads `fb`, which is UPSTREAM of present_frame_copy, so it
  * cannot see the scale, the sub-pixel shift, the HUD strip or the two-pass
  * path. That blind spot is not hypothetical: a framebuffer screenshot looked
- * perfect while the GPU was drawing nothing at all (5d15f5c, HUD layer never
+ * perfect while the GPU was drawing nothing at all (11d4918, HUD layer never
  * presented). This reads the render output itself, after every draw and before
  * the swap, so it is the only capture that can verify a present-path change.
  *

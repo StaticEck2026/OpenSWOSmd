@@ -260,7 +260,7 @@ static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
      * whose match state has a different shape, but two builds with the same shape and
      * different behaviour played each other and went out of step in the middle of a
      * match -- and a tester on last week's game got bug reports filed against this
-     * week's (2026-09-27: c4478b9 against 8473bc7). The commit, with '-' for a build
+     * week's (2026-09-27: c1f49c0 against 31f8aef). The commit, with '-' for a build
      * made from uncommitted changes, which is not the commit it says. */
     if (memcmp(mine->build, theirs->build, 8) != 0) {
         fprintf(stderr, "[p2p] the other player runs build %.8s, this is %.8s: refused\n",

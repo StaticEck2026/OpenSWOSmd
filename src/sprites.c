@@ -2410,7 +2410,7 @@ const Sprite *g_spriteAnimVisible[SPRITE_ANIMVIS_MAX];
 int16_t       g_spriteAnimVisibleCount;
 
 /* Which margin animates is decided for the SIMULATION DRAW width (display.h), not
- * the render width. Locally they are the same -- 6bb54d9: a sprite in a widescreen
+ * the render width. Locally they are the same -- f1d348c: a sprite in a widescreen
  * margin is drawn, so it has to animate, or it slides along frozen, and that is not
  * to be given up. The replay rig pins it to 336, because a recording was made with no
  * margin, which keeps the corpus exact and leaves every other render -> simulation

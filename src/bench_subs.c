@@ -1619,7 +1619,7 @@ DrawBenchAndSubsMenu(void)
          * column is ~37. The only time an Amiga player ever sees the bench is
          * inside the subs menu, where these same sprites ARE drawn.
          *
-         * be8051e made Render_CameraX() the game camera "backed off by half the
+         * 2b67c6f made Render_CameraX() the game camera "backed off by half the
          * extra width", so a widescreen view now extends LEFT as well as right
          * and reaches pitch x 0 — revealing a strip the original never showed,
          * with nobody on it. Reported as "empty benches! Poor team, no coach
@@ -1696,7 +1696,7 @@ draw_bench:
     /* Is the bench ON SCREEN? That is a RENDER question, so it has to be asked
      * of the render origin — the same one the sprites below are placed with.
      * DrawSpriteInCameraView/DrawSpriteHotspotInCameraView do `x -=
-     * Render_CameraX()`, and since be8051e that is `_cameraX - WIDE_MARGIN`,
+     * Render_CameraX()`, and since 2b67c6f that is `_cameraX - WIDE_MARGIN`,
      * i.e. up to WIDE_MARGIN px further LEFT than the simulation camera.
      *
      * Asking `_cameraX` instead made this gate lag the picture: the bench

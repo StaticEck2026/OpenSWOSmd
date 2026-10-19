@@ -58,7 +58,7 @@ When idle (no credits, no game in progress) the cabinet runs an **attract loop**
 - Pick the `.HIL` set by gameplay mode: 70 FPS DOS reels when DOS gameplay is on,
   50 FPS Amiga reels otherwise (a reel recorded at one rate plays back wrong at
   the other — see DOS_GAMEPLAY.md timing notes).
-  *(Superseded: each reel now self-describes its rate and plays at it, `b3ebe2b`,
+  *(Superseded: each reel now self-describes its rate and plays at it, `7c6fb9f`,
   so one flat reel folder serves both modes — see "Current implementation
   decisions".)*
 - **`.SRP` reels are accepted too** (`docs/REPLAY_FORMAT_V2.md`): drop a recording

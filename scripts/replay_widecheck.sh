@@ -7,7 +7,7 @@
 #
 # WHAT THIS PROVES, and why it is a different question from the corpus itself.
 #
-# The simulation is SUPPOSED to be width-independent: 90285a2 pinned
+# The simulation is SUPPOSED to be width-independent: b4775f3 pinned
 # _sim_view_width to SCREEN_WIDTH so every display plays the same game and only
 # the renderer draws wider (main.c, GAMEPLAY.md 25.4/25.5). If that holds, every
 # field the rig compares must be IDENTICAL at any render width, so a divergence
@@ -21,7 +21,7 @@
 # invisible to the corpus for exactly that reason.
 #
 # WHAT IT DOES NOT CATCH: draw-time bugs that never touch a compared field —
-# the empty-bench gate (30b6d35) and the Switch asset redirect (a559436) were
+# the empty-bench gate (25111bb) and the Switch asset redirect (7c80c73) were
 # both invisible to any field comparison. Those need a rendered-frame check
 # (widening the view must only ADD content at the edges, never move or drop it).
 # Do not read a pass here as "widescreen is correct".

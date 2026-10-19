@@ -769,7 +769,7 @@ C++ `CodeGenerator` with a JSON backend.
 
 The default set is `MULTIPLAYER_MENUS` in the script: 30 menus (the 29 online ones and
 `selectUniform` since the UNIFORM button, docs/UNIFORM.md), 1360 entries, 258 handler
-names. (`credits` was imported for the CREDITS button from 7e9b925 until 2026-10-18, when
+names. (`credits` was imported for the CREDITS button from 8082369 until 2026-10-18, when
 the screen became OpenSWOS's own `openswos/creditsMenu`.) Before `selectUniform` it was
 30 menus, 1352 entries, 233 handler names, from
 swos-2020 @ `ebf1cc4` (the header's `Source:` line says which commit; the first import was

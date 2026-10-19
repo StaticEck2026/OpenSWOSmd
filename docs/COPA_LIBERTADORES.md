@@ -1,6 +1,6 @@
 # Copa Libertadores — design
 
-> Status (2026-09-30): **implemented**, though not as §4/§7 sketch it -- Copa is a data-only record in `bin/data_json/competitions/tournaments.json` (`_copaLibertadores`, compId 128), loaded dynamically on SDL and baked for the Amiga in `src/competition_data_copa_baked.c`; the per-season qualifier (champion + runner-up of the 10 CONMEBOL leagues, which already existed as compiled comps) is `src/career_copa.c`. Commits `a6f0c31`, `d66453a`, `206ffd3`, `580ca70`, `53b28ee`. How it was built: `docs/COMPETITION_DYNAMIC_REFACTOR.md` §8b-8e. This design is kept as the original spec.
+> Status (2026-09-30): **implemented**, though not as §4/§7 sketch it -- Copa is a data-only record in `bin/data_json/competitions/tournaments.json` (`_copaLibertadores`, compId 128), loaded dynamically on SDL and baked for the Amiga in `src/competition_data_copa_baked.c`; the per-season qualifier (champion + runner-up of the 10 CONMEBOL leagues, which already existed as compiled comps) is `src/career_copa.c`. Commits `a6f0c31`, `d66453a`, `206ffd3`, `580ca70`, `653918b`. How it was built: `docs/COMPETITION_DYNAMIC_REFACTOR.md` §8b-8e. This design is kept as the original spec.
 
 Design for adding the **Copa Libertadores** (CONMEBOL's Champions-League
 equivalent) to OpenSWOS, modelled on the **1996 edition**

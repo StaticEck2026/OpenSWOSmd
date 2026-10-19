@@ -2159,7 +2159,7 @@ void GameplayStyle_Set(int dos, int persist)
      *    kick-off, by game_loop.c's MatchViewEnter: the menus are 272 lines of
      *    Amiga artwork, so resizing to 200 while one is on screen cuts its
      *    bottom rows off -- which is exactly what applying it globally did
-     *    (ba5854d). The next match picks it up.
+     *    (09547c4). The next match picks it up.
      *
      *    Everything else the style covers already tracks the flag live and
      *    needs nothing here: the frame rate through DosGameplay_TargetFps()

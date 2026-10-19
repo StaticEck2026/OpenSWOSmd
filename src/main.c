@@ -923,7 +923,7 @@ int main(int argc, char **argv)
         opts.contest_own_ratings = 0;
         /* Replay at the port's OWN native view, not the tester's monitor. The
          * original reason given here — "SWOS's camera constants are all derived
-         * from the view size" — no longer holds: 90285a2 pinned _sim_view_width
+         * from the view size" — no longer holds: b4775f3 pinned _sim_view_width
          * to SCREEN_WIDTH (below), so the SIMULATION is supposed to be
          * width-independent and only the renderer draws wider. The pin stays as
          * the DEFAULT because that is the geometry the corpus was recorded in.

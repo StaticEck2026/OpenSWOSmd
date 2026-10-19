@@ -514,12 +514,12 @@ extern int16_t _sim_view_height;
 /* ---- The SIMULATION DRAW width ----------------------------------------------
  * The simulation view above is 336 whatever the display. But a few things the match
  * decides depend on what is DRAWN, and so on how wide the view is: which sprites in a
- * widescreen margin animate (sprites.c, 6bb54d9 -- drawn, so they must, or they
+ * widescreen margin animate (sprites.c, f1d348c -- drawn, so they must, or they
  * slide), which crowd tiles toggle (animated_patterns.c, which also calls Rand), which
  * corner flags are placed (adverts.c) and when the bench is populated (bench_subs.c).
  * They read THIS width, never _screen_width.
  *
- * Locally it IS the render width (main.c), so a player sees exactly what 6bb54d9
+ * Locally it IS the render width (main.c), so a player sees exactly what f1d348c
  * gave them. The replay rig pins it to 336 -- a recording was made on a display with
  * no margin -- unless --replay-sim-width says otherwise. And a netplay session sets
  * it to one width both peers agreed (the wider of the two, P2PLink_AgreedSimWidth):

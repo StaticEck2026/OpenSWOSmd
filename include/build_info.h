@@ -13,7 +13,7 @@
 #ifndef BUILD_INFO_H
 #define BUILD_INFO_H
 
-/* "b8e665e", or "b8e665e-dirty" when tracked source differed from that commit
+/* "401ff14", or "401ff14-dirty" when tracked source differed from that commit
  * -- meaning the binary is NOT that commit. Lowercase, as git prints it. */
 const char *Build_Id(void);
 
@@ -25,7 +25,7 @@ const char *Build_Date(void);
  * The ONLY place the platform is decided -- don't detect it again elsewhere. */
 const char *Build_Platform(void);
 
-/* One line for a human: "OpenSWOS b8e665e (2026-09-15, linux x86-64)".
+/* One line for a human: "OpenSWOS 401ff14 (2026-09-15, linux x86-64)".
  * Window title, SWOS.log and --version. */
 const char *Build_Version(void);
 

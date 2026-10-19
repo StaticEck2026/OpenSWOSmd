@@ -134,7 +134,7 @@ one and how long it waited in all.
 
 GGPO's time sync recommends a wait from two figures: this peer's own estimate of how far
 ahead the other is, and the other peer's estimate, sent in the quality report
-(`frame_advantage`). In every OpenSWOS build up to 752bac0 the second was garbage.
+(`frame_advantage`). In every OpenSWOS build up to 1340705 the second was garbage.
 
 Our portability work on the fork replaced `<windows.h>`'s `min` with a template in
 `platform_linux.h` whose return type was a bare `decltype(a < b ? a : b)` -- a REFERENCE,
@@ -161,7 +161,7 @@ default; **OpenSWOS builds with 0** (`GGPO_CXXFLAGS` in the Makefile), which is 
 it always did in effect, without the noise. Sending the true figure and retuning the
 pacing for it is the proper end of this, and its own piece of work.
 
-## The first attempt (2026-10-05, build 752bac0), and what it taught
+## The first attempt (2026-10-05, build 1340705), and what it taught
 
 It evened the two players out at any gap over 0.6 of a frame. On real matches that turned
 the commonest state, 1/0, into 1/1: at input delay 2 the total went from 1.32 to 1.94 and

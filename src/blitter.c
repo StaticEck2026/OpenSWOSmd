@@ -794,7 +794,7 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
      * NUM_PLANES-1 became bit 7 while the charset still stores its shadow at
      * bit 3 — so shadowBit was ALWAYS 0 and no shadow pixel was ever written.
      * Sprite-baked text (in-match player names via Text2Sprite, team names)
-     * rendered flat white. ea30a13 fixed exactly this in the frontbuffer text
+     * rendered flat white. b28c52e fixed exactly this in the frontbuffer text
      * path (text_render.c) but did not touch this one, which is why menu and
      * HUD text kept their shadows while the player name lost its. */
     uint16_t color = (uint16_t)(planeMask & 0xFF);

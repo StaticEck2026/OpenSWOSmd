@@ -5,7 +5,7 @@
  * hundreds of squads in bin/data (72 TEAM.* files). Everything the cross-platform
  * comparison has proved therefore rests on those teams' player data. The one gameplay bug
  * that comparison DID find -- the goalkeeper price reading 35 bytes in front of
- * skillsPerQuadrant (c0cf39e) -- was reached only by a player whose position byte decoded
+ * skillsPerQuadrant (b7fc214) -- was reached only by a player whose position byte decoded
  * to 0, i.e. it was the DATA that chose whether the bug fired. A bug that needs a squad the
  * corpus never loads is invisible to every test we have.
  *

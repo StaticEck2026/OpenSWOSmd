@@ -11235,7 +11235,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
      *
      * A slot's `numRounds` is log2(numTeams) (DIY_InitCupBracketState), so the
      * 16-team SECOND ROUND slot reports numRounds=4 even though it only plays
-     * ONE round. 46bf9dd dropped the hasGroups short-circuit and let that count
+     * ONE round. fc6fe83 dropped the hasGroups short-circuit and let that count
      * gate the finalise, so a grouped stage never set competitionFinished and
      * the bracket advanced INSIDE slot 1 instead of moving to slot 2:
      *   - career: the slot never advanced, so DIY_RecordCupBracketProgress
@@ -11244,9 +11244,9 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
      *     tester's "R2 rows show the QF opponent, results vanish, COMPETITION
      *     INFO lists the QF ties under a SECOND ROUND header", and the
      *     competition then stopped progressing.
-     *   - the preset symptom 46bf9dd was chasing ("no NEXT ROUND after R16")
+     *   - the preset symptom fc6fe83 was chasing ("no NEXT ROUND after R16")
      *     was really the inverted hasGroups test in DIYCupOnSelectCommonC,
-     *     root-caused and fixed 3 days later in e5380ae. */
+     *     root-caused and fixed 3 days later in 46322c5. */
     if (baseS->hasGroups != 0)  /* 0x48 */
         goto final_or_groups;   /* grouped tournament -> finalise this stage */
 

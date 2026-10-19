@@ -108,7 +108,7 @@ here, and each of its sixteen players must be one of that team's players — a d
 each — with the same position, skills and value. Names, faces, nationalities, shirt numbers,
 kits, line-up and formation are free. (Shirt numbers have to be: the team screen swaps two
 players' numbers when it swaps a starter and a substitute. The first version of this check,
-in the `c24975e` drop, compared them, and so refused any team arranged that way.) A team that fails has not been picked as far as this machine is
+in the `5b0be25` drop, compared them, and so refused any team arranged that way.) A team that fails has not been picked as far as this machine is
 concerned: the other player shows as having no team, the lobby says YOUR OPPONENT'S TEAM IS NOT
 A DATABASE TEAM, and a match cannot start. That covers every team, custom or not.
 

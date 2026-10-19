@@ -135,7 +135,7 @@ Amiga-60 is a `_gGameStyle` value (see the enum plan below). Its tuning:
 ## 7. `_gGameStyle` enum + ini (shared with the DOS mode)
 
 Today it's just `_gDosGameplay` (bool: DOS-70 vs Amiga-50), set by
-`[gameplay] style = amiga | dos` (`src/swos_settings.c`; since c58d1a8 the style sets the
+`[gameplay] style = amiga | dos` (`src/swos_settings.c`; since 27c56b2 the style sets the
 view too, and online a match plays the HOST's style). Three modes → a small enum:
 
 ```c

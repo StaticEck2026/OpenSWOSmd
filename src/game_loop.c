@@ -731,7 +731,7 @@ GameFrameResult GameLoop_Frame(void)
     /* Record the camera in the SAME space the per-sprite coordinates are written
      * in. Those come off the draw path (sprites.c), which measures from
      * Render_CameraX() -- the RENDER camera. `_cameraX` is the SIMULATION one,
-     * and since be8051e the two are not a shift apart but a SCALE, so storing
+     * and since 2b67c6f the two are not a shift apart but a SCALE, so storing
      * `_cameraX` here made `sprite_x + cam_x` mean nothing: it was a world
      * position plus cam * (1 - max/pan), drifting further the more the camera had
      * moved. Every stationary object -- the goal overlay most visibly -- slid

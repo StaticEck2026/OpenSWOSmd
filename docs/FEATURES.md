@@ -16,7 +16,7 @@ enhancements.
 Add the **CONMEBOL** equivalent of the European Cup / Champions League — a
 continental club cup contested by South American league champions.
 
-> **Status: done** (206ffd3, 580ca70, 53b28ee and later fixes). Detailed design in
+> **Status: done** (206ffd3, 580ca70, 653918b and later fixes). Detailed design in
 > `docs/COPA_LIBERTADORES.md`. It went the preferred way: a pure-data competition in
 > `bin/data_json/competitions/tournaments.json`, installed at runtime by
 > `DataJson_InstallCompetitionGraph` on SDL and baked for the Amiga in
