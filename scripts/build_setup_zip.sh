@@ -118,6 +118,7 @@ mv "$OUT.tmp" "$OUT" || fail "could not write $OUT"
 
 echo ""
 echo "== built from commit $(git rev-parse --short HEAD)"
-unzip -l "$OUT" | grep -v -E '/$' | awk 'NR > 3 && $4 != "" { print "   " $4 }' | grep -v -E '^   (-|Name)' |
-    grep -v '\.app/Contents/.*/' || true
+zipinfo -1 "$OUT" | grep -v -E '/$|\.app/Contents/' | sed 's/^/   /'
+zipinfo -1 "$OUT" | grep -o '^.*\.app/' | sort -u | sed 's/^/   /'
+
 ls -l "$OUT"

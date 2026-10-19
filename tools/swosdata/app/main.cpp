@@ -409,7 +409,8 @@ struct App {
     for (int s = 0; s < SD_STEP_COUNT; s++) any = any || installed[s].present > 0;
     if (playable)
       w().set_status(Str("The game's data is already installed in " + Shown(outDir) +
-                         ". Play, or install again from your copy to add to it."));
+                         (game.empty() ? ". Install again from your copy to add to it."
+                                       : ". Play, or install again from your copy to add to it.")));
     else if (any)
       w().set_status(Str("Some of the game's data is in " + Shown(outDir) +
                          ", but not enough to play: install from your copy."));
