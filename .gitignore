@@ -58,14 +58,9 @@ bin/data_json/menus/openswos/*
 bin/data_json/tactics/*
 !bin/data_json/tactics/*.json
 
-# Track the decoded team JSON too (bin/data_json/teams/, ~19MB). It's the
-# decode_data.py --dump-json export of every team file. Regenerable, but kept in
-# the repo so a clone has the full corpus without needing the original data +
-# python. NOTE: the WASM build preloads all of bin/data_json, so this rides along
-# into SWOS.data — see wasm notes in the Makefile if download size matters.
-!bin/data_json/teams
-bin/data_json/teams/*
-!bin/data_json/teams/*.json
+# The team JSON (bin/data_json/teams/) is the original game's player database:
+# not in the repo. The data setup (tools/swosdata) makes it from the player's
+# own TEAM files, into the assets folder.
 
 # Career-mode balance knobs (runtime-loaded; testers edit + relaunch, no rebuild).
 !bin/data_json/career_params.json
@@ -152,3 +147,29 @@ scratch/*.py
 !scratch/wc_drive2.py
 # scripts/netplay_width_test.sh output.
 tests/netplay-width/
+
+# ---- The original game's data: NOT in this repo -----------------------------
+# OpenSWOS ships none of Sensible World of Soccer's own files. The data setup
+# (tools/swosdata, openswos-setup / swosdata) builds them from the player's own
+# copy into the assets folder ($SWOS_ASSETS, default <user SWOS folder>/assets).
+# A developer may still keep them in bin/ -- the FS-UAE harness mounts bin/ as
+# DH1: -- so they are ignored here, and every drop is staged from tracked files
+# only (scripts/stage_runtime.sh). What stays tracked in these trees is the
+# project's own: LOADER76 (the credits loader), the credits photos, the 1UP coin
+# sound, the SWOS 2020 pitch maps and the commentary README.
+bin/data/*
+!bin/data/credits_icons.bmp
+bin/grafs/*
+!bin/grafs/LOADER76.RAW
+bin/grafs_aga/*
+!bin/grafs_aga/LOADER76.RAW
+!bin/grafs_aga/P2020_*.MAP
+bin/grafs_dos/
+bin/grafs_jag/
+bin/sound/*
+!bin/sound/1UP.WAV
+bin/sound_dos/*
+!bin/sound_dos/commentary
+bin/sound_dos/commentary/*
+!bin/sound_dos/commentary/README.txt
+bin/save/

@@ -96,23 +96,51 @@ Known issues (open):
 
 This is a personal project under active development; expect rough edges.
 
-## You need the original Amiga data files
+## You need your own copy of the game
 
-This repo contains the engine, **not the game data.** SWOS is still under
-copyright and the data files (graphics, sound modules, team files,
-fixtures) are not redistributed.
+OpenSWOS is the engine, **not the game data.** *Sensible World of Soccer* is
+still under copyright, so none of its graphics, music, sound or team files are
+in this repo or in any download. **OpenSWOS Setup** builds them from a copy you
+own; it downloads nothing.
 
-You need a legitimate copy of *Sensible World of Soccer* for Amiga (e.g., the
-ADF/HDF you dumped from your own floppy or hard-disk install). Place the
-following directories from the Amiga distribution into `bin/`:
+| Your copy | What it gives you | Where to get it |
+|---|---|---|
+| **PC version** (the installed game folder) | the PC graphics, sound, music and commentary, the AGA graphics, the teams | [GOG](https://www.gog.com/en/game/sensible_world_of_soccer_9697); the [PC CD version](https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996) has the same files |
+| **Amiga version** (both floppies as `.adf` images) | the Amiga graphics, music and effects, the loading screens, the teams | image your own disks |
+| **Atari Jaguar** cartridge (optional) | the Jaguar sprites (`[graphics] sprites = jaguar`) | the cartridge image ([Atarimania](https://www.atarimania.com/games/atari-jaguar-games-sensible-soccer-international-edition-30123)); needs the PC version too |
 
+Either the PC or the Amiga version is enough to play. With only the PC version
+the game plays the PC sound and music and skips the Amiga's loading screens;
+with both you get everything, and the Amiga version (`SWOS-Amiga.zip`) needs
+both.
+
+**Windows:** the installer runs OpenSWOS Setup when it finishes. **Elsewhere:**
+run `openswos-setup` (or the command-line `swosdata`, below). Point it at your
+files, or at a folder holding them, and it writes the game's data to the
+**assets folder**:
+
+| Platform | Assets folder |
+|---|---|
+| Windows | `%USERPROFILE%\Documents\SWOS\assets` |
+| macOS | `~/Library/Application Support/SWOS/assets` |
+| Linux | `~/.swos/assets` |
+
+Set `SWOS_ASSETS` to use another folder; the game, the setup and the build
+(`make WASM=1` bakes the assets into the web build) all read it. For the Amiga,
+unpack `SWOS-Amiga.zip` and use **Amiga version → Add the game data** in the
+setup to fill in the drawer.
+
+```sh
+# The setup's command-line half, built from tools/swosdata:
+make -C tools/swosdata
+tools/swosdata/build/swosdata --scan ~/Games/SWOS --scan ~/Amiga/ADF \
+                              --res bin --out ~/.swos/assets
 ```
-bin/
-├── data/       (TEAM.000…TEAM.0FE, POOLPLYR.DAT, EUROCUP.TMD, …)
-├── grafs/      (4-bitplane OCS sprites)
-├── grafs_aga/  (8-bitplane AGA sprites)
-└── sound/      (HERO.SNG, MENU.SNG, SFX.SNG/IN1/IN2, …)
-```
+
+Every file it writes is byte-for-byte the one the original game shipped (or,
+for the converted AGA and Jaguar graphics, the one this project's own
+converters always made); `tools/swosdata` is a C port of the
+[SwosGfx](https://github.com/benbaker76/SwosGfx) conversions plus an ADF reader.
 
 **Where saves go differs by target**, because the two have different
 constraints:
@@ -121,8 +149,9 @@ constraints:
   [Settings file](#settings-file-swosini) — e.g.
   `%USERPROFILE%\Documents\SWOS\save\` — so an installed copy in a
   read-only directory still works.
-- **Amiga** writes to `bin/save/`, since FS-UAE mounts `bin/` as DH1: and the
-  game's paths are relative to it.
+- **Amiga** writes to `save/` in its drawer (`bin/save/` in a development
+  tree, since FS-UAE mounts `bin/` as DH1: and the game's paths are relative
+  to it).
 
 Both are created automatically. The JSON save format is designed to move
 between the two — it serialises *named fields* and semantic identities rather
