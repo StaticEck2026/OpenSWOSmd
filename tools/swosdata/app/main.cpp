@@ -128,9 +128,26 @@ std::vector<std::string> PickFiles(const char* filterName, const char* filterSpe
 
 // The game's own files (setup/glyphs.txt, data/credits_icons.bmp, ...): beside
 // the executable in an install; in a dev build, the repo's bin/ above it.
+#if defined(__APPLE__)
+// On macOS the setup is its own .app beside SWOS.app (SWOS-macOS-app.zip), and
+// the game's files are inside that: SWOS.app/Contents/MacOS. exeDir is
+// "OpenSWOS Setup.app/Contents/MacOS", three levels below the folder they share.
+static std::string GameAppMacOSDir(const std::string& exeDir) {
+  const std::string shared = sd::ParentDir(sd::ParentDir(sd::ParentDir(exeDir)));
+  const std::string dir = Join(shared, "SWOS.app/Contents/MacOS");
+  return sd::IsDir(dir) ? dir : std::string();
+}
+#endif
+
 std::string FindResDir(const std::string& exeDir) {
   if (exeDir.empty()) return {};
   if (sd::IsFile(Join(exeDir, "setup/glyphs.txt"))) return exeDir;
+#if defined(__APPLE__)
+  {
+    const std::string mac = GameAppMacOSDir(exeDir);
+    if (!mac.empty() && sd::IsFile(Join(mac, "setup/glyphs.txt"))) return mac;
+  }
+#endif
   for (std::string d = exeDir; !d.empty();) {
     const std::string bin = Join(d, "bin");
     if (sd::IsFile(Join(bin, "setup/glyphs.txt"))) return bin;
@@ -161,6 +178,12 @@ std::string FindGame(const std::string& exeDir) {
     const std::string p = Join(exeDir, n);
     if (sd::IsFile(p)) return p;
   }
+#if defined(__APPLE__)
+  {
+    const std::string mac = GameAppMacOSDir(exeDir);
+    if (!mac.empty() && sd::IsFile(Join(mac, "SWOS"))) return Join(mac, "SWOS");
+  }
+#endif
   return {};
 }
 

@@ -1,3 +1,7 @@
+# The Makefile's output (build-<arch>: the macOS universal slices).
+build/
+build-arm64/
+build-x86_64/
 # CMake build trees (build.sh / build.bat) and the fetched Slint SDK.
 build-app/
 build-app-static/

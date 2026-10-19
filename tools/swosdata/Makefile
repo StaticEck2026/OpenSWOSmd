@@ -9,7 +9,9 @@ ROOT    := ../..
 OUT     := build
 CC      ?= gcc
 CFLAGS  ?= -O2 -g
-CFLAGS  += -std=c99 -Wall -Wextra -Wno-unused-parameter -Ilib -I$(ROOT)/include -I$(ROOT)/src
+# ARCHFLAGS: e.g. "-arch x86_64" for one slice of a macOS universal build.
+ARCHFLAGS ?=
+CFLAGS  += $(ARCHFLAGS) -std=c99 -Wall -Wextra -Wno-unused-parameter -Ilib -I$(ROOT)/include -I$(ROOT)/src
 
 LIB_SRCS := $(wildcard lib/*.c) $(ROOT)/src/rnc.c
 LIB_OBJS := $(patsubst %.c,$(OUT)/obj/%.o,$(notdir $(LIB_SRCS)))

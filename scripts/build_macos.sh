@@ -137,13 +137,38 @@ make macos-app $FLAGS -j"$JOBS" || { echo "!! make macos-app failed"; exit 1; }
 [ -d bin/SWOS.app ] || { echo "!! bin/SWOS.app was not produced"; exit 1; }
 echo "== lipo: $(lipo -info bin/SWOS.app/Contents/MacOS/SWOS 2>&1)"
 
+# The data setup (tools/swosdata): OpenSWOS ships none of the original game's
+# data, so a Mac player needs it to play at all. The window, "OpenSWOS Setup.app",
+# links the prebuilt Slint (arm64 only; its dylib goes in the app's Frameworks);
+# the command line, swosdata, is plain C and goes universal.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
+echo "== data setup: swosdata (universal) + OpenSWOS Setup.app"
+for a in arm64 x86_64; do
+    make -C tools/swosdata OUT="build-$a" ARCHFLAGS="-arch $a -mmacosx-version-min=11.0" \
+        "build-$a/swosdata" >/dev/null || { echo "!! swosdata ($a) failed"; exit 1; }
+done
+mkdir -p tools/swosdata/build &&
+    lipo -create -output tools/swosdata/build/swosdata-universal \
+         tools/swosdata/build-arm64/swosdata tools/swosdata/build-x86_64/swosdata ||
+    { echo "!! lipo swosdata failed"; exit 1; }
+( cd tools/swosdata && ./build.sh >/dev/null ) || { echo "!! OpenSWOS Setup.app failed"; exit 1; }
+SETUP_APP="tools/swosdata/build-app/bin/OpenSWOS Setup.app"
+[ -d "$SETUP_APP" ] || { echo "!! $SETUP_APP was not produced"; exit 1; }
+
 mkdir -p dist
-echo "== packing dist/$ZIP (ditto — preserves SDL2.framework symlinks)"
+echo "== packing dist/$ZIP (ditto — preserves the frameworks' symlinks)"
 rm -f "dist/$ZIP"
-# ditto runs from bin/ because --keepParent takes the basename of its source,
-# and SWOS.app lives there; the archive is written up into dist/.
-( cd bin && ditto -c -k --sequesterRsrc --keepParent SWOS.app "../dist/$ZIP" ) \
-    || { echo "!! ditto failed"; exit 1; }
+# One folder, OpenSWOS/, holding the game, the setup window and the setup's
+# command line. ditto --keepParent takes the basename of its source, so it runs
+# on a staged folder; the archive is written into dist/.
+STAGE="$(mktemp -d)/OpenSWOS"
+mkdir -p "$STAGE" &&
+    ditto bin/SWOS.app "$STAGE/SWOS.app" &&
+    ditto "$SETUP_APP" "$STAGE/OpenSWOS Setup.app" &&
+    cp tools/swosdata/build/swosdata-universal "$STAGE/swosdata" &&
+    ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/$ZIP" ||
+    { echo "!! ditto failed"; exit 1; }
+rm -rf "$(dirname "$STAGE")"
 # zipinfo shows a leading 'l' in the mode column for a stored symlink. A plain
 # `zip -r` would have followed them and this count would be 0.
 echo "== SYMLINKS_IN_ZIP=$(zipinfo "dist/$ZIP" 2>/dev/null | grep -c '^l' || true)"
