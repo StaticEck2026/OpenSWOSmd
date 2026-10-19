@@ -544,14 +544,17 @@ all save types are proven."
 > **The original game's data is NOT in this repo** (since 2026-10-19). The data
 > setup, `tools/swosdata` (C library + `swosdata` CLI + the Slint window
 > `openswos-setup`), builds it from the player's own copy -- Amiga ADFs, the PC
-> (GOG) folder, the Jaguar cartridge -- byte-for-byte what used to be committed,
+> (GOG) folder, the Jaguar cartridge, a SWOS 2020 install for its pitches
+> (`grafs_2020/` + `grafs_aga/P2020_n.MAP`, from its `swos/` folder: the set its
+> launcher picked; untracked 2026-10-19 until their authors agree) --
+> byte-for-byte what used to be committed,
 > into the **assets folder**: `$SWOS_ASSETS`, default `assets` in the per-user
 > game folder (`swos_assets_dir()`, `src/swos_io.c`). The SDL game looks there
 > first and beside the binary second (`swos_data_path()`); `make WASM=1` preloads
 > `bin/` plus `$(SWOS_ASSETS)`. Without the Amiga disks the game plays the PC
 > sound/music and skips the Amiga loading screens (`_gNoAmigaSound`,
 > `_gNoAmigaScreens`, main.c). What stays tracked in the trees below is the
-> project's own (LOADER76, credits photos, 1UP.WAV, P2020 maps, `bin/setup/`);
+> project's own (LOADER76, credits photos, 1UP.WAV, `bin/setup/`);
 > the rest is `.gitignore`d, so a developer's `bin/` can still hold it (the
 > FS-UAE harness needs it there). **Every drop is staged from git-tracked files
 > only** (`scripts/stage_runtime.sh`) -- never sweep `bin/` into a release.

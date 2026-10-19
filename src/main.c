@@ -1108,6 +1108,15 @@ int main(int argc, char **argv)
      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])
         snprintf(_gDosGraphicsDir, sizeof _gDosGraphicsDir, "%s", opts.dos_dir);
+    /* SWOS 2020's pitches come from the player's own SWOS 2020 install (the data
+     * setup copies them); without them, draw the PC game's. SWOS.ini keeps "2020". */
+    if (_gDosGraphics && strcmp(_gDosGraphicsDir, "grafs_2020") == 0) {
+        extern int swos_data_exists(const char *rel);
+        if (!swos_data_exists("grafs_2020/pitch1.dat")) {
+            snprintf(_gDosGraphicsDir, sizeof _gDosGraphicsDir, "%s", "grafs_dos");
+            fprintf(stderr, "[assets] no SWOS 2020 pitches (grafs_2020/): drawing the PC game's\n");
+        }
+    }
 
     /* Redirect stderr to SWOS.log in the per-user game folder (beside SWOS.ini
      * and save/ — swos_user_dir(), resolved above). Saves the tester from having

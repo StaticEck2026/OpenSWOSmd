@@ -321,3 +321,28 @@ const SdCopy g_sdDosCopy[] = {
     { "grafs_2020/swtitle.256", "SWTITLE.256" },
     { NULL, NULL }
 };
+
+/* SWOS 2020's graphics tier: what its launcher copies into its game folder from
+ * the pitch set picked in it (dlc/pitch/<set>/, or swos/graphics/<set>/). The
+ * other five files of the tier are the PC game's own, above. */
+const SdCopy g_sd2020Copy[] = {
+    { "grafs_2020/bench.dat", "bench.dat" },
+    { "grafs_2020/goal1.dat", "goal1.dat" },
+    { "grafs_2020/pitch1.blk", "pitch1.blk" },
+    { "grafs_2020/pitch1.dat", "pitch1.dat" },
+    { "grafs_2020/pitch2.blk", "pitch2.blk" },
+    { "grafs_2020/pitch2.dat", "pitch2.dat" },
+    { "grafs_2020/pitch3.blk", "pitch3.blk" },
+    { "grafs_2020/pitch3.dat", "pitch3.dat" },
+    { "grafs_2020/pitch4.blk", "pitch4.blk" },
+    { "grafs_2020/pitch4.dat", "pitch4.dat" },
+    { "grafs_2020/pitch5.blk", "pitch5.blk" },
+    { "grafs_2020/pitch5.dat", "pitch5.dat" },
+    { "grafs_2020/pitch6.blk", "pitch6.blk" },
+    { "grafs_2020/pitch6.dat", "pitch6.dat" },
+    { "grafs_2020/score.dat", "score.dat" },
+    { "grafs_2020/team1.dat", "team1.dat" },
+    { "grafs_2020/team2.dat", "team2.dat" },
+    { "grafs_2020/team3.dat", "team3.dat" },
+    { NULL, NULL }
+};

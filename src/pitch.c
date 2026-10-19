@@ -32,7 +32,8 @@ extern TeamGame _bottomTeamInGame;
 extern uint16_t _fansSidesSwapped;
 
 /* OPTIONS -> PITCHES: 0 the DOS pitches the AGA build has always drawn (SWCPICHn.MAP),
- * 1 SWOS 2020's (P2020_n.MAP, made by scripts/make_pitch_aga.py). The AGA Amiga only:
+ * 1 SWOS 2020's (P2020_n.MAP, made by the data setup from the player's SWOS 2020
+ * install, tools/swosdata; scripts/make_pitch_aga.py is the original). The AGA Amiga only:
  * the row is hidden elsewhere (OptionsMenuBeforeDraw), and SDL picks its pitches by
  * its graphics tier. For the session, like the menu's other rows on the Amiga. */
 uint16_t _pitchStyleOption;

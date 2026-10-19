@@ -718,9 +718,10 @@ tools/swosdata/build/swosdata --dos "/path/to/Sensible World of Soccer 96-97" \
 ```
 
 The PC game's folder alone is enough (the Amiga disks add the Amiga graphics and music);
-copy it from a GOG install. Without the data the player still builds, but has no graphics:
-`make WASM=1` preloads `bin/` plus `$(SWOS_ASSETS)`, and `bin/` holds only the project's
-own files. Rerun it after a change to `tools/swosdata` -- it rewrites the same files.
+copy it from a GOG install. `--swos2020 "/path/to/SWOS 2020"` adds SWOS 2020's pitches
+(`[graphics] style = 2020`) from a SWOS 2020 install, the set picked in its launcher.
+Without the data the player still builds, but has no graphics: `make WASM=1` preloads
+`bin/` plus `$(SWOS_ASSETS)`, and `bin/` holds only the project's own files. Rerun it after a change to `tools/swosdata` -- it rewrites the same files.
 
 Then the admin page's Rebuild builds it with the server (`scripts/run_matchmaker.sh
 --build-only --with-playback`), and `scripts/swos-matchmaker-service.sh install` or `restart`

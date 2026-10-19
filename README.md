@@ -108,6 +108,7 @@ own; it downloads nothing.
 | **PC version** (the installed game folder) | the PC graphics, sound, music and commentary, the AGA graphics, the teams | [GOG](https://www.gog.com/en/game/sensible_world_of_soccer_9697); the [PC CD version](https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996) has the same files |
 | **Amiga version** (both floppies as `.adf` images) | the Amiga graphics, music and effects, the loading screens, the teams | image your own disks |
 | **Atari Jaguar** cartridge (optional) | the Jaguar sprites (`[graphics] sprites = jaguar`) | the cartridge image ([Atarimania](https://www.atarimania.com/games/atari-jaguar-games-sensible-soccer-international-edition-30123)); needs the PC version too |
+| **SWOS 2020** install (optional) | SWOS 2020's pitches (`[graphics] style = 2020`, and OPTIONS → PITCHES on the AGA Amiga): whichever set is picked in its launcher | [sensiblesoccer.de](http://sensiblesoccer.de); point the setup at its install folder |
 
 Either the PC or the Amiga version is enough to play. With only the PC version
 the game plays the PC sound and music and skips the Amiga's loading screens;
@@ -134,10 +135,11 @@ setup to fill in the drawer.
 # The setup's command-line half, built from tools/swosdata:
 make -C tools/swosdata
 tools/swosdata/build/swosdata --scan ~/Games/SWOS --scan ~/Amiga/ADF \
+                              [--swos2020 "$HOME/Games/SWOS 2020"] \
                               --res bin --out ~/.swos/assets
 ```
 
-Every file it writes is byte-for-byte the one the original game shipped (or,
+Every file it writes is byte-for-byte the one the original game (or SWOS 2020) shipped (or,
 for the converted AGA and Jaguar graphics, the one this project's own
 converters always made); `tools/swosdata` is a C port of the
 [SwosGfx](https://github.com/benbaker76/SwosGfx) conversions plus an ADF reader.
@@ -869,7 +871,6 @@ Reverse Engineering            benbaker76 (Amiga) / zkz (DOS)
 AGA                            benbaker76
 Multiplayer (GGPO-X)           thd79
 Server Help                    Redhair
-Custom Graphics                Francescomanetti82
 Lead Tester                    Playaveli
 Beta Testers                   crom1, ElMichaJ, EMPI, gatifun, petarku,
                                Predicador, Redhair, segra, starwindz, thd79

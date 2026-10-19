@@ -2,7 +2,7 @@
  * swosdata -- build OpenSWOS's game data from the player's own copy of the game,
  * from the command line. The setup app does the same through the library.
  *
- *   swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE]
+ *   swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE] [--swos2020 DIR]
  *            --out DIR [--res DIR]
  *   swosdata --compare OUT REF     every file in OUT equals REF's (RNC unpacked)
  */
@@ -27,6 +27,7 @@ static int32_t usage(void)
 {
     fprintf(stderr,
             "usage: swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE]\n"
+            "                [--swos2020 DIR]\n"
             "                --out DIR [--res DIR]\n"
             "       swosdata --compare OUT REF\n");
     return 2;
@@ -110,8 +111,13 @@ int main(int argc, char **argv)
                 return 1;
             }
         } else if (strcmp(a, "--dos") == 0) {
-            if (SdSources_AddFile(&job.src, v) != 0) {
+            if (SdSources_AddFile(&job.src, v) != 0 || !SdSources_HaveDos(&job.src)) {
                 fprintf(stderr, "not a PC Sensible World of Soccer folder: %s\n", v);
+                return 1;
+            }
+        } else if (strcmp(a, "--swos2020") == 0) {
+            if (SdSources_AddFile(&job.src, v) != 0 || !SdSources_HaveSwos2020(&job.src)) {
+                fprintf(stderr, "not a SWOS 2020 install: %s\n", v);
                 return 1;
             }
         } else if (strcmp(a, "--out") == 0)
@@ -129,6 +135,7 @@ int main(int argc, char **argv)
     printf("Amiga disk 2: %s\n", job.src.adf2[0] ? job.src.adf2 : "(not found)");
     printf("PC game:      %s\n", job.src.dosDir[0] ? job.src.dosDir : "(not found)");
     printf("Jaguar:       %s\n", job.src.jagRom[0] ? job.src.jagRom : "(not found)");
+    printf("SWOS 2020:    %s\n", job.src.s2020Dir[0] ? job.src.s2020Dir : "(not found)");
 
     job.log = on_log;
     if (SwosData_Run(&job, err) != 0) {

@@ -50,12 +50,38 @@ static long file_size(const char *path)
     return n;
 }
 
-/* A PC game folder: SPRITE.DAT and the DATA folder's team files. */
+/* SWOS 2020's game folder (<install>/swos): its program and a pitch. */
+static int32_t is_s2020_game_dir(const char *dir)
+{
+    char p[1024];
+    return Sd_FindNoCase(dir, "swos-port-Release.exe", p, sizeof p) == 0 &&
+           Sd_FindNoCase(dir, "pitch1.dat", p, sizeof p) == 0 &&
+           Sd_FindNoCase(dir, "pitch1.blk", p, sizeof p) == 0;
+}
+
+/* A PC game folder: SPRITE.DAT and the DATA folder's team files -- and not
+ * SWOS 2020's, which has both but its own graphics. */
 static int32_t is_dos_dir(const char *dir)
 {
     char p[1024];
     return Sd_FindNoCase(dir, "SPRITE.DAT", p, sizeof p) == 0 &&
-           Sd_FindNoCase(dir, "DATA/TEAM.000", p, sizeof p) == 0;
+           Sd_FindNoCase(dir, "DATA/TEAM.000", p, sizeof p) == 0 &&
+           !is_s2020_game_dir(dir);
+}
+
+/* `dir` is SWOS 2020's install or its game folder: the game folder into out. */
+static int32_t find_s2020(const char *dir, char *out, uint32_t cap)
+{
+    char game[1024];
+    if (is_s2020_game_dir(dir)) {
+        snprintf(out, cap, "%s", dir);
+        return 0;
+    }
+    if (Sd_FindNoCase(dir, "swos", game, sizeof game) == 0 && is_s2020_game_dir(game)) {
+        snprintf(out, cap, "%s", game);
+        return 0;
+    }
+    return -1;
 }
 
 /* The cartridge: 2 MB, and the game's name where the Jaguar header keeps
@@ -119,9 +145,15 @@ int32_t SdSources_AddFile(SdSources *s, const char *path)
                 snprintf(s->dosDir, sizeof s->dosDir, "%s", path);
             return 0;
         }
+        char game[1024];
+        if (find_s2020(path, game, sizeof game) == 0) {
+            if (!s->s2020Dir[0])
+                snprintf(s->s2020Dir, sizeof s->s2020Dir, "%s", game);
+            return 0;
+        }
         return -1;
     }
-    /* A file inside the PC game folder: take its folder. */
+    /* A file inside the PC game folder or SWOS 2020's: take its folder. */
     char dir[1024];
     snprintf(dir, sizeof dir, "%s", path);
     char *slash = strrchr(dir, '/');
@@ -135,19 +167,28 @@ int32_t SdSources_AddFile(SdSources *s, const char *path)
                 snprintf(s->dosDir, sizeof s->dosDir, "%s", dir);
             return 0;
         }
+        char game[1024];
+        if (find_s2020(dir, game, sizeof game) == 0) {
+            if (!s->s2020Dir[0])
+                snprintf(s->s2020Dir, sizeof s->s2020Dir, "%s", game);
+            return 0;
+        }
     }
     return -1;
 }
 
 static int32_t count_found(const SdSources *s)
 {
-    return (s->adf1[0] != 0) + (s->adf2[0] != 0) + (s->dosDir[0] != 0) + (s->jagRom[0] != 0);
+    return (s->adf1[0] != 0) + (s->adf2[0] != 0) + (s->dosDir[0] != 0) + (s->jagRom[0] != 0) +
+           (s->s2020Dir[0] != 0);
 }
 
 static void scan_dir(SdSources *s, const char *dir, int32_t depth)
 {
     if (is_dos_dir(dir) && !s->dosDir[0])
         snprintf(s->dosDir, sizeof s->dosDir, "%s", dir);
+    if (!s->s2020Dir[0])
+        find_s2020(dir, s->s2020Dir, sizeof s->s2020Dir);
 #ifdef _WIN32
     char pattern[1100];
     Sd_PathJoin(pattern, sizeof pattern, dir, "*");
@@ -193,6 +234,7 @@ int32_t SdSources_Scan(SdSources *s, const char *dir)
 int32_t SdSources_HaveAmiga(const SdSources *s) { return s->adf1[0] && s->adf2[0]; }
 int32_t SdSources_HaveDos(const SdSources *s) { return s->dosDir[0] != 0; }
 int32_t SdSources_HaveJaguar(const SdSources *s) { return s->jagRom[0] != 0; }
+int32_t SdSources_HaveSwos2020(const SdSources *s) { return s->s2020Dir[0] != 0; }
 
 int32_t SdSources_Open(SdSources *s, char *err)
 {

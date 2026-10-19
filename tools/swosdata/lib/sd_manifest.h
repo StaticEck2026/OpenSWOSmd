@@ -15,5 +15,7 @@ typedef struct {
 extern const char *const g_sdAmigaCopy[];
 /* Ends with { NULL, NULL }. */
 extern const SdCopy g_sdDosCopy[];
+/* SWOS 2020's pitches, src in its game folder (swos/). Ends with { NULL, NULL }. */
+extern const SdCopy g_sd2020Copy[];
 
 #endif

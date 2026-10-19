@@ -156,14 +156,13 @@ tests/netplay-width/
 # DH1: -- so they are ignored here, and every drop is staged from tracked files
 # only (scripts/stage_runtime.sh). What stays tracked in these trees is the
 # project's own: LOADER76 (the credits loader), the credits photos, the 1UP coin
-# sound, the SWOS 2020 pitch maps and the commentary README.
+# sound and the commentary README.
 bin/data/*
 !bin/data/credits_icons.bmp
 bin/grafs/*
 !bin/grafs/LOADER76.RAW
 bin/grafs_aga/*
 !bin/grafs_aga/LOADER76.RAW
-!bin/grafs_aga/P2020_*.MAP
 bin/grafs_dos/
 bin/grafs_jag/
 bin/sound/*
@@ -173,12 +172,9 @@ bin/sound_dos/*
 bin/sound_dos/commentary/*
 !bin/sound_dos/commentary/README.txt
 bin/save/
-# SWOS 2020's tier is tracked, except the five PC files it ships unchanged.
-bin/grafs_2020/charset.dat
-bin/grafs_2020/fill.256
-bin/grafs_2020/sprite.dat
-bin/grafs_2020/stad.256
-bin/grafs_2020/swtitle.256
+# SWOS 2020's tier: five PC files and SWOS 2020's own pitches, the setup copies
+# from the player's SWOS 2020 install (and makes grafs_aga/P2020_n.MAP from them).
+bin/grafs_2020/
 
 # Original-game files from the early bring-up (the disk-ID files, the reloc
 # table, a memory dump of the original running) and old AGA conversions: not

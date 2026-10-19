@@ -2,10 +2,10 @@
  * swosdata.h -- build OpenSWOS's game data from the player's own copy of the game.
  *
  * OpenSWOS ships no original game data. The player points this at what they
- * own -- the Amiga floppies, the PC version (GOG), the Jaguar cartridge -- and
+ * own -- the Amiga floppies, the PC version (GOG), the Jaguar cartridge, SWOS 2020 -- and
  * it writes the trees the game reads into an assets folder, laid out as the
  * game's bin/ folder is: data/, grafs/, grafs_aga/, grafs_dos/, grafs_jag/,
- * sound/, sound_dos/, data_json/teams/.
+ * grafs_2020/, sound/, sound_dos/, data_json/teams/.
  *
  * Each step needs some of the sources and is skipped, with a note, without
  * them; SwosData_Plan says beforehand what will and will not be made.
@@ -34,6 +34,7 @@ typedef enum {
     SD_STEP_AGA_AMIGA,      /* grafs_aga/: the loading and disk screens, from the Amiga */
     SD_STEP_TEAMS,          /* data_json/teams/ (and data/ without the Amiga disks) */
     SD_STEP_JAGUAR,         /* grafs_jag/: the Jaguar's sprites, gaps from the PC game */
+    SD_STEP_SWOS2020,       /* grafs_2020/ and grafs_aga/P2020_n.MAP: SWOS 2020's pitches */
     SD_STEP_COUNT
 } SdStep;
 

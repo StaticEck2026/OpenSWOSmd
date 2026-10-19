@@ -77,6 +77,10 @@ void SwosData_Plan(const SdJob *job, SdStepInfo info[SD_STEP_COUNT])
     info[SD_STEP_JAGUAR].name = "Atari Jaguar sprites";
     info[SD_STEP_JAGUAR].needs = "the Jaguar cartridge and the PC game";
     info[SD_STEP_JAGUAR].ready = SdSources_HaveJaguar(&job->src) && SdSources_HaveDos(&job->src);
+
+    info[SD_STEP_SWOS2020].name = "SWOS 2020 pitches";
+    info[SD_STEP_SWOS2020].needs = "a SWOS 2020 install";
+    info[SD_STEP_SWOS2020].ready = SdSources_HaveSwos2020(&job->src);
 }
 
 static int32_t write_out(SdJob *job, const char *rel, const SdBuf *b, char *err)
@@ -137,6 +141,14 @@ static int32_t step_amiga_files(SdJob *job, int32_t *done, int32_t total, char *
     }
     logf_(job, "Amiga: %d files", count_amiga() + 1);
     return 0;
+}
+
+static int32_t count_2020(void)
+{
+    int32_t n = 0;
+    while (g_sd2020Copy[n].dest)
+        n++;
+    return n;
 }
 
 static int32_t step_dos_files(SdJob *job, int32_t *done, int32_t total, char *err)
@@ -375,6 +387,43 @@ static int32_t step_jaguar(SdJob *job, int32_t *done, int32_t total, char *err)
     return rc;
 }
 
+/* SWOS 2020's pitches as its launcher left them in its game folder -- the set the
+ * player picked there -- and the AGA Amiga's maps of them, P2020_n.MAP. Those are
+ * written unpacked: the game reads them straight into the pitch buffer, as they
+ * do not fit the screen buffer even packed (src/pitch.c loadPitchMap2020). */
+static int32_t step_swos2020(SdJob *job, int32_t *done, int32_t total, char *err)
+{
+    for (int32_t i = 0; g_sd2020Copy[i].dest; i++) {
+        char path[1100];
+        SdBuf b;
+        if (Sd_FindNoCase(job->src.s2020Dir, g_sd2020Copy[i].src, path, sizeof path) != 0) {
+            snprintf(err, 256, "%s is not in SWOS 2020's game folder", g_sd2020Copy[i].src);
+            return -1;
+        }
+        if (Sd_ReadFile(path, &b, err) != 0)
+            return -1;
+        int32_t rc = write_out(job, g_sd2020Copy[i].dest, &b, err);
+        Sd_BufFree(&b);
+        if (rc != 0)
+            return -1;
+        tick(job, done, total);
+    }
+    for (int32_t n = 1; n <= 6; n++) {
+        SdBuf map;
+        char rel[64];
+        if (Sd_DosPitchToAgaMap(job->src.s2020Dir, n, &map, err) != 0)
+            return -1;
+        snprintf(rel, sizeof rel, "grafs_aga/P2020_%d.MAP", n);
+        int32_t rc = write_out(job, rel, &map, err);
+        Sd_BufFree(&map);
+        if (rc != 0)
+            return -1;
+        tick(job, done, total);
+    }
+    logf_(job, "SWOS 2020: %d files", count_2020() + 6);
+    return 0;
+}
+
 int32_t SwosData_Run(SdJob *job, char *err)
 {
     SdStepInfo info[SD_STEP_COUNT];
@@ -393,6 +442,8 @@ int32_t SwosData_Run(SdJob *job, char *err)
         total += count_teams();
     if (info[SD_STEP_JAGUAR].ready)
         total += SD_JAG_FILE_COUNT;
+    if (info[SD_STEP_SWOS2020].ready)
+        total += count_2020() + 6;
 
     if (SdSources_Open(&job->src, err) != 0)
         return -1;
@@ -409,6 +460,7 @@ int32_t SwosData_Run(SdJob *job, char *err)
         case SD_STEP_AGA_AMIGA:   rc = step_aga_amiga(job, &done, total, err); break;
         case SD_STEP_TEAMS:       rc = step_teams(job, &done, total, err); break;
         case SD_STEP_JAGUAR:      rc = step_jaguar(job, &done, total, err); break;
+        case SD_STEP_SWOS2020:    rc = step_swos2020(job, &done, total, err); break;
         default: break;
         }
     }

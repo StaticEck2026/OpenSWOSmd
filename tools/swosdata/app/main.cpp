@@ -1,7 +1,8 @@
 // OpenSWOS Setup: the window over the swosdata library.
 //
 // The player names their own copy of SWOS -- the Amiga disks, the PC game
-// folder, the Jaguar cartridge -- and SwosData_Run writes the game's data into
+// folder, the Jaguar cartridge, a SWOS 2020 install for its pitches -- and
+// SwosData_Run writes the game's data into
 // the assets folder the game reads. The run happens on a worker thread; its log
 // and progress reach the window through slint::invoke_from_event_loop.
 //
@@ -262,6 +263,8 @@ struct App {
                      bool(SdSources_HaveDos(&src))});
     rows->push_back({"Jaguar cartridge (optional)", Str(src.jagRom[0] ? Shown(src.jagRom) : "not found"),
                      bool(SdSources_HaveJaguar(&src))});
+    rows->push_back({"SWOS 2020 (optional)", Str(src.s2020Dir[0] ? Shown(src.s2020Dir) : "not found"),
+                     bool(SdSources_HaveSwos2020(&src))});
     w().set_sources(rows);
 
     w().set_out_dir(Str(Shown(outDir)));
@@ -364,9 +367,25 @@ struct App {
     Refresh();
   }
 
+  // SWOS 2020's pitches: the set picked in its launcher, from its game folder.
+  void BrowseSwos2020() {
+    const std::string dir = PickFolder(src.s2020Dir);
+    if (dir.empty()) return;
+    SdSources fresh{};
+    if (SdSources_AddFile(&fresh, dir.c_str()) != 0 || !fresh.s2020Dir[0]) {
+      Notice("Not a SWOS 2020 install: " + dir +
+                 ". It is the folder with gameLauncher.exe and the swos folder in it.",
+             true);
+    } else {
+      std::memcpy(src.s2020Dir, fresh.s2020Dir, sizeof src.s2020Dir);
+      Notice("SWOS 2020 found: its pitches are the set picked in its launcher.", false);
+    }
+    Refresh();
+  }
+
   void Scan(const std::string& dir) {
     const int32_t before = (src.adf1[0] != 0) + (src.adf2[0] != 0) + (src.dosDir[0] != 0) +
-                           (src.jagRom[0] != 0);
+                           (src.jagRom[0] != 0) + (src.s2020Dir[0] != 0);
     const int32_t after = SdSources_Scan(&src, dir.c_str());
     if (after > before)
       Notice("Found " + std::to_string(after - before) + " new in " + dir + ".", false);
@@ -594,7 +613,8 @@ int main(int argc, char** argv) {
   ui->on_browse_source([&app](int i) {
     if (i == 0) app.BrowseAmiga();
     else if (i == 1) app.BrowsePc();
-    else app.BrowseJaguar();
+    else if (i == 2) app.BrowseJaguar();
+    else app.BrowseSwos2020();
   });
   ui->on_search_folder([&app] {
     const std::string dir = PickFolder({});
