@@ -23,11 +23,10 @@ see `SDL_ONLY_SRCS` in `Makefile.amiga`.
 > or comment referring to "the Amiga port" as a separate tree, it predates
 > the merge; fix it when you touch it.
 >
-> **Renamed 2026-10-18:** this project was "OpenSWOS" and is now **OpenSWOS**
-> (github.com/benbaker76/OpenSWOS), the open-source release. OpenSWOS carries on
-> as a separate fork. The wire/file identifiers were renamed with it (`VERSION:OPENSWOS`,
-> GGPO session `openswos`, custom-team format `openswos-team`, ggpo-x branch `openswos`),
-> so a OpenSWOS build and an OpenSWOS build do not meet online.
+> **OpenSWOS** (github.com/benbaker76/OpenSWOS) is the open-source release. Its wire/file
+> identifiers are its own (`VERSION:OPENSWOS`, GGPO session `openswos`, custom-team format
+> `openswos-team`, ggpo-x branch `openswos`): a build of another fork with different ones
+> does not meet it online.
 
 **Docs map:** `docs/INDEX.md` lists every doc in `docs/` (what it is, whether it is current,
 when to read it) and every path the project uses — repos, tools, servers, save folders.
