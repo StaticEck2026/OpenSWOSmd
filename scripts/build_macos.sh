@@ -12,6 +12,11 @@
 #   dist/SWOS-macOS.zip      the universal binary alone — needs SDL2 installed
 #                            system-wide, since the framework ships in the .app
 #
+# and the Mac's part of OpenSWOS-Setup.zip, which scripts/build_setup_zip.sh packs
+# with the Windows and Linux setups (not handed out on its own):
+#   dist/OpenSWOS-Setup-macOS.zip     macOS/ with OpenSWOS Setup.app and swosdata
+#   dist/OpenSWOS-Setup-macOS.commit  the commit it was built from
+#
 # They land in dist/ beside build_dist.sh's archives, and are packed into the
 # MAC'S dist/ too — the Mac is a checkout of this same repo, so it follows the
 # same rule: bin/ is the runtime tree, dist/ is what a tester is handed.
@@ -181,6 +186,19 @@ rm -f "dist/$ZIPBIN"
 ( cd bin && ditto -c -k --sequesterRsrc SWOS.macos "../dist/$ZIPBIN" ) \
     || { echo "!! ditto (binary) failed"; exit 1; }
 
+# The Mac's part of OpenSWOS-Setup.zip (scripts/build_setup_zip.sh): a macOS/
+# folder with the setup window and its command line. ditto, for the Slint dylib.
+SETUP_PART=OpenSWOS-Setup-macOS.zip
+echo "== packing dist/$SETUP_PART (the setup, for OpenSWOS-Setup.zip)"
+rm -f "dist/$SETUP_PART"
+STAGE="$(mktemp -d)/macOS"
+mkdir -p "$STAGE" &&
+    ditto "$SETUP_APP" "$STAGE/OpenSWOS Setup.app" &&
+    cp tools/swosdata/build/swosdata-universal "$STAGE/swosdata" &&
+    ditto -c -k --keepParent "$STAGE" "dist/$SETUP_PART" ||
+    { echo "!! ditto (setup) failed"; exit 1; }
+rm -rf "$(dirname "$STAGE")"
+
 echo "== BUILT_COMMIT=$(git rev-parse --short HEAD)"
 echo "== ZIP_BYTES=$(stat -f%z "dist/$ZIP")"
 echo "== ZIPBIN_BYTES=$(stat -f%z "dist/$ZIPBIN")"
@@ -193,6 +211,9 @@ banner "fetch -> dist/$MAC_ZIP, dist/$MAC_ZIP_BIN"
 mkdir -p dist
 scp -q "$MAC_HOST:$MAC_PATH/dist/$MAC_ZIP"     "dist/$MAC_ZIP"     || { echo "-- FAIL: scp (.app)"; exit 1; }
 scp -q "$MAC_HOST:$MAC_PATH/dist/$MAC_ZIP_BIN" "dist/$MAC_ZIP_BIN" || { echo "-- FAIL: scp (binary)"; exit 1; }
+scp -q "$MAC_HOST:$MAC_PATH/dist/OpenSWOS-Setup-macOS.zip" dist/OpenSWOS-Setup-macOS.zip ||
+    { echo "-- FAIL: scp (setup)"; exit 1; }
+sed -n 's/.*BUILT_COMMIT=//p' "$LOG" | head -1 > dist/OpenSWOS-Setup-macOS.commit
 
 banner "SUMMARY"
 printf '  built from commit  : %s\n' "$(sed -n 's/.*BUILT_COMMIT=//p' "$LOG" | head -1)"
@@ -205,4 +226,4 @@ printf '  slices             : %s\n' "$(grep -m1 '^== lipo:' "$LOG" | sed 's/^==
 printf '  symlinks preserved : %s (0 would mean SDL2.framework is broken)\n' \
     "$(sed -n 's/.*SYMLINKS_IN_ZIP=//p' "$LOG" | head -1)"
 echo ""
-ls -l "dist/$MAC_ZIP" "dist/$MAC_ZIP_BIN"
+ls -l "dist/$MAC_ZIP" "dist/$MAC_ZIP_BIN" dist/OpenSWOS-Setup-macOS.zip

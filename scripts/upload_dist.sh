@@ -121,7 +121,7 @@ WEB_SRC="dist/web"
 
 # The tester-facing archives. dist/SWOS.nsp is NOT here: the Switch package is
 # not something the website hands out.
-BIN_FILES="SWOS-Amiga.zip SWOS-portable.zip SWOS-macOS-app.zip SWOS-macOS.zip SWOS-Setup.exe SWOS.zip"
+BIN_FILES="SWOS-Amiga.zip SWOS-portable.zip SWOS-macOS-app.zip SWOS-macOS.zip SWOS-Setup.exe SWOS.zip OpenSWOS-Setup.zip"
 BIN_SRC="dist"
 
 DO_WEB=1

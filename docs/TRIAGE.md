@@ -16,6 +16,7 @@ procedure rather than triage.
 /triage <id>            work one report
 /requests               review the feature requests waiting, build the approved ones
 scripts/build_dist.sh   + scripts/build_macos.sh    the drop
+scripts/build_setup_zip.sh                          then OpenSWOS-Setup.zip
 packaging/web/changelog.html                        an entry for the drop's build
 scripts/upload_dist.sh --insecure-tls               publish it
 reportctl status <id> done "fixed in <commit>" + archive
@@ -143,7 +144,12 @@ with netplay like Linux x86_64 and Cygwin64, so it no longer covers this.)
 ```bash
 scripts/build_dist.sh       # every target this machine can build -> dist/
 scripts/build_macos.sh      # the two macOS archives, over ssh to the Mac mini
+scripts/build_setup_zip.sh  # OpenSWOS-Setup.zip: the setup for Windows, macOS, Linux
 ```
+
+The first two can run together (different machines; neither wipes `dist/`). The
+setup zip comes after both: it takes the Mac's part from `build_macos.sh` and
+refuses one built from another commit.
 
 **Never from a `-dirty` tree** — the build stamp in every binary is how a tester
 report is tied back to a commit. Commit first, then build. `build_dist.sh`

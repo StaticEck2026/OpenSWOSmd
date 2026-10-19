@@ -529,9 +529,12 @@ void SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT])
     if (!assetsDir || !assetsDir[0])
         return;
 
+    /* The team files in the Amiga list are the teams step's: it writes them from
+     * the PC game too, so they say nothing about the Amiga disks. */
     SdInstalled *n = &out[SD_STEP_AMIGA_FILES];
     for (int32_t i = 0; g_sdAmigaCopy[i]; i++)
-        count_file(assetsDir, g_sdAmigaCopy[i], n);
+        if (strncmp(g_sdAmigaCopy[i], "data/", 5) != 0)
+            count_file(assetsDir, g_sdAmigaCopy[i], n);
 
     n = &out[SD_STEP_DOS_FILES];
     for (int32_t i = 0; g_sdDosCopy[i].dest; i++)
@@ -561,6 +564,7 @@ void SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT])
         char name[64];
         if (strncmp(g_sdAmigaCopy[i], "data/", 5) != 0)
             continue;
+        count_file(assetsDir, g_sdAmigaCopy[i], n);
         Sd_TeamJsonName(g_sdAmigaCopy[i] + 5, name, sizeof name);
         snprintf(rel, sizeof rel, "data_json/teams/%s", name);
         count_file(assetsDir, rel, n);

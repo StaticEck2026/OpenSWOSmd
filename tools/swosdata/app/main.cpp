@@ -108,7 +108,8 @@ std::string PickFile(const char* filterName, const char* filterSpec) {
 // ------------------------------------------------------- the game's files ---
 
 // The game's own files (setup/glyphs.txt, data/credits_icons.bmp, ...): beside
-// the executable in an install; in a dev build, the repo's bin/ above it.
+// the executable in an install; above it in OpenSWOS-Setup.zip; in a dev build,
+// the repo's bin/ above it.
 #if defined(__APPLE__)
 // On macOS the setup is its own .app beside SWOS.app (SWOS-macOS-app.zip), and
 // the game's files are inside that: SWOS.app/Contents/MacOS. exeDir is
@@ -129,7 +130,10 @@ std::string FindResDir(const std::string& exeDir) {
     if (!mac.empty() && sd::IsFile(Join(mac, "setup/glyphs.txt"))) return mac;
   }
 #endif
+  // Above it: OpenSWOS-Setup.zip keeps them above its Windows/Linux/macOS
+  // folders; the repo keeps them in bin/.
   for (std::string d = exeDir; !d.empty();) {
+    if (sd::IsFile(Join(d, "setup/glyphs.txt"))) return d;
     const std::string bin = Join(d, "bin");
     if (sd::IsFile(Join(bin, "setup/glyphs.txt"))) return bin;
     const std::string up = sd::ParentDir(d);

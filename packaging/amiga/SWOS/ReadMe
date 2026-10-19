@@ -29,11 +29,22 @@
  INSTALLING
  ----------
 
- Unpack the archive onto your hard drive as it is. You get a SWOS drawer
- with its icon. Open the drawer and double-click SWOS.
+ The drawer has the game but not Sensible World of Soccer's own graphics,
+ sound and team data: those are made from a copy of the game you own (the
+ two SWOS 96/97 disk images, .adf, and the PC version if you have it), by
+ OpenSWOS Setup. The setup runs on a PC or a Mac, not on the Amiga:
 
- Everything the game needs is inside the drawer, so it can live anywhere:
- move it as a whole, never the files one by one.
+ 1. Unpack the archive on the PC or Mac. You get a SWOS drawer with its
+    icon.
+ 2. Download OpenSWOS-Setup.zip from https://baker76.com/swos.html,
+    unpack it and run OpenSWOS Setup (its ReadMe.txt says how).
+ 3. Install from your disk images, then under "Amiga version" choose the
+    SWOS drawer and press "Add the game data".
+ 4. Copy the drawer to your Amiga's hard drive, or to the drive of
+    FS-UAE / WinUAE. Open it and double-click SWOS.
+
+ Everything the game needs is then inside the drawer, so it can live
+ anywhere: move it as a whole, never the files one by one.
 
  Saved careers, seasons, tactics and highlights go in the "save" drawer.
 
@@ -56,6 +67,7 @@
  grafs         graphics
  grafs_aga     AGA graphics
  sound         music and sound effects
+               (these four are filled by OpenSWOS Setup)
  save          your saved games
  c, s          only for booting an emulator from the drawer (above)
 

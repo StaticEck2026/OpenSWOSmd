@@ -7,16 +7,28 @@
  *   --scan looks through DIR and every folder inside it
  *   swosdata --compare OUT REF     every file in OUT equals REF's (RNC unpacked)
  *   swosdata --installed DIR       what an earlier run left in the assets folder DIR
+ *   --res DIR: the setup's own files (setup/, data/credits_icons.bmp); found
+ *   without it in the current folder, else beside this program or above it.
  */
+#define _POSIX_C_SOURCE 200809L     /* readlink */
+#define _DARWIN_C_SOURCE
+
 #include "swosdata.h"
+#include "sg_dir.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#endif
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
 #endif
 
 static void on_log(void *user, const char *line)
@@ -95,6 +107,69 @@ static int32_t compare_tree(const char *out, const char *ref, const char *rel, i
 }
 #endif
 
+/* This program's own path, or argv[0] when the system will not say. */
+static void exe_path(const char *argv0, char *out, uint32_t cap)
+{
+    snprintf(out, cap, "%s", argv0 ? argv0 : "");
+#if defined(_WIN32)
+    DWORD n = GetModuleFileNameA(NULL, out, cap);
+    if (n == 0 || n >= cap)
+        snprintf(out, cap, "%s", argv0 ? argv0 : "");
+#elif defined(__APPLE__)
+    char buf[1024];
+    uint32_t size = sizeof buf;
+    if (_NSGetExecutablePath(buf, &size) == 0)
+        snprintf(out, cap, "%s", buf);
+#else
+    char buf[1024];
+    ssize_t n = readlink("/proc/self/exe", buf, sizeof buf - 1);
+    if (n > 0) {
+        buf[n] = 0;
+        snprintf(out, cap, "%s", buf);
+    }
+#endif
+}
+
+/* Cut the last path component off `p`; 0 when there was none. */
+static int32_t parent_dir(char *p)
+{
+    char *slash = strrchr(p, '/');
+#ifdef _WIN32
+    char *back = strrchr(p, '\\');
+    if (back && (!slash || back > slash))
+        slash = back;
+#endif
+    if (!slash || slash == p)
+        return 0;
+    *slash = 0;
+    return 1;
+}
+
+/* The setup's own files: in the current folder as before, else in the folder
+ * this program is in or one above it (OpenSWOS-Setup.zip keeps them above the
+ * Windows/Linux/macOS folders), or that folder's bin/ (the repo). Left empty
+ * -- relative to here -- when none has them, so the error names the file. */
+static void find_res_dir(const char *argv0, char *out, uint32_t cap)
+{
+    char dir[1024], probe[1100];
+    out[0] = 0;
+    if (Sg_IsFile("setup/glyphs.txt"))
+        return;
+    exe_path(argv0, dir, sizeof dir);
+    while (parent_dir(dir)) {
+        Sg_PathJoin(probe, sizeof probe, dir, "setup/glyphs.txt");
+        if (Sg_IsFile(probe)) {
+            snprintf(out, cap, "%s", dir);
+            return;
+        }
+        Sg_PathJoin(probe, sizeof probe, dir, "bin/setup/glyphs.txt");
+        if (Sg_IsFile(probe)) {
+            Sg_PathJoin(out, cap, dir, "bin");
+            return;
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     static SdJob job;
@@ -164,6 +239,8 @@ int main(int argc, char **argv)
     printf("SWOS 2020:    %s\n", job.src.s2020Dir[0] ? job.src.s2020Dir : "(not found)");
     if (!job.outDir[0])
         return 0;       /* no --out: only say what was found */
+    if (!job.resDir[0])
+        find_res_dir(argv[0], job.resDir, sizeof job.resDir);
 
     job.log = on_log;
     if (SwosData_Run(&job, err) != 0) {
