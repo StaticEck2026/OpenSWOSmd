@@ -312,5 +312,12 @@ const SdCopy g_sdDosCopy[] = {
     { "sound_dos/pierce/m349_e_.raw", "SFX/PIERCE/M349_E_.RAW" },
     { "sound_dos/pierce/m365_1_.raw", "SFX/PIERCE/M365_1_.RAW" },
     { "sound_dos/sample.ad", "SAMPLE.AD" },
+    /* SWOS 2020's grafs tier changed most of the PC files but not these five,
+     * which it ships as they are (under lower-case names). */
+    { "grafs_2020/charset.dat", "CHARSET.DAT" },
+    { "grafs_2020/fill.256", "FILL.256" },
+    { "grafs_2020/sprite.dat", "SPRITE.DAT" },
+    { "grafs_2020/stad.256", "STAD.256" },
+    { "grafs_2020/swtitle.256", "SWTITLE.256" },
     { NULL, NULL }
 };

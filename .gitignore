@@ -173,3 +173,9 @@ bin/sound_dos/*
 bin/sound_dos/commentary/*
 !bin/sound_dos/commentary/README.txt
 bin/save/
+# SWOS 2020's tier is tracked, except the five PC files it ships unchanged.
+bin/grafs_2020/charset.dat
+bin/grafs_2020/fill.256
+bin/grafs_2020/sprite.dat
+bin/grafs_2020/stad.256
+bin/grafs_2020/swtitle.256
