@@ -779,6 +779,14 @@ the long version):
   Trace upward and fix the cause; don't add a `if (!ptr) return;` to make
   the menu draw work.
 
+## Tools
+
+- **[SwosGfx](https://github.com/benbaker76/SwosGfx)** — converts SWOS graphics
+  (Amiga and DOS) to and from editable formats: pitches to BMP or Tiled maps and
+  back, raw bitplane screens to BMP and back, sprites and palettes. OpenSWOS's own
+  asset scripts use it, e.g. `scripts/make_credits_aga.py` (the AGA credits
+  backdrop) and `scripts/make_jag_graphics.py` (the Jaguar sprites).
+
 ## License
 
 Copyright (C) 2025-2026 Ben Baker and the OpenSWOS contributors.
