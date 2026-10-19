@@ -67,7 +67,10 @@ VERSION=""
 STAGE_ONLY=0
 
 # Mirrors FULL_DATA_DIRS in scripts/build_dist.sh. See "WHAT SHIPS" above.
-DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json"
+DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json setup"
+# The data setup's window (tools/swosdata/build.bat static): the installer runs
+# it when it finishes, because the game cannot start without the player's data.
+SETUP_EXE="${SETUP_EXE:-tools/swosdata/build_win_static/bin/Release/openswos-setup.exe}"
 # Cygwin runtime for SWOS.exe — mirrors FULL_DLLS in build_dist.sh.
 # FOUR files, and only two of them are visible to
 # cygcheck:
@@ -162,25 +165,21 @@ if [ -n "$DLL_MISS" ]; then
     echo "!! the installed SWOS.exe WILL NOT START. Set CYGWIN_BIN." >&2
 fi
 
-STAGED_DIRS=""
-DIR_MISS=""
-for d in $DATA_DIRS; do
-    if [ -d "bin/$d" ]; then
-        # -L: bin/data_json/* is partly generated and may be symlinked in some
-        # checkouts; the installer needs the contents, not a dangling link.
-        cp -RL "bin/$d" "$STAGE_DIR/" 2>/dev/null || cp -R "bin/$d" "$STAGE_DIR/" ||
-            die "cannot stage bin/$d"
-        STAGED_DIRS="$STAGED_DIRS $d"
-    else
-        DIR_MISS="$DIR_MISS $d"
-    fi
-done
+# Only git-tracked files (scripts/stage_runtime.sh): the project's own data. The
+# original game's is made from the player's copy by the setup below, and a copy
+# of it in a developer's bin/ must never be packaged.
+STAGED_DIRS="$(scripts/stage_runtime.sh "$STAGE_DIR" $DATA_DIRS)" || die "cannot stage bin/"
+if [ -f "$SETUP_EXE" ]; then
+    cp "$SETUP_EXE" "$STAGE_DIR/" || die "cannot stage $SETUP_EXE"
+else
+    die "no $SETUP_EXE: build it with tools/swosdata/build.bat static (the installer runs it)"
+fi
 find "$STAGE_DIR" -name .DS_Store -delete 2>/dev/null
 find "$STAGE_DIR" -name '*.uaem' -delete 2>/dev/null
 
 echo "-- runtime: SWOS.exe$DLL_OK"
-echo "-- data:$STAGED_DIRS"
-[ -n "$DIR_MISS" ] && echo "-- NOTE: not staged (not in bin/):$DIR_MISS"
+echo "-- data: $STAGED_DIRS"
+echo "-- setup: $(basename "$SETUP_EXE")"
 echo "-- staged $(du -sh "$STAGE_DIR" 2>/dev/null | cut -f1) in $STAGE_DIR"
 
 [ "$STAGE_ONLY" = 1 ] && { echo "-- --stage-only: not compiling"; exit 0; }

@@ -28,6 +28,9 @@
 #define AppName        "OpenSWOS"
 #define AppPublisher   "Baker76"
 #define AppExeName     "SWOS.exe"
+; The data setup: OpenSWOS ships none of the original game's data, and this makes
+; it from the player's own copy (tools/swosdata). Run when the install finishes.
+#define SetupExeName   "openswos-setup.exe"
 #define AppURL         "https://github.com/benbaker76/OpenSWOS"
 
 ; Relative to THIS file. Inno resolves relative paths against the script's
@@ -98,11 +101,14 @@ Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
+Name: "{group}\{#AppName} Setup"; Filename: "{app}\{#SetupExeName}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Not the game: without the player's data it has nothing to show. The setup has a
+; Play button for when it is done.
+Filename: "{app}\{#SetupExeName}"; Description: "Set up the game data from your copy of Sensible World of Soccer"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 ; The data trees are installed wholesale by one wildcard, so remove them
@@ -117,3 +123,5 @@ Type: filesandordirs; Name: "{app}\grafs_2020"
 Type: filesandordirs; Name: "{app}\grafs_arcade"
 Type: filesandordirs; Name: "{app}\sound"
 Type: filesandordirs; Name: "{app}\sound_dos"
+Type: filesandordirs; Name: "{app}\grafs_jag"
+Type: filesandordirs; Name: "{app}\setup"

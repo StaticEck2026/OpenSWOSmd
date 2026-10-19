@@ -46,6 +46,12 @@
 #   windows        make (in Cygwin)     -> bin/SWOS.exe
 #   switch         scripts/build_switch.sh package
 #                                       -> bin/SWOS.nss + dist/SWOS.nsp
+#   setup          make -C tools/swosdata  -> tools/swosdata/build/swosdata (the
+#                                          data setup's command line, Linux)
+#                  tools/swosdata/build.bat static (via cmd.exe)
+#                                       -> openswos-setup.exe (the data setup's
+#                                          window, one static .exe; needs Visual
+#                                          Studio and Rust on the Windows side)
 #   installer      scripts/build_installer.sh
 #                                       -> dist/SWOS-Setup.exe  (packaging step,
 #                                          not a compile: it needs bin/SWOS.exe
@@ -151,7 +157,7 @@ SDL_SWITCH_ROOT="${SDL_SWITCH_ROOT:-D:\\Projects\\GitHub\\SDL-switch}"
 
 # `installer` is a packaging step rather than a compile, but it lives in this
 # list so --only/--skip and the summary treat it like everything else.
-ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows switch installer"
+ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows setup switch installer"
 
 # Binaries that go into the zip. The WASM outputs are deliberately excluded:
 # SWOS.html/.js/.wasm/.data are a web deployment, not something a tester runs
@@ -159,16 +165,23 @@ ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows s
 # WASM=1` links them straight into dist/web/ (Makefile, OUTDIR).
 ZIP_MEMBERS="SWOS SWOS.x86_64 SWOS.aarch64 SWOS.armhf SWOS.exe SWOS2"
 
-# SWOS-full.zip — a RUNNABLE drop: the same binaries plus the game data, so a
-# tester can unzip and play instead of supplying their own bin/. Everything sits
-# at the zip root because the SDL binary chdir's to its own directory.
+# SWOS-full.zip — a RUNNABLE drop: the same binaries plus the project's own
+# data and the data setup. The ORIGINAL GAME'S data is not in it: the player's
+# own copy is turned into it by the setup (tools/swosdata, openswos-setup.exe /
+# swosdata) into their assets folder. Everything sits at the zip root because the
+# SDL binary chdir's to its own directory. Staged by scripts/stage_runtime.sh,
+# which takes only git-tracked files, so data a developer keeps in bin/ never
+# ships.
 #
 # The data list mirrors what `make macos-app` bundles (Makefile, macos-app rule)
 # — that is this project's tested definition of "what the game needs at runtime".
 # save/ is deliberately EXCLUDED: it is 24 MB of test careers here, and saves go
 # to a per-user directory anyway (swos_io.c), so shipping it would both bloat the
 # zip and drop stale saves on testers.
-FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json"
+FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound sound_dos data_json setup"
+# The data setup, built by the `setup` target.
+SETUP_CLI="tools/swosdata/build/swosdata"
+SETUP_EXE="tools/swosdata/build_win_static/bin/Release/openswos-setup.exe"
 # Cygwin runtime for SWOS.exe. FOUR files, and only two of them are visible to
 # cygcheck:
 #
@@ -537,6 +550,29 @@ if wanted windows; then
     esac
 fi
 
+# ---- setup (the data setup: tools/swosdata) ----------------------------------
+# OpenSWOS ships none of the original game's data; this is what makes it from
+# the player's own copy. The command line builds here; the window is a static
+# Slint .exe built by tools/swosdata/build.bat on the Windows side (Visual Studio
+# + Rust; docs in tools/swosdata). A missing Windows toolchain is a SKIP.
+if wanted setup; then
+    banner "setup -> $SETUP_CLI + $SETUP_EXE"
+    SETUP_RC=0
+    make -C tools/swosdata -j"$JOBS" >/dev/null || SETUP_RC=1
+    WINSD="$(wslpath -w "$ROOT/tools/swosdata" 2>/dev/null || echo "")"
+    if [ "$SETUP_RC" = 0 ] && [ -n "$WINSD" ] && command -v cmd.exe >/dev/null 2>&1; then
+        ( cd /mnt/c && cmd.exe /c "cd /d $WINSD && build.bat static" ) >/dev/null 2>&1 || SETUP_RC=2
+    else
+        [ "$SETUP_RC" = 0 ] && SETUP_RC=3
+    fi
+    case $SETUP_RC in
+        0) record setup "OK"; echo "-- OK: setup" ;;
+        1) record setup "FAIL"; echo "-- FAIL: setup (the command line)" ;;
+        2) record setup "FAIL"; echo "-- FAIL: setup (openswos-setup.exe; run tools/swosdata/build.bat static)" ;;
+        3) record setup "SKIP (no Windows side for openswos-setup.exe)" ;;
+    esac
+fi
+
 # ---- switch (NX, via Windows interop) ---------------------------------------
 # Produces dist/SWOS.nsp, not a zip: an .nsp IS the installable package, and at
 # ~84 MB it is dominated by the SDK's own opengl/vulkan modules, which compress
@@ -606,10 +642,8 @@ fi
 # ---- package: full dist (binaries + data + Windows runtime) ------------------
 if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; then
     banner "package -> $FULL_ZIP_PATH  (full game: binaries + data)"
-    FULL_DIRS=""
-    for d in $FULL_DATA_DIRS; do
-        [ -d "bin/$d" ] && FULL_DIRS="$FULL_DIRS $d"
-    done
+    FULL_TMP="$(mktemp -d)"
+    FULL_DIRS="$(scripts/stage_runtime.sh "$FULL_TMP" $FULL_DATA_DIRS)"
     if [ -z "$FULL_DIRS" ]; then
         echo "-- SKIP: no data directories under bin/"
     else
@@ -617,8 +651,19 @@ if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; the
         rm -f "$FULL_ZIP_PATH"
         # Binaries junked to the root, then the data trees with their paths kept.
         ( cd bin && zip -j -q "$ROOT/$FULL_ZIP_PATH" $ZIPPED ) &&
-        ( cd bin && zip -r -q "$ROOT/$FULL_ZIP_PATH" $FULL_DIRS -x '*/.DS_Store' ) &&
+        ( cd "$FULL_TMP" && zip -r -q "$ROOT/$FULL_ZIP_PATH" $FULL_DIRS -x '*/.DS_Store' ) &&
             echo "-- data:     $FULL_DIRS"
+        # The data setup beside the game: the window on Windows, the command
+        # line elsewhere. Without them the drop cannot be played at all.
+        SETUP_IN=""
+        for f in "$SETUP_EXE" "$SETUP_CLI"; do
+            [ -f "$f" ] && SETUP_IN="$SETUP_IN $f"
+        done
+        if [ -n "$SETUP_IN" ]; then
+            zip -j -q "$FULL_ZIP_PATH" $SETUP_IN && echo "-- setup:   $(echo $SETUP_IN | tr ' ' '\n' | sed 's|.*/||' | tr '\n' ' ')"
+        else
+            echo "-- NOTE: no data setup built (the setup target): the drop needs it to be played"
+        fi
 
         # Windows runtime beside SWOS.exe. Skipped cleanly off-Cygwin hosts.
         DLL_ADDED=""; DLL_MISS=""
@@ -660,16 +705,12 @@ if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; the
         rm -rf "$SDL_TMP"
         echo "-- OK: $FULL_ZIP_PATH"
     fi
+    rm -rf "$FULL_TMP"
 fi
 
 # ---- package: Amiga dist (m68k binary + the trees it actually reads) ---------
 if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; then
     banner "package -> $AMIGA_ZIP_PATH  (Amiga: a SWOS drawer to drop onto a hard drive)"
-    AMIGA_DIRS=""
-    for d in $AMIGA_DATA_DIRS $AMIGA_BOOT_DIRS; do
-        if [ -d "bin/$d" ]; then AMIGA_DIRS="$AMIGA_DIRS $d"
-        else echo "!! bin/$d missing" >&2; fi
-    done
     [ -f "$AMIGA_PKG_DIR/SWOS/SWOS" ] && [ -f "$AMIGA_PKG_DIR/SWOS/SWOS.info" ] ||
         echo "!! $AMIGA_PKG_DIR/SWOS/SWOS or its icon missing — the drop will not start from Workbench" >&2
     outdir "$AMIGA_ZIP_PATH"
@@ -677,13 +718,18 @@ if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; the
     # Staged, so the zip holds exactly the layout above. save/ is created EMPTY --
     # the binary writes there but won't mkdir it -- and never copied from bin/save,
     # whose 24 MB of test careers must not leak in.
+    #
+    # Only the project's own files in the trees go in (scripts/stage_runtime.sh
+    # stages tracked files): the original game's data is added by the player with
+    # the data setup ("Amiga version" -> Add the game data), from their own copy.
     AMIGA_TMP="$(mktemp -d)"
     if cp -R "$AMIGA_PKG_DIR/." "$AMIGA_TMP/" &&
        cp bin/SWOS2 "$AMIGA_TMP/SWOS/" &&
-       ( cd bin && cp -R $AMIGA_DIRS "$AMIGA_TMP/SWOS/" ) &&
+       AMIGA_DIRS="$(scripts/stage_runtime.sh "$AMIGA_TMP/SWOS" $AMIGA_DATA_DIRS $AMIGA_BOOT_DIRS)" &&
        mkdir -p "$AMIGA_TMP/SWOS/save" &&
        ( cd "$AMIGA_TMP" && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" . -x '*/.DS_Store' ); then
-        echo "-- drawer:  SWOS/ + SWOS.info; inside it SWOS2, the Workbench script and icon,$AMIGA_DIRS, empty save/"
+        echo "-- drawer:  SWOS/ + SWOS.info; inside it SWOS2, the Workbench script and icon, $AMIGA_DIRS, empty save/"
+        echo "-- (no game data: the player adds it with the data setup)"
         echo "-- OK: $AMIGA_ZIP_PATH"
     else
         echo "-- FAIL: $AMIGA_ZIP_PATH" >&2
