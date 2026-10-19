@@ -189,6 +189,42 @@ static int32_t write_packed(SdJob *job, const char *rel, const SgBuf *b, char *e
     return rc;
 }
 
+/* The ball on the title screen and on the menus' logo, redrawn to say AGA: the
+ * project's own drawings in setup/, pasted over the converted picture, in its
+ * 256 colours. MENUS2 becomes 8 planes deep with it, and the game stores the
+ * logo cut from it (sprite 0xE0) 8 deep on the AGA Amiga (spriteNumPlanes). */
+static const struct {
+    const char *name, *file;
+    int32_t     x, y;
+} kAgaPatches[] = {
+    { "LOADER1", "setup/LOADER1_AGA.bmp", 200, 72 },
+    { "MENUS2",  "setup/MENUS2_AGA.bmp",   72, 24 },
+};
+
+static int32_t apply_aga_patch(SdJob *job, const char *name, SgImage *img, char *err)
+{
+    for (uint32_t i = 0; i < sizeof kAgaPatches / sizeof kAgaPatches[0]; i++) {
+        if (strcmp(kAgaPatches[i].name, name) != 0)
+            continue;
+        char path[1100];
+        SgImage patch;
+        Sg_PathJoin(path, sizeof path, job->resDir, kAgaPatches[i].file);
+        if (SgImage_ReadBmp(&patch, path, err) != 0)
+            return -1;
+        const int32_t x = kAgaPatches[i].x, y = kAgaPatches[i].y;
+        int32_t rc = 0;
+        if (x + patch.w > img->w || y + patch.h > img->h) {
+            snprintf(err, 256, "%s does not fit %s at %d,%d", kAgaPatches[i].file, name, (int)x, (int)y);
+            rc = -1;
+        }
+        for (int32_t row = 0; row < patch.h && rc == 0; row++)
+            memcpy(img->px + (y + row) * img->w + x, patch.px + row * patch.w, (size_t)patch.w);
+        SgImage_Free(&patch);
+        return rc;
+    }
+    return 0;
+}
+
 static int32_t write_raw(SdJob *job, const char *rel, const SgImage *img, char *err)
 {
     SgBuf raw;
@@ -227,7 +263,7 @@ static int32_t make_banks(SdJob *job, int32_t *done, int32_t total, char *err)
     int32_t rc = Sg_FontExtend(&banks[SG_BANK_CHARSET], glyphs, err);
     for (int32_t b = 0; b < SG_BANK_COUNT; b++) {
         char rel[64];
-        if (rc == 0) {
+        if (rc == 0 && (rc = apply_aga_patch(job, Sg_BankNames[b], &banks[b], err)) == 0) {
             snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", Sg_BankNames[b]);
             rc = write_raw(job, rel, &banks[b], err);
             tick(job, done, total);
@@ -296,7 +332,8 @@ static int32_t step_aga_amiga(SdJob *job, int32_t *done, int32_t total, char *er
         if (rc != 0)
             return -1;
         snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", kAmigaPictures[i]);
-        rc = write_raw(job, rel, &img, err);
+        if ((rc = apply_aga_patch(job, kAmigaPictures[i], &img, err)) == 0)
+            rc = write_raw(job, rel, &img, err);
         SgImage_Free(&img);
         if (rc != 0)
             return -1;

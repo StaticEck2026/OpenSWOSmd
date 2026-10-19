@@ -219,6 +219,10 @@ extern volatile uint16_t g_blitQActive;
 
 #define SOCCER_S_SPRITE_FIRST         0x447
 #define SOCCER_S_SPRITE_LAST          0x486
+/* The menus' "Sensible World of Soccer" logo, cut whole from MENUS2. On AGA its ball
+ * is redrawn in the 256 colours (tools/swosdata, setup/MENUS2_AGA.bmp), so it is
+ * stored 8 planes deep like SOCCER_S. */
+#define MENU_LOGO_SPRITE              0x0E0
 
 /* The in-match RUNNING frames of both teams, the goalkeepers and the referee: 15 lines,
  * one word wide, linked (mask shared by the planes). On AGA they are stored 8 planes deep
@@ -262,6 +266,8 @@ static inline uint16_t spriteNumPlanes(int16_t ordinal)
     if ((uint16_t)ordinal >= SOCCER_S_SPRITE_FIRST &&
         (uint16_t)ordinal <= SOCCER_S_SPRITE_LAST)
         return PITCH_NUM_PLANES;   /* SOCCER_S bank is genuinely 8-plane */
+    if ((uint16_t)ordinal == MENU_LOGO_SPRITE)
+        return PITCH_NUM_PLANES;   /* the logo's AGA ball uses the 256 colours */
     if (spriteIsPadded8(ordinal))
         return PITCH_NUM_PLANES;   /* a running frame: 4 colour planes + 4 of zeros */
 #else
