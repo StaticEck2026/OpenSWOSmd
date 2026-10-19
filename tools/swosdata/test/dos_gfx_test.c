@@ -12,33 +12,33 @@
  */
 #include "dos_pitch.h"
 #include "dos_picture.h"
-#include "sd_util.h"
+#include "sg_util.h"
 
 #include <stdio.h>
 #include <string.h>
 
 static int32_t bad = 0;
 
-static int32_t load_unpacked(const char *dir, const char *name, SdBuf *out)
+static int32_t load_unpacked(const char *dir, const char *name, SgBuf *out)
 {
     char path[1024], err[256];
-    SdBuf raw;
-    if (Sd_FindNoCase(dir, name, path, sizeof path) || Sd_ReadFile(path, &raw, err)) {
+    SgBuf raw;
+    if (Sg_FindNoCase(dir, name, path, sizeof path) || Sg_ReadFile(path, &raw, err)) {
         printf("  %s: no reference in %s\n", name, dir);
         return -1;
     }
-    if (Sd_RncUnpack(&raw, out, err)) {
+    if (Sg_RncUnpack(&raw, out, err)) {
         printf("  %s: %s\n", name, err);
-        Sd_BufFree(&raw);
+        Sg_BufFree(&raw);
         return -1;
     }
-    Sd_BufFree(&raw);
+    Sg_BufFree(&raw);
     return 0;
 }
 
-static void check_map(const char *agaDir, const char *name, const SdBuf *map)
+static void check_map(const char *agaDir, const char *name, const SgBuf *map)
 {
-    SdBuf ref;
+    SgBuf ref;
     uint32_t i, diff = 0, n;
     if (!agaDir || load_unpacked(agaDir, name, &ref))
         return;
@@ -52,19 +52,19 @@ static void check_map(const char *agaDir, const char *name, const SdBuf *map)
                (unsigned)ref.size, (unsigned)diff);
         bad = 1;
     }
-    Sd_BufFree(&ref);
+    Sg_BufFree(&ref);
 }
 
-static void check_picture(const char *agaDir, const char *name, const SdImage *img)
+static void check_picture(const char *agaDir, const char *name, const SgImage *img)
 {
-    SdBuf ref;
+    SgBuf ref;
     int32_t x, y, p, planes = 8, bpr = img->w / 8, diff = 0;
     if (!agaDir || load_unpacked(agaDir, name, &ref))
         return;
     if (ref.size != (uint32_t)(bpr * planes * img->h)) {
         printf("  %s: %u bytes, not %d x %d x 8 planes\n", name, (unsigned)ref.size, img->w, img->h);
         bad = 1;
-        Sd_BufFree(&ref);
+        Sg_BufFree(&ref);
         return;
     }
     for (y = 0; y < img->h; y++)
@@ -80,7 +80,7 @@ static void check_picture(const char *agaDir, const char *name, const SdImage *i
         printf("  %s: DIFFERS (%d of %d pixels)\n", name, diff, img->w * img->h);
         bad = 1;
     }
-    Sd_BufFree(&ref);
+    Sg_BufFree(&ref);
 }
 
 static void pitches(const char *srcDir, const char *prefix, const char *outDir, const char *agaDir)
@@ -88,22 +88,22 @@ static void pitches(const char *srcDir, const char *prefix, const char *outDir, 
     char err[256], name[64], path[1024];
     int32_t n;
     for (n = 1; n <= 6; n++) {
-        SdBuf map;
+        SgBuf map;
         snprintf(name, sizeof name, "%s%d.MAP", prefix, (int)n);
-        if (Sd_DosPitchToAgaMap(srcDir, n, &map, err)) {
+        if (Sg_DosPitchToAgaMap(srcDir, n, &map, err)) {
             printf("FAIL %s: %s\n", name, err);
             bad = 1;
             continue;
         }
-        Sd_PathJoin(path, sizeof path, outDir, name);
-        if (Sd_WriteFile(path, map.data, map.size, err)) {
+        Sg_PathJoin(path, sizeof path, outDir, name);
+        if (Sg_WriteFile(path, map.data, map.size, err)) {
             printf("FAIL %s\n", err);
             bad = 1;
         }
         printf("%s: %u bytes%s\n", name, (unsigned)map.size,
-               map.size > SD_PITCH_AGA_BUFFER ? "  -- OVER the pitch buffer" : "");
+               map.size > SG_PITCH_AGA_BUFFER ? "  -- OVER the pitch buffer" : "");
         check_map(agaDir, name, &map);
-        Sd_BufFree(&map);
+        Sg_BufFree(&map);
     }
 }
 
@@ -111,27 +111,27 @@ static void picture(const char *dosDir, const char *in, const char *out, const c
                     const char *outDir, const char *agaDir)
 {
     char err[256], path[1024];
-    SdImage pic, big;
+    SgImage pic, big;
     int32_t tc;
-    if (Sd_FindNoCase(dosDir, in, path, sizeof path)) {
+    if (Sg_FindNoCase(dosDir, in, path, sizeof path)) {
         printf("FAIL %s is not in %s\n", in, dosDir);
         bad = 1;
         return;
     }
-    if (Sd_DosPictureLoadEx(path, &pic, &tc, err) || Sd_DosPictureScaleToAmiga(&pic, &big, err)) {
+    if (Sg_DosPictureLoadEx(path, &pic, &tc, err) || Sg_DosPictureScaleToAmiga(&pic, &big, err)) {
         printf("FAIL %s: %s\n", in, err);
         bad = 1;
         return;
     }
-    Sd_PathJoin(path, sizeof path, outDir, out);
-    if (Sd_DosPictureWriteBmp(&big, path, err)) {
+    Sg_PathJoin(path, sizeof path, outDir, out);
+    if (Sg_DosPictureWriteBmp(&big, path, err)) {
         printf("FAIL %s\n", err);
         bad = 1;
     }
     printf("%s -> %s: %dx%d, text colour %d\n", in, out, big.w, big.h, (int)tc);
     check_picture(agaDir, raw, &big);
-    SdImage_Free(&pic);
-    SdImage_Free(&big);
+    SgImage_Free(&pic);
+    SgImage_Free(&big);
 }
 
 int main(int argc, char **argv)

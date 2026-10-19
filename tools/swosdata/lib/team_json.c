@@ -409,7 +409,7 @@ static void j_field(Jw *w, const char *key, const uint8_t *s, uint32_t len)
 /* ------------------------------------------------------------ records */
 
 static int32_t s8(uint8_t v) { return (int8_t)v; }
-static int32_t s16(const uint8_t *p) { return (int16_t)Sd_Be16(p); }
+static int32_t s16(const uint8_t *p) { return (int16_t)Sg_Be16(p); }
 
 static void emit_player(Jw *w, const uint8_t *b, const char *uuid)
 {
@@ -520,11 +520,11 @@ static void emit_team(Jw *w, const uint8_t *b, int32_t withIds)
     close_(w, "}");
 }
 
-int32_t Sd_TeamFileToJson(const char *fileName, const SdBuf *raw, SdBuf *outJson, char *err)
+int32_t Sd_TeamFileToJson(const char *fileName, const SgBuf *raw, SgBuf *outJson, char *err)
 {
     SdTeamFileType type = Sd_TeamFileType(fileName);
     const char *base = base_name(fileName);
-    SdBuf blob;
+    SgBuf blob;
     Jw w;
     uint32_t n, i;
     char fileUpper[64], cname[64];
@@ -535,7 +535,7 @@ int32_t Sd_TeamFileToJson(const char *fileName, const SdBuf *raw, SdBuf *outJson
         snprintf(err, 256, "%s: not a team database file", base);
         return -1;
     }
-    if (Sd_RncUnpack(raw, &blob, err))
+    if (Sg_RncUnpack(raw, &blob, err))
         return -1;
 
     memset(&w, 0, sizeof w);
@@ -546,7 +546,7 @@ int32_t Sd_TeamFileToJson(const char *fileName, const SdBuf *raw, SdBuf *outJson
     open_(&w, NULL, "{");
     if (type == SD_TEAMFILE_TEAM) {
         const uint8_t *recs = blob.data + 2;
-        uint32_t count = blob.size >= 2 ? Sd_Be16(blob.data) : 0;
+        uint32_t count = blob.size >= 2 ? Sg_Be16(blob.data) : 0;
         n = blob.size >= 2 ? (blob.size - 2) / TEAM_REC_SIZE : 0;
         if (count < n)
             n = count;                 /* parse_blob stops at a short record */
@@ -594,7 +594,7 @@ int32_t Sd_TeamFileToJson(const char *fileName, const SdBuf *raw, SdBuf *outJson
         close_(&w, "]");
     }
     close_(&w, "}");
-    Sd_BufFree(&blob);
+    Sg_BufFree(&blob);
 
     if (w.oom) {
         free(w.data);

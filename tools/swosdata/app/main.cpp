@@ -56,11 +56,6 @@ std::string Shown(std::string p) {
   return p;
 }
 
-std::string BaseName(const std::string& p) {
-  const size_t cut = p.find_last_of("/\\");
-  return cut == std::string::npos ? p : p.substr(cut + 1);
-}
-
 // --------------------------------------------------------------- pickers ---
 
 #ifdef SD_WITH_DIALOGS
@@ -90,37 +85,22 @@ std::string PickFolder(const std::string& start) {
 #endif
 }
 
-std::vector<std::string> PickFiles(const char* filterName, const char* filterSpec, bool multiple) {
-  std::vector<std::string> picked;
+// One file, of the kinds `filterSpec` lists ("adf", "jag,j64"): "" when the
+// player cancelled.
+std::string PickFile(const char* filterName, const char* filterSpec) {
+  std::string picked;
 #ifdef SD_WITH_DIALOGS
   NfdSession s;
   if (!s.ok) return picked;
   const nfdu8filteritem_t filter[1] = {{filterName, filterSpec}};
-  if (multiple) {
-    const nfdpathset_t* set = nullptr;
-    if (NFD_OpenDialogMultipleU8(&set, filter, 1, nullptr) == NFD_OKAY && set) {
-      nfdpathsetsize_t n = 0;
-      NFD_PathSet_GetCount(set, &n);
-      for (nfdpathsetsize_t i = 0; i < n; i++) {
-        nfdu8char_t* p = nullptr;
-        if (NFD_PathSet_GetPathU8(set, i, &p) == NFD_OKAY && p) {
-          picked.emplace_back(p);
-          NFD_PathSet_FreePathU8(p);
-        }
-      }
-      NFD_PathSet_Free(set);
-    }
-  } else {
-    nfdu8char_t* p = nullptr;
-    if (NFD_OpenDialogU8(&p, filter, 1, nullptr) == NFD_OKAY && p) {
-      picked.emplace_back(p);
-      NFD_FreePathU8(p);
-    }
+  nfdu8char_t* p = nullptr;
+  if (NFD_OpenDialogU8(&p, filter, 1, nullptr) == NFD_OKAY && p) {
+    picked = p;
+    NFD_FreePathU8(p);
   }
 #else
   (void)filterName;
   (void)filterSpec;
-  (void)multiple;
 #endif
   return picked;
 }
@@ -246,27 +226,195 @@ struct App {
     w().set_notice_error(error);
   }
 
+  // ------------------------------------------------------------ the rows ---
+
+  // The five sources, each a path the player can type, paste, browse for or
+  // have found by "Choose a folder". A path that is not the thing its row asks
+  // for stays in the box (so it can be corrected), marked, and is not used.
+  enum Row { ROW_PC, ROW_DISK1, ROW_DISK2, ROW_JAG, ROW_2020, ROW_COUNT };
+  std::string unusable[ROW_COUNT];
+  std::shared_ptr<slint::VectorModel<SourceRow>> rows;
+
+  char* RowPath(int r) {
+    switch (r) {
+      case ROW_PC: return src.dosDir;
+      case ROW_DISK1: return src.adf1;
+      case ROW_DISK2: return src.adf2;
+      case ROW_JAG: return src.jagRom;
+      default: return src.s2020Dir;
+    }
+  }
+
+  SourceRow MakeRow(int r) {
+    static const char* const kLabels[ROW_COUNT] = {
+        "PC game folder", "Amiga disk 1", "Amiga disk 2", "Jaguar cartridge (optional)", "SWOS 2020 (optional)"};
+    static const char* const kHints[ROW_COUNT] = {
+        "the folder with SPRITE.DAT and DATA in it", "disk 1 image (.adf)", "disk 2 image (.adf)",
+        "Sensible Soccer International Edition (.jag)", "the SWOS 2020 install folder"};
+    SourceRow row;
+    row.label = kLabels[r];
+    row.placeholder = kHints[r];
+    const char* path = RowPath(r);
+    row.value = Str(!unusable[r].empty() ? unusable[r] : path[0] ? Shown(path) : std::string());
+    row.state = !unusable[r].empty() ? 2 : path[0] ? 1 : 0;
+    return row;
+  }
+
+  // In place: rebuilding the model would take the focus from the box the
+  // player is typing in.
+  void RefreshRows() {
+    if (!rows) {
+      rows = std::make_shared<slint::VectorModel<SourceRow>>();
+      for (int r = 0; r < ROW_COUNT; r++) rows->push_back(MakeRow(r));
+      w().set_sources(rows);
+      return;
+    }
+    for (int r = 0; r < ROW_COUNT; r++) rows->set_row_data(r, MakeRow(r));
+  }
+
+  // A pasted path: spaces around it and the quotes Windows' "Copy as path"
+  // puts round it go; ~/ is the home folder.
+  static std::string CleanPath(std::string p) {
+    while (!p.empty() && (p.back() == ' ' || p.back() == '\t' || p.back() == '\r' || p.back() == '\n')) p.pop_back();
+    size_t b = 0;
+    while (b < p.size() && (p[b] == ' ' || p[b] == '\t')) b++;
+    p = p.substr(b);
+    if (p.size() >= 2 && ((p.front() == '"' && p.back() == '"') || (p.front() == '\'' && p.back() == '\'')))
+      p = p.substr(1, p.size() - 2);
+#ifndef _WIN32
+    if (p.rfind("~/", 0) == 0) {
+      const char* home = std::getenv("HOME");
+      if (home) p = std::string(home) + p.substr(1);
+    }
+#endif
+    return p;
+  }
+
+  // Put `text` in row r. Returns what to tell the player ("" for nothing).
+  std::string SetRow(int r, const std::string& text) {
+    const std::string path = CleanPath(text);
+    char* dst = RowPath(r);
+    unusable[r].clear();
+    if (path.empty()) {
+      dst[0] = '\0';
+      return "";
+    }
+    SdSources found{};
+    SdSources_AddFile(&found, path.c_str());
+    auto take = [](char* to, const char* from) { std::snprintf(to, 1024, "%s", from); };
+    switch (r) {
+      case ROW_PC:
+        if (found.dosDir[0]) { take(dst, found.dosDir); return ""; }
+        dst[0] = '\0';
+        unusable[r] = path;
+        return found.s2020Dir[0] ? "That is SWOS 2020, not the PC game: it goes in the SWOS 2020 row."
+                                 : "Not the PC game's folder: it is the one with SPRITE.DAT and DATA in it.";
+      case ROW_DISK1:
+      case ROW_DISK2: {
+        const int other = r == ROW_DISK1 ? ROW_DISK2 : ROW_DISK1;
+        const char* mine = r == ROW_DISK1 ? found.adf1 : found.adf2;
+        const char* theirs = r == ROW_DISK1 ? found.adf2 : found.adf1;
+        if (mine[0]) { take(dst, mine); return ""; }
+        dst[0] = '\0';
+        if (theirs[0]) {  // the other disk: put it where it belongs
+          take(RowPath(other), theirs);
+          unusable[other].clear();
+          return std::string("That is disk ") + (other == ROW_DISK1 ? "1" : "2") + ", so it went in that row.";
+        }
+        unusable[r] = path;
+        return "Not a Sensible World of Soccer disk image (.adf). The two disks are named SWOS and SWOS2.";
+      }
+      case ROW_JAG:
+        if (found.jagRom[0]) { take(dst, found.jagRom); return ""; }
+        dst[0] = '\0';
+        unusable[r] = path;
+        return "Not the Sensible Soccer Jaguar cartridge (a 2 MB .jag, .j64, .rom or .bin).";
+      default:
+        if (found.s2020Dir[0]) { take(dst, found.s2020Dir); return ""; }
+        dst[0] = '\0';
+        unusable[r] = path;
+        return "Not a SWOS 2020 install: it is the folder with gameLauncher.exe and the swos folder in it.";
+    }
+  }
+
+  // While typing: only the mark and the plan follow, nothing is said yet.
+  void RowEdited(int r, const std::string& text) {
+    SetRow(r, text);
+    SourceRow row = MakeRow(r);
+    row.value = Str(text);
+    rows->set_row_data(r, row);
+    RefreshPlan();
+  }
+
+  // Enter, or the box loses focus: the cleaned path, and what is wrong with it.
+  void RowCommitted(int r, const std::string& text) {
+    const std::string msg = SetRow(r, text);
+    Notice(msg, !msg.empty() && msg.rfind("That is disk", 0) != 0);
+    RefreshRows();
+    RefreshPlan();
+  }
+
+  void BrowseRow(int r) {
+    std::string picked;
+    const char* current = RowPath(r);
+    switch (r) {
+      case ROW_PC:
+      case ROW_2020: picked = PickFolder(current[0] ? current : std::string()); break;
+      case ROW_DISK1:
+      case ROW_DISK2: picked = PickFile("Amiga disk image", "adf"); break;
+      default: picked = PickFile("Jaguar cartridge", "jag,j64,rom,bin"); break;
+    }
+    if (picked.empty()) return;
+    RowCommitted(r, picked);
+  }
+
   void Refresh() {
-    auto rows = std::make_shared<slint::VectorModel<SourceRow>>();
+    RefreshRows();
+    RefreshPlan();
+  }
 
-    std::string amiga;
-    if (src.adf1[0] && src.adf2[0])
-      amiga = Shown(src.adf1) + "   +   " + BaseName(src.adf2);
-    else if (src.adf1[0])
-      amiga = Shown(src.adf1) + "   (disk 2 not found)";
-    else if (src.adf2[0])
-      amiga = Shown(src.adf2) + "   (disk 1 not found)";
+  // ------------------------------------------------------- installed ---
+
+  // What the assets folder already has: read at launch, after an install, and
+  // when the folder is changed.
+  SdInstalled installed[SD_STEP_COUNT] = {};
+
+  int InstalledState(int s) const {
+    const SdInstalled& n = installed[s];
+    return n.total > 0 && n.present == n.total ? 1 : n.present > 0 ? 2 : 0;
+  }
+
+  // Enough to play: the Amiga files, or the PC version's (its sound plus the
+  // AGA graphics made from it); and the teams either way.
+  bool Playable() const {
+    return (InstalledState(SD_STEP_AMIGA_FILES) == 1 ||
+            (InstalledState(SD_STEP_DOS_FILES) == 1 && InstalledState(SD_STEP_AGA_PC) == 1)) &&
+           InstalledState(SD_STEP_TEAMS) == 1;
+  }
+
+  void CheckInstalled() {
+    SwosData_Installed(outDir.c_str(), installed);
+    if (busy) return;
+    const bool playable = Playable();
+    w().set_done(playable);
+    w().set_status_error(false);
+    w().set_progress(playable ? 1.0f : 0.0f);
+    game = FindGame(exeDir);
+    w().set_can_play(playable && !game.empty());
+    bool any = false;
+    for (int s = 0; s < SD_STEP_COUNT; s++) any = any || installed[s].present > 0;
+    if (playable)
+      w().set_status(Str("The game's data is already installed in " + Shown(outDir) +
+                         ". Play, or install again from your copy to add to it."));
+    else if (any)
+      w().set_status(Str("Some of the game's data is in " + Shown(outDir) +
+                         ", but not enough to play: install from your copy."));
     else
-      amiga = "not found";
-    rows->push_back({"Amiga disks (2 .adf)", Str(amiga), bool(SdSources_HaveAmiga(&src))});
-    rows->push_back({"PC game folder", Str(src.dosDir[0] ? Shown(src.dosDir) : "not found"),
-                     bool(SdSources_HaveDos(&src))});
-    rows->push_back({"Jaguar cartridge (optional)", Str(src.jagRom[0] ? Shown(src.jagRom) : "not found"),
-                     bool(SdSources_HaveJaguar(&src))});
-    rows->push_back({"SWOS 2020 (optional)", Str(src.s2020Dir[0] ? Shown(src.s2020Dir) : "not found"),
-                     bool(SdSources_HaveSwos2020(&src))});
-    w().set_sources(rows);
+      w().set_status(Str("Ready."));
+  }
 
+  // Everything below the sources: where it goes and what will be made.
+  void RefreshPlan() {
     w().set_out_dir(Str(Shown(outDir)));
     w().set_out_note(Shown(outDir) == Shown(defaultOutDir)
                          ? Str("This is the folder the game reads its data from.")
@@ -282,7 +430,7 @@ struct App {
     bool any = false;
     for (int i = 0; i < SD_STEP_COUNT; i++) {
       (i < (SD_STEP_COUNT + 1) / 2 ? left : right)
-          ->push_back({Str(info[i].name), bool(info[i].ready), Str(info[i].needs)});
+          ->push_back({Str(info[i].name), bool(info[i].ready), Str(info[i].needs), InstalledState(i)});
       any = any || info[i].ready;
     }
     w().set_plan_left(left);
@@ -310,87 +458,82 @@ struct App {
 
   // ----------------------------------------------------------- sources ---
 
-  void BrowseAmiga() {
-    const auto files = PickFiles("Amiga disk images", "adf", true);
-    if (files.empty()) return;
-    // A fresh set, so a second Browse replaces the disks rather than being
-    // refused because a disk is already set.
-    SdSources fresh{};
-    std::vector<std::string> bad;
-    for (const auto& f : files)
-      if (SdSources_AddFile(&fresh, f.c_str()) != 0) bad.push_back(BaseName(f));
-    if (fresh.adf1[0]) std::memcpy(src.adf1, fresh.adf1, sizeof src.adf1);
-    if (fresh.adf2[0]) std::memcpy(src.adf2, fresh.adf2, sizeof src.adf2);
-    if (!bad.empty()) {
-      std::string names;
-      for (const auto& b : bad) names += (names.empty() ? "" : ", ") + b;
-      Notice("Not a Sensible World of Soccer disk: " + names +
-                 ". The two disks are the ones named SWOS and SWOS2.",
-             true);
-    } else if (!SdSources_HaveAmiga(&src)) {
-      Notice(std::string("Found disk ") + (src.adf1[0] ? "1" : "2") +
-                 ". Pick both .adf files (disk 1 and disk 2) together.",
-             false);
-    } else {
-      Notice("Both Amiga disks found.", false);
+  // The player chooses folders; each is searched, with every folder inside it,
+  // on the worker (a big folder takes a while), and what it finds is added to
+  // what earlier folders found. Stop keeps what was found so far.
+  std::atomic<bool> stopScan{false};
+
+  static int32_t CountFound(const SdSources& s) {
+    return (s.adf1[0] != 0) + (s.adf2[0] != 0) + (s.dosDir[0] != 0) + (s.jagRom[0] != 0) +
+           (s.s2020Dir[0] != 0);
+  }
+
+  struct ScanProgress {
+    App* app;
+    std::chrono::steady_clock::time_point last;
+  };
+
+  static int32_t OnScanFolder(void* user, int32_t folders, const char* dir) {
+    ScanProgress* p = static_cast<ScanProgress*>(user);
+    const auto now = std::chrono::steady_clock::now();
+    if (now - p->last >= std::chrono::milliseconds(100)) {
+      p->last = now;
+      App* app = p->app;
+      const std::string text = "Searching... " + std::to_string(folders) + " folders: " + Shown(dir);
+      slint::invoke_from_event_loop([app, text] { app->w().set_scan_status(Str(text)); });
     }
+    return p->app->stopScan.load() ? 1 : 0;
+  }
+
+  void StartScan(const std::string& dir) {
+    if (busy) return;
+    if (worker.joinable()) worker.join();
+    SetBusy(true);
+    stopScan = false;
+    w().set_scanning(true);
+    w().set_scan_status(Str("Searching " + Shown(dir) + " ..."));
+    Notice("", false);
+    const SdSources start = src;
+    worker = std::thread([this, dir, start] {
+      SdSources found = start;
+      ScanProgress progress{this, std::chrono::steady_clock::now()};
+      const int32_t rc = SdSources_ScanEx(&found, dir.c_str(), OnScanFolder, &progress);
+      slint::invoke_from_event_loop([this, dir, found, rc, start] { FinishScan(dir, found, rc < 0, start); });
+    });
+  }
+
+  void FinishScan(const std::string& dir, const SdSources& found, bool stopped, const SdSources& before) {
+    SetBusy(false);
+    w().set_scanning(false);
+    w().set_scan_status("");
+    src = found;
+    for (int r = 0; r < ROW_COUNT; r++)
+      if (RowPath(r)[0]) unusable[r].clear();
+    const int32_t added = CountFound(found) - CountFound(before);
+    std::string text;
+    bool error = false;
+    if (added > 0)
+      text = "Found " + std::to_string(added) + " in " + Shown(dir) + ".";
+    else {
+      text = "Nothing new in " + Shown(dir) + " or the folders inside it.";
+      error = true;
+    }
+    if (stopped) text += " (Stopped before the end.)";
+    if (!SdSources_HaveDos(&src) && !SdSources_HaveAmiga(&src))
+      text += " The game needs the PC version's folder or both Amiga disks.";
+    else if (src.adf1[0] != 0 && src.adf2[0] == 0)
+      text += " Disk 2 of the Amiga version is still missing.";
+    else if (src.adf2[0] != 0 && src.adf1[0] == 0)
+      text += " Disk 1 of the Amiga version is still missing.";
+    Notice(text, error);
     Refresh();
   }
 
-  void BrowsePc() {
-    const std::string dir = PickFolder(src.dosDir);
-    if (dir.empty()) return;
-    SdSources fresh{};
-    if (SdSources_AddFile(&fresh, dir.c_str()) != 0) {
-      Notice("Not the PC game's folder: " + dir +
-                 ". It is the folder with SPRITE.DAT and DATA in it (for GOG, the game's install folder).",
-             true);
-    } else {
-      std::memcpy(src.dosDir, fresh.dosDir, sizeof src.dosDir);
-      Notice("PC game found.", false);
-    }
-    Refresh();
-  }
-
-  void BrowseJaguar() {
-    const auto files = PickFiles("Jaguar cartridge", "jag,j64,rom,bin", false);
-    if (files.empty()) return;
-    SdSources fresh{};
-    if (SdSources_AddFile(&fresh, files[0].c_str()) != 0 || !fresh.jagRom[0]) {
-      Notice("Not the Sensible Soccer Jaguar cartridge: " + BaseName(files[0]) +
-                 " (a 2 MB .jag, .j64, .rom or .bin).",
-             true);
-    } else {
-      std::memcpy(src.jagRom, fresh.jagRom, sizeof src.jagRom);
-      Notice("Jaguar cartridge found.", false);
-    }
-    Refresh();
-  }
-
-  // SWOS 2020's pitches: the set picked in its launcher, from its game folder.
-  void BrowseSwos2020() {
-    const std::string dir = PickFolder(src.s2020Dir);
-    if (dir.empty()) return;
-    SdSources fresh{};
-    if (SdSources_AddFile(&fresh, dir.c_str()) != 0 || !fresh.s2020Dir[0]) {
-      Notice("Not a SWOS 2020 install: " + dir +
-                 ". It is the folder with gameLauncher.exe and the swos folder in it.",
-             true);
-    } else {
-      std::memcpy(src.s2020Dir, fresh.s2020Dir, sizeof src.s2020Dir);
-      Notice("SWOS 2020 found: its pitches are the set picked in its launcher.", false);
-    }
-    Refresh();
-  }
-
-  void Scan(const std::string& dir) {
-    const int32_t before = (src.adf1[0] != 0) + (src.adf2[0] != 0) + (src.dosDir[0] != 0) +
-                           (src.jagRom[0] != 0) + (src.s2020Dir[0] != 0);
-    const int32_t after = SdSources_Scan(&src, dir.c_str());
-    if (after > before)
-      Notice("Found " + std::to_string(after - before) + " new in " + dir + ".", false);
-    else
-      Notice("Nothing new found in " + dir + " (it and the folders inside it).", true);
+  void ClearSources() {
+    if (busy) return;
+    src = SdSources{};
+    for (auto& u : unusable) u.clear();
+    Notice("", false);
     Refresh();
   }
 
@@ -436,6 +579,8 @@ struct App {
   void FinishInstall(int32_t rc, const std::string& err) {
     Flush();
     SetBusy(false);
+    SwosData_Installed(outDir.c_str(), installed);
+    RefreshPlan();
     if (rc == 0) {
       w().set_progress(1.0f);
       w().set_done(true);
@@ -538,7 +683,8 @@ int Usage() {
       "usage: openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--drawer DIR]\n"
       "  --res DIR    the game's own files (with setup/glyphs.txt); default: beside\n"
       "               this program, else the nearest bin/ above it\n"
-      "  --scan DIR   look for the game's sources in DIR (repeatable)\n"
+      "  --scan DIR   look for the game's sources in DIR and every folder inside\n"
+      "               it (repeatable)\n"
       "  --out DIR    the assets folder to write (default: the one the game reads)\n"
       "  --drawer DIR an unpacked SWOS-Amiga.zip drawer to add the game data to\n"
       "testing: --auto (install, then fill --drawer)  --snapshot PREFIX  --quit  --play\n",
@@ -606,24 +752,26 @@ int main(int argc, char** argv) {
                true);
 #ifndef SD_WITH_DIALOGS
   else
-    app.Notice("This build has no file picker (built without dbus); start it with --scan DIR.", true);
+    app.Notice("This build has no folder picker (built without dbus); start it with --scan DIR.", true);
 #endif
-  ui->set_status(Str("Ready."));
+  // What an earlier run left: Play is there at once if the game can be played.
+  app.CheckInstalled();
+  app.RefreshPlan();
 
-  ui->on_browse_source([&app](int i) {
-    if (i == 0) app.BrowseAmiga();
-    else if (i == 1) app.BrowsePc();
-    else if (i == 2) app.BrowseJaguar();
-    else app.BrowseSwos2020();
-  });
-  ui->on_search_folder([&app] {
+  ui->on_choose_folder([&app] {
     const std::string dir = PickFolder({});
-    if (!dir.empty()) app.Scan(dir);
+    if (!dir.empty()) app.StartScan(dir);
   });
+  ui->on_stop_scan([&app] { app.stopScan = true; });
+  ui->on_browse_source([&app](int r) { app.BrowseRow(r); });
+  ui->on_source_edited([&app](int r, const slint::SharedString& t) { app.RowEdited(r, std::string(t)); });
+  ui->on_source_committed([&app](int r, const slint::SharedString& t) { app.RowCommitted(r, std::string(t)); });
+  ui->on_clear_sources([&app] { app.ClearSources(); });
   ui->on_change_out([&app] {
     const std::string dir = PickFolder(sd::IsDir(app.outDir) ? app.outDir : std::string());
     if (dir.empty()) return;
     app.outDir = dir;
+    app.CheckInstalled();
     app.Refresh();
   });
   ui->on_install([&app] { app.Install(); });

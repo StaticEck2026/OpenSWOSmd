@@ -141,8 +141,9 @@ tools/swosdata/build/swosdata --scan ~/Games/SWOS --scan ~/Amiga/ADF \
 
 Every file it writes is byte-for-byte the one the original game (or SWOS 2020) shipped (or,
 for the converted AGA and Jaguar graphics, the one this project's own
-converters always made); `tools/swosdata` is a C port of the
-[SwosGfx](https://github.com/benbaker76/SwosGfx) conversions plus an ADF reader.
+converters always made). `tools/swosdata` is built on
+[swosgfx](https://github.com/benbaker76/swosgfx) (the converters; a submodule at
+`third_party/swosgfx`, so `git submodule update --init` first) plus an ADF reader.
 
 **Where saves go differs by target**, because the two have different
 constraints:
@@ -812,11 +813,15 @@ the long version):
 
 ## Tools
 
-- **[SwosGfx](https://github.com/benbaker76/SwosGfx)** — converts SWOS graphics
-  (Amiga and DOS) to and from editable formats: pitches to BMP or Tiled maps and
-  back, raw bitplane screens to BMP and back, sprites and palettes. OpenSWOS's own
-  asset scripts use it, e.g. `scripts/make_credits_aga.py` (the AGA credits
-  backdrop) and `scripts/make_jag_graphics.py` (the Jaguar sprites).
+- **[swosgfx](https://github.com/benbaker76/swosgfx)** — converts SWOS graphics
+  (Amiga, PC and Jaguar) to and from editable formats: pitches to BMP or Tiled maps
+  and back, raw bitplane screens to BMP and back, sprites and palettes. A
+  command-line tool for Windows, macOS and Linux and a C library; OpenSWOS's data
+  setup is built on the library (`third_party/swosgfx`). It is the C/C++ rewrite
+  of the C# [SwosGfx](https://github.com/benbaker76/SwosGfx-CSharp), which
+  OpenSWOS's older asset scripts were written against, e.g.
+  `scripts/make_credits_aga.py` (the AGA credits backdrop) and
+  `scripts/make_jag_graphics.py` (the Jaguar sprites).
 
 ## License
 

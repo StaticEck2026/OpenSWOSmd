@@ -10,7 +10,7 @@
 #include "team_json.h"
 #include "dos2amiga.h"
 #include "font_extend.h"
-#include "jag2amiga.h"
+#include "jag_tier.h"
 #include "rnc_pack.h"
 
 #include <stdarg.h>
@@ -83,11 +83,11 @@ void SwosData_Plan(const SdJob *job, SdStepInfo info[SD_STEP_COUNT])
     info[SD_STEP_SWOS2020].ready = SdSources_HaveSwos2020(&job->src);
 }
 
-static int32_t write_out(SdJob *job, const char *rel, const SdBuf *b, char *err)
+static int32_t write_out(SdJob *job, const char *rel, const SgBuf *b, char *err)
 {
     char path[1100];
-    Sd_PathJoin(path, sizeof path, job->outDir, rel);
-    return Sd_WriteFile(path, b->data, b->size, err);
+    Sg_PathJoin(path, sizeof path, job->outDir, rel);
+    return Sg_WriteFile(path, b->data, b->size, err);
 }
 
 static void tick(SdJob *job, int32_t *done, int32_t total)
@@ -98,19 +98,19 @@ static void tick(SdJob *job, int32_t *done, int32_t total)
 
 static void glyphs_path(const SdJob *job, char *out, uint32_t cap)
 {
-    Sd_PathJoin(out, cap, job->resDir, "setup/glyphs.txt");
+    Sg_PathJoin(out, cap, job->resDir, "setup/glyphs.txt");
 }
 
-static int32_t write_packed(SdJob *job, const char *rel, const SdBuf *b, char *err);
+static int32_t write_packed(SdJob *job, const char *rel, const SgBuf *b, char *err);
 
 static int32_t step_amiga_files(SdJob *job, int32_t *done, int32_t total, char *err)
 {
     for (int32_t i = 0; g_sdAmigaCopy[i]; i++) {
-        SdBuf b;
+        SgBuf b;
         if (SdSources_ReadAmiga(&job->src, g_sdAmigaCopy[i], &b, err) != 0)
             return -1;
         int32_t rc = write_out(job, g_sdAmigaCopy[i], &b, err);
-        Sd_BufFree(&b);
+        Sg_BufFree(&b);
         if (rc != 0)
             return -1;
         if (job->progress)
@@ -118,23 +118,23 @@ static int32_t step_amiga_files(SdJob *job, int32_t *done, int32_t total, char *
     }
     /* The font, with the extra letters drawn in (written over the disk's own). */
     {
-        SdBuf raw, un, out;
-        SdImage img;
+        SgBuf raw, un, out;
+        SgImage img;
         char glyphs[1100];
         glyphs_path(job, glyphs, sizeof glyphs);
         if (SdSources_ReadAmiga(&job->src, "grafs/CHARSET.RAW", &raw, err) != 0)
             return -1;
-        int32_t rc = Sd_RncUnpack(&raw, &un, err);
-        Sd_BufFree(&raw);
-        if (rc == 0 && (rc = Sd_AmigaRawDecode(&un, 320, 256, 4, &img, err)) == 0) {
-            if ((rc = Sd_FontExtend(&img, glyphs, err)) == 0 &&
-                (rc = Sd_AmigaRawEncode(&img, 4, &out, err)) == 0) {
+        int32_t rc = Sg_RncUnpack(&raw, &un, err);
+        Sg_BufFree(&raw);
+        if (rc == 0 && (rc = Sg_AmigaRawDecode(&un, 320, 256, 4, &img, err)) == 0) {
+            if ((rc = Sg_FontExtend(&img, glyphs, err)) == 0 &&
+                (rc = Sg_AmigaRawEncode(&img, 4, &out, err)) == 0) {
                 rc = write_packed(job, "grafs/CHARSET.RAW", &out, err);
-                Sd_BufFree(&out);
+                Sg_BufFree(&out);
             }
-            SdImage_Free(&img);
+            SgImage_Free(&img);
         }
-        Sd_BufFree(&un);
+        Sg_BufFree(&un);
         if (rc != 0)
             return -1;
         tick(job, done, total);
@@ -154,11 +154,11 @@ static int32_t count_2020(void)
 static int32_t step_dos_files(SdJob *job, int32_t *done, int32_t total, char *err)
 {
     for (int32_t i = 0; g_sdDosCopy[i].dest; i++) {
-        SdBuf b;
+        SgBuf b;
         if (SdSources_ReadDos(&job->src, g_sdDosCopy[i].src, &b, err) != 0)
             return -1;
         int32_t rc = write_out(job, g_sdDosCopy[i].dest, &b, err);
-        Sd_BufFree(&b);
+        Sg_BufFree(&b);
         if (rc != 0)
             return -1;
         if (job->progress)
@@ -174,44 +174,44 @@ static const char *const kAmigaPictures[] = {
     "LOADER00", "LOADER01", "LOADER1", "LOADER10", "LOADER2", "LOADER3", "LOADER4",
     "LOADER5", "LOADER6", "LOADER7", "LOADER8A", "LOADER8B", "LOADER9", "DISK22", "OLDDISK1",
 };
-#define AGA_PC_COUNT (SD_BANK_COUNT + 2 + 6 + 1)   /* banks, MENUBG, MENUBG2, SWCPICH1-6, CREDITS */
+#define AGA_PC_COUNT (SG_BANK_COUNT + 2 + 6 + 1)   /* banks, MENUBG, MENUBG2, SWCPICH1-6, CREDITS */
 
 /* Packed as SwosGfx packed them (RNC method 2). Not optional: the game reads a
  * file whole into its screen buffer before unpacking it, so a 352x272 8-plane
  * picture (95,744 bytes) only fits packed. */
-static int32_t write_packed(SdJob *job, const char *rel, const SdBuf *b, char *err)
+static int32_t write_packed(SdJob *job, const char *rel, const SgBuf *b, char *err)
 {
-    SdBuf packed;
-    if (Sd_RncPackLikeSwosGfx(b, &packed, err) != 0)
+    SgBuf packed;
+    if (Sg_RncPackLikeSwosGfx(b, &packed, err) != 0)
         return -1;
     int32_t rc = write_out(job, rel, &packed, err);
-    Sd_BufFree(&packed);
+    Sg_BufFree(&packed);
     return rc;
 }
 
-static int32_t write_raw(SdJob *job, const char *rel, const SdImage *img, char *err)
+static int32_t write_raw(SdJob *job, const char *rel, const SgImage *img, char *err)
 {
-    SdBuf raw;
-    if (Sd_AmigaRawEncode(img, 0, &raw, err) != 0)
+    SgBuf raw;
+    if (Sg_AmigaRawEncode(img, 0, &raw, err) != 0)
         return -1;
     int32_t rc = write_packed(job, rel, &raw, err);
-    Sd_BufFree(&raw);
+    Sg_BufFree(&raw);
     return rc;
 }
 
 /* A PC picture, enlarged to the Amiga screen (SWTITLE -> MENUBG, STAD -> MENUBG2). */
-static int32_t make_backdrop(SdJob *job, const char *dosName, SdImage *out, char *err)
+static int32_t make_backdrop(SdJob *job, const char *dosName, SgImage *out, char *err)
 {
     char path[1100];
-    SdImage pic;
-    if (Sd_FindNoCase(job->src.dosDir, dosName, path, sizeof path) != 0) {
+    SgImage pic;
+    if (Sg_FindNoCase(job->src.dosDir, dosName, path, sizeof path) != 0) {
         snprintf(err, 256, "%s is not in the PC game folder", dosName);
         return -1;
     }
-    if (Sd_DosPictureLoad(path, &pic, err) != 0)
+    if (Sg_DosPictureLoad(path, &pic, err) != 0)
         return -1;
-    int32_t rc = Sd_DosPictureScaleToAmiga(&pic, out, err);
-    SdImage_Free(&pic);
+    int32_t rc = Sg_DosPictureScaleToAmiga(&pic, out, err);
+    SgImage_Free(&pic);
     return rc;
 }
 
@@ -219,27 +219,27 @@ static int32_t make_backdrop(SdJob *job, const char *dosName, SdImage *out, char
  * Amiga's banks keep them, and the extra letters drawn into the font. */
 static int32_t make_banks(SdJob *job, int32_t *done, int32_t total, char *err)
 {
-    SdImage banks[SD_BANK_COUNT];
+    SgImage banks[SG_BANK_COUNT];
     char glyphs[1100];
-    if (Sd_DosToAmigaBanks(job->src.dosDir, banks, err) != 0)
+    if (Sg_DosToAmigaBanks(job->src.dosDir, banks, err) != 0)
         return -1;
     glyphs_path(job, glyphs, sizeof glyphs);
-    int32_t rc = Sd_FontExtend(&banks[SD_BANK_CHARSET], glyphs, err);
-    for (int32_t b = 0; b < SD_BANK_COUNT; b++) {
+    int32_t rc = Sg_FontExtend(&banks[SG_BANK_CHARSET], glyphs, err);
+    for (int32_t b = 0; b < SG_BANK_COUNT; b++) {
         char rel[64];
         if (rc == 0) {
-            snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", Sd_BankNames[b]);
+            snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", Sg_BankNames[b]);
             rc = write_raw(job, rel, &banks[b], err);
             tick(job, done, total);
         }
-        SdImage_Free(&banks[b]);
+        SgImage_Free(&banks[b]);
     }
     return rc;
 }
 
 static int32_t step_aga_pc(SdJob *job, int32_t *done, int32_t total, char *err)
 {
-    SdImage menubg, menubg2, icons;
+    SgImage menubg, menubg2, icons;
     if (make_banks(job, done, total, err) != 0)
         return -1;
     if (make_backdrop(job, "SWTITLE.256", &menubg, err) != 0)
@@ -248,34 +248,34 @@ static int32_t step_aga_pc(SdJob *job, int32_t *done, int32_t total, char *err)
     tick(job, done, total);
     if (rc == 0 && (rc = make_backdrop(job, "STAD.256", &menubg2, err)) == 0) {
         rc = write_raw(job, "grafs_aga/MENUBG2.RAW", &menubg2, err);
-        SdImage_Free(&menubg2);
+        SgImage_Free(&menubg2);
         tick(job, done, total);
     }
     for (int32_t n = 1; n <= 6 && rc == 0; n++) {
-        SdBuf map;
+        SgBuf map;
         char rel[64];
-        if ((rc = Sd_DosPitchToAgaMap(job->src.dosDir, n, &map, err)) != 0)
+        if ((rc = Sg_DosPitchToAgaMap(job->src.dosDir, n, &map, err)) != 0)
             break;
         snprintf(rel, sizeof rel, "grafs_aga/SWCPICH%d.MAP", n);
         rc = write_packed(job, rel, &map, err);
-        Sd_BufFree(&map);
+        Sg_BufFree(&map);
         tick(job, done, total);
     }
     /* The credits backdrop: MENUBG with the project's own photos on it. */
     if (rc == 0) {
         char path[1100];
-        Sd_PathJoin(path, sizeof path, job->resDir, "data/credits_icons.bmp");
-        if ((rc = SdImage_ReadBmp(&icons, path, err)) == 0) {
-            SdBuf raw;
+        Sg_PathJoin(path, sizeof path, job->resDir, "data/credits_icons.bmp");
+        if ((rc = SgImage_ReadBmp(&icons, path, err)) == 0) {
+            SgBuf raw;
             if ((rc = Sd_MakeCreditsAga(&menubg, &icons, &raw, err)) == 0) {
                 rc = write_packed(job, "grafs_aga/CREDITS.RAW", &raw, err);
-                Sd_BufFree(&raw);
+                Sg_BufFree(&raw);
             }
-            SdImage_Free(&icons);
+            SgImage_Free(&icons);
         }
         tick(job, done, total);
     }
-    SdImage_Free(&menubg);
+    SgImage_Free(&menubg);
     if (rc == 0)
         logf_(job, "AGA from the PC game: %d files", AGA_PC_COUNT);
     return rc;
@@ -286,18 +286,18 @@ static int32_t step_aga_amiga(SdJob *job, int32_t *done, int32_t total, char *er
     int32_t count = (int32_t)(sizeof kAmigaPictures / sizeof kAmigaPictures[0]);
     for (int32_t i = 0; i < count; i++) {
         char rel[64];
-        SdBuf raw;
-        SdImage img;
+        SgBuf raw;
+        SgImage img;
         snprintf(rel, sizeof rel, "grafs/%s.RAW", kAmigaPictures[i]);
         if (SdSources_ReadAmiga(&job->src, rel, &raw, err) != 0)
             return -1;
-        int32_t rc = Sd_AmigaPictureTo256(kAmigaPictures[i], &raw, &img, err);
-        Sd_BufFree(&raw);
+        int32_t rc = Sg_AmigaPictureTo256(kAmigaPictures[i], &raw, &img, err);
+        Sg_BufFree(&raw);
         if (rc != 0)
             return -1;
         snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", kAmigaPictures[i]);
         rc = write_raw(job, rel, &img, err);
-        SdImage_Free(&img);
+        SgImage_Free(&img);
         if (rc != 0)
             return -1;
         tick(job, done, total);
@@ -324,7 +324,7 @@ static int32_t step_teams(SdJob *job, int32_t *done, int32_t total, char *err)
         const char *rel = g_sdAmigaCopy[i];
         if (strncmp(rel, "data/", 5) != 0)
             continue;
-        SdBuf raw, json;
+        SgBuf raw, json;
         char dosRel[64], name[64], out[96];
         snprintf(dosRel, sizeof dosRel, "DATA/%s", rel + 5);
         int32_t rc = fromAmiga ? SdSources_ReadAmiga(&job->src, rel, &raw, err)
@@ -336,25 +336,25 @@ static int32_t step_teams(SdJob *job, int32_t *done, int32_t total, char *err)
          * byte for byte: team files method 1, the cup pools and the player pool
          * method 2. */
         if (!fromAmiga) {
-            SdBuf packed = { NULL, 0 };
+            SgBuf packed = { NULL, 0 };
             int32_t method = strncmp(rel + 5, "TEAM.", 5) == 0 ? 1 : 2;
-            rc = Sd_RncPack(&raw, method, &packed, err);
+            rc = Sg_RncPack(&raw, method, &packed, err);
             if (rc == 0)
                 rc = write_out(job, rel, &packed, err);
-            Sd_BufFree(&packed);
+            Sg_BufFree(&packed);
             if (rc != 0) {
-                Sd_BufFree(&raw);
+                Sg_BufFree(&raw);
                 return -1;
             }
         }
         rc = Sd_TeamFileToJson(rel + 5, &raw, &json, err);
-        Sd_BufFree(&raw);
+        Sg_BufFree(&raw);
         if (rc != 0)
             return -1;
         Sd_TeamJsonName(rel + 5, name, sizeof name);
         snprintf(out, sizeof out, "data_json/teams/%s", name);
         rc = write_out(job, out, &json, err);
-        Sd_BufFree(&json);
+        Sg_BufFree(&json);
         if (rc != 0)
             return -1;
         tick(job, done, total);
@@ -371,7 +371,7 @@ static int32_t step_jaguar(SdJob *job, int32_t *done, int32_t total, char *err)
     SdJagFile files[SD_JAG_FILE_COUNT];
     uint32_t celebrations = 0;
     char setup[1100];
-    Sd_PathJoin(setup, sizeof setup, job->resDir, "setup");
+    Sg_PathJoin(setup, sizeof setup, job->resDir, "setup");
     if (Sd_JagBuild(job->src.jagRom, job->src.dosDir, setup, files, &celebrations, err) != 0)
         return -1;
     int32_t rc = 0;
@@ -395,27 +395,27 @@ static int32_t step_swos2020(SdJob *job, int32_t *done, int32_t total, char *err
 {
     for (int32_t i = 0; g_sd2020Copy[i].dest; i++) {
         char path[1100];
-        SdBuf b;
-        if (Sd_FindNoCase(job->src.s2020Dir, g_sd2020Copy[i].src, path, sizeof path) != 0) {
+        SgBuf b;
+        if (Sg_FindNoCase(job->src.s2020Dir, g_sd2020Copy[i].src, path, sizeof path) != 0) {
             snprintf(err, 256, "%s is not in SWOS 2020's game folder", g_sd2020Copy[i].src);
             return -1;
         }
-        if (Sd_ReadFile(path, &b, err) != 0)
+        if (Sg_ReadFile(path, &b, err) != 0)
             return -1;
         int32_t rc = write_out(job, g_sd2020Copy[i].dest, &b, err);
-        Sd_BufFree(&b);
+        Sg_BufFree(&b);
         if (rc != 0)
             return -1;
         tick(job, done, total);
     }
     for (int32_t n = 1; n <= 6; n++) {
-        SdBuf map;
+        SgBuf map;
         char rel[64];
-        if (Sd_DosPitchToAgaMap(job->src.s2020Dir, n, &map, err) != 0)
+        if (Sg_DosPitchToAgaMap(job->src.s2020Dir, n, &map, err) != 0)
             return -1;
         snprintf(rel, sizeof rel, "grafs_aga/P2020_%d.MAP", n);
         int32_t rc = write_out(job, rel, &map, err);
-        Sd_BufFree(&map);
+        Sg_BufFree(&map);
         if (rc != 0)
             return -1;
         tick(job, done, total);
@@ -468,6 +468,84 @@ int32_t SwosData_Run(SdJob *job, char *err)
     return rc;
 }
 
+/* ---- what is installed already ------------------------------------------ */
+
+static void count_file(const char *assetsDir, const char *rel, SdInstalled *n)
+{
+    char path[1100];
+    FILE *f;
+    n->total++;
+    Sg_PathJoin(path, sizeof path, assetsDir, rel);
+    if ((f = fopen(path, "rb")) != NULL) {
+        fclose(f);
+        n->present++;
+    } else if (Sg_FindNoCase(assetsDir, rel, path, sizeof path) == 0) {
+        n->present++;   /* the game finds its files in any case, and so do we */
+    }
+}
+
+/* The files each step writes, from the same lists the steps use. */
+void SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT])
+{
+    char rel[160];
+    memset(out, 0, sizeof(SdInstalled) * SD_STEP_COUNT);
+    if (!assetsDir || !assetsDir[0])
+        return;
+
+    SdInstalled *n = &out[SD_STEP_AMIGA_FILES];
+    for (int32_t i = 0; g_sdAmigaCopy[i]; i++)
+        count_file(assetsDir, g_sdAmigaCopy[i], n);
+
+    n = &out[SD_STEP_DOS_FILES];
+    for (int32_t i = 0; g_sdDosCopy[i].dest; i++)
+        count_file(assetsDir, g_sdDosCopy[i].dest, n);
+
+    n = &out[SD_STEP_AGA_PC];
+    for (int32_t b = 0; b < SG_BANK_COUNT; b++) {
+        snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", Sg_BankNames[b]);
+        count_file(assetsDir, rel, n);
+    }
+    count_file(assetsDir, "grafs_aga/MENUBG.RAW", n);
+    count_file(assetsDir, "grafs_aga/MENUBG2.RAW", n);
+    for (int32_t p = 1; p <= 6; p++) {
+        snprintf(rel, sizeof rel, "grafs_aga/SWCPICH%d.MAP", (int)p);
+        count_file(assetsDir, rel, n);
+    }
+    count_file(assetsDir, "grafs_aga/CREDITS.RAW", n);
+
+    n = &out[SD_STEP_AGA_AMIGA];
+    for (uint32_t i = 0; i < sizeof kAmigaPictures / sizeof kAmigaPictures[0]; i++) {
+        snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", kAmigaPictures[i]);
+        count_file(assetsDir, rel, n);
+    }
+
+    n = &out[SD_STEP_TEAMS];
+    for (int32_t i = 0; g_sdAmigaCopy[i]; i++) {
+        char name[64];
+        if (strncmp(g_sdAmigaCopy[i], "data/", 5) != 0)
+            continue;
+        Sd_TeamJsonName(g_sdAmigaCopy[i] + 5, name, sizeof name);
+        snprintf(rel, sizeof rel, "data_json/teams/%s", name);
+        count_file(assetsDir, rel, n);
+    }
+
+    n = &out[SD_STEP_JAGUAR];
+    for (int32_t b = 0; b < SG_JAG_BANK_COUNT; b++) {
+        snprintf(rel, sizeof rel, "grafs_jag/%s.RAW", Sg_JagBankNames[b]);
+        count_file(assetsDir, rel, n);
+    }
+    count_file(assetsDir, "grafs_jag/JAG.PAL", n);
+    count_file(assetsDir, "grafs_jag/JAGKITS.BIN", n);
+
+    n = &out[SD_STEP_SWOS2020];
+    for (int32_t i = 0; g_sd2020Copy[i].dest; i++)
+        count_file(assetsDir, g_sd2020Copy[i].dest, n);
+    for (int32_t p = 1; p <= 6; p++) {
+        snprintf(rel, sizeof rel, "grafs_aga/P2020_%d.MAP", (int)p);
+        count_file(assetsDir, rel, n);
+    }
+}
+
 void SwosData_DefaultAssetsDir(char *out, uint32_t cap)
 {
     const char *env = getenv("SWOS_ASSETS");
@@ -495,10 +573,10 @@ static int32_t copy_tree(const char *src, const char *dst, const char *rel, char
 {
     char dir[1100];
     int32_t count = 0;
-    Sd_PathJoin(dir, sizeof dir, src, rel);
+    Sg_PathJoin(dir, sizeof dir, src, rel);
 #ifdef _WIN32
     char pattern[1100];
-    Sd_PathJoin(pattern, sizeof pattern, dir, "*");
+    Sg_PathJoin(pattern, sizeof pattern, dir, "*");
     WIN32_FIND_DATAA fd;
     HANDLE h = FindFirstFileA(pattern, &fd);
     if (h == INVALID_HANDLE_VALUE)
@@ -515,13 +593,13 @@ static int32_t copy_tree(const char *src, const char *dst, const char *rel, char
         const char *name = e->d_name;
         char full[1100];
         struct stat st;
-        Sd_PathJoin(full, sizeof full, dir, name);
+        Sg_PathJoin(full, sizeof full, dir, name);
         int32_t isDir = stat(full, &st) == 0 && S_ISDIR(st.st_mode);
 #endif
         if (name[0] == '.')
             continue;
         char sub[1100];
-        Sd_PathJoin(sub, sizeof sub, rel, name);
+        Sg_PathJoin(sub, sizeof sub, rel, name);
         if (isDir) {
             int32_t n = copy_tree(src, dst, sub, err);
             if (n < 0) {
@@ -531,15 +609,15 @@ static int32_t copy_tree(const char *src, const char *dst, const char *rel, char
             count += n;
         } else {
             char from[1100], to[1100];
-            SdBuf b;
-            Sd_PathJoin(from, sizeof from, src, sub);
-            Sd_PathJoin(to, sizeof to, dst, sub);
-            if (Sd_ReadFile(from, &b, err) != 0 || Sd_WriteFile(to, b.data, b.size, err) != 0) {
-                Sd_BufFree(&b);
+            SgBuf b;
+            Sg_PathJoin(from, sizeof from, src, sub);
+            Sg_PathJoin(to, sizeof to, dst, sub);
+            if (Sg_ReadFile(from, &b, err) != 0 || Sg_WriteFile(to, b.data, b.size, err) != 0) {
+                Sg_BufFree(&b);
                 count = -1;
                 break;
             }
-            Sd_BufFree(&b);
+            Sg_BufFree(&b);
             count++;
         }
 #ifdef _WIN32
@@ -558,13 +636,13 @@ int32_t SwosData_FillAmigaDrawer(const char *assetsDir, const char *drawerDir,
 {
     static const char *const kTrees[] = { "data", "grafs", "grafs_aga", "sound" };
     char probe[1100];
-    if (Sd_FindNoCase(drawerDir, "SWOS2", probe, sizeof probe) != 0) {
+    if (Sg_FindNoCase(drawerDir, "SWOS2", probe, sizeof probe) != 0) {
         snprintf(err, 256, "%s is not a SWOS drawer (no SWOS2 in it): unpack SWOS-Amiga.zip first",
                  drawerDir);
         return -1;
     }
-    if (Sd_FindNoCase(assetsDir, "grafs/MENUS.RAW", probe, sizeof probe) != 0 ||
-        Sd_FindNoCase(assetsDir, "grafs_aga/MENUS.RAW", probe, sizeof probe) != 0) {
+    if (Sg_FindNoCase(assetsDir, "grafs/MENUS.RAW", probe, sizeof probe) != 0 ||
+        Sg_FindNoCase(assetsDir, "grafs_aga/MENUS.RAW", probe, sizeof probe) != 0) {
         snprintf(err, 256, "the game data is not complete: the Amiga version needs both the "
                            "Amiga disks and the PC game");
         return -1;
@@ -580,7 +658,7 @@ int32_t SwosData_FillAmigaDrawer(const char *assetsDir, const char *drawerDir,
         }
     }
     /* The program writes saves there but will not create the folder. */
-    Sd_PathJoin(probe, sizeof probe, drawerDir, "save");
-    Sd_MakeDirs(probe);
+    Sg_PathJoin(probe, sizeof probe, drawerDir, "save");
+    Sg_MakeDirs(probe);
     return 0;
 }

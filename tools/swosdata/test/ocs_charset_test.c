@@ -7,12 +7,12 @@
 int main(int argc, char **argv)
 {
     char err[256];
-    SdBuf in, un, ref, refu, out;
-    SdImage img;
+    SgBuf in, un, ref, refu, out;
+    SgImage img;
     if (argc != 4) return 2;
-    if (Sd_ReadFile(argv[1], &in, err) || Sd_RncUnpack(&in, &un, err) ||
-        Sd_AmigaRawDecode(&un, 320, 256, 4, &img, err) || Sd_FontExtend(&img, argv[2], err) ||
-        Sd_AmigaRawEncode(&img, 4, &out, err) || Sd_ReadFile(argv[3], &ref, err) || Sd_RncUnpack(&ref, &refu, err)) {
+    if (Sg_ReadFile(argv[1], &in, err) || Sg_RncUnpack(&in, &un, err) ||
+        Sg_AmigaRawDecode(&un, 320, 256, 4, &img, err) || Sg_FontExtend(&img, argv[2], err) ||
+        Sg_AmigaRawEncode(&img, 4, &out, err) || Sg_ReadFile(argv[3], &ref, err) || Sg_RncUnpack(&ref, &refu, err)) {
         printf("FAIL %s\n", err);
         return 1;
     }

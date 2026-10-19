@@ -52,6 +52,13 @@ void    SwosData_Plan(const SdJob *job, SdStepInfo info[SD_STEP_COUNT]);
  * ~/Library/Application Support/SWOS on macOS, ~/.swos elsewhere. */
 void    SwosData_DefaultAssetsDir(char *out, uint32_t cap);
 
+/* What an earlier run left in `assetsDir`: for each step, how many of the
+ * files it writes are there, of how many. A step is installed when all are. */
+typedef struct {
+    int32_t present, total;
+} SdInstalled;
+void    SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT]);
+
 /* Run every step whose sources are there. 0 when everything that ran
  * succeeded; otherwise `err` (256 bytes) names the first failure. */
 int32_t SwosData_Run(SdJob *job, char *err);

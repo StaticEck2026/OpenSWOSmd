@@ -24,7 +24,7 @@
  * BENBAKER76, ZKZ, PLAYAVELI, THD79 (menus.c k_creditsAgaNames). */
 static const int32_t k_photos[CA_COUNT] = { 1, 3, 0, 4 };
 
-int32_t Sd_MakeCreditsAga(const SdImage *bg, const SdImage *strip, SdBuf *outRaw, char *err)
+int32_t Sd_MakeCreditsAga(const SgImage *bg, const SgImage *strip, SgBuf *outRaw, char *err)
 {
     outRaw->data = NULL;
     outRaw->size = 0;
@@ -48,8 +48,8 @@ int32_t Sd_MakeCreditsAga(const SdImage *bg, const SdImage *strip, SdBuf *outRaw
         return -1;
     }
 
-    SdImage out;
-    if (SdImage_Init(&out, CA_W, CA_H)) {
+    SgImage out;
+    if (SgImage_Init(&out, CA_W, CA_H)) {
         snprintf(err, 256, "credits: out of memory");
         return -1;
     }
@@ -64,7 +64,7 @@ int32_t Sd_MakeCreditsAga(const SdImage *bg, const SdImage *strip, SdBuf *outRaw
                 out.px[(CA_PHOTO_Y + y) * CA_W + x0 + x] =
                     strip->px[y * strip->w + k_photos[p] * CA_PHOTO + x];
     }
-    int32_t rc = Sd_AmigaRawEncode(&out, 8, outRaw, err);
-    SdImage_Free(&out);
+    int32_t rc = Sg_AmigaRawEncode(&out, 8, outRaw, err);
+    SgImage_Free(&out);
     return rc;
 }

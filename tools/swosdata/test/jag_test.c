@@ -9,9 +9,9 @@
  * <BANK>.bmp, and the raw CJCGRAFS sheet with CJCGRAFS_JAGSHEET.bmp, so a
  * difference is found by pixel rather than by planar byte.
  */
-#include "jag2amiga.h"
-#include "sd_image.h"
-#include "sd_util.h"
+#include "jag_tier.h"
+#include "sg_image.h"
+#include "sg_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,12 +20,12 @@
 static int32_t CompareFile(const SdJagFile *f, const char *refDir)
 {
     char path[1024], err[256];
-    SdBuf ref;
+    SgBuf ref;
     uint32_t first = 0, diff = 0, n;
     int32_t bad;
 
-    Sd_PathJoin(path, sizeof path, refDir, f->name);
-    if (Sd_ReadFile(path, &ref, err) != 0) {
+    Sg_PathJoin(path, sizeof path, refDir, f->name);
+    if (Sg_ReadFile(path, &ref, err) != 0) {
         printf("%-12s no reference (%s)\n", f->name, err);
         return 1;
     }
@@ -44,26 +44,26 @@ static int32_t CompareFile(const SdJagFile *f, const char *refDir)
     else
         printf("%-12s identical (%u bytes)\n", f->name, (unsigned)f->data.size);
     bad = (diff || ref.size != f->data.size) ? 1 : 0;
-    Sd_BufFree(&ref);
+    Sg_BufFree(&ref);
     return bad;
 }
 
-static int32_t CompareBmp(const SdImage *img, const char *bmpDir, const char *name)
+static int32_t CompareBmp(const SgImage *img, const char *bmpDir, const char *name)
 {
     char path[1024], file[64], err[256];
-    SdImage ref;
+    SgImage ref;
     int32_t diff = 0, fx = -1, fy = -1, palDiff = 0;
 
     snprintf(file, sizeof file, "%s.bmp", name);
-    Sd_PathJoin(path, sizeof path, bmpDir, file);
+    Sg_PathJoin(path, sizeof path, bmpDir, file);
     memset(&ref, 0, sizeof ref);
-    if (SdImage_ReadBmp(&ref, path, err) != 0) {
+    if (SgImage_ReadBmp(&ref, path, err) != 0) {
         printf("  %-18s no reference (%s)\n", file, err);
         return 1;
     }
     if (ref.w != img->w || ref.h != img->h) {
         printf("  %-18s is %dx%d, ours %dx%d\n", file, (int)ref.w, (int)ref.h, (int)img->w, (int)img->h);
-        SdImage_Free(&ref);
+        SgImage_Free(&ref);
         return 1;
     }
     for (int32_t y = 0; y < img->h; y++)
@@ -78,7 +78,7 @@ static int32_t CompareBmp(const SdImage *img, const char *bmpDir, const char *na
                palDiff ? ", palette differs" : "");
     else
         printf("  %-18s identical\n", file);
-    SdImage_Free(&ref);
+    SgImage_Free(&ref);
     return (diff || palDiff) ? 1 : 0;
 }
 
@@ -98,12 +98,12 @@ int main(int argc, char **argv)
         return 1;
     }
     printf("celebrations drawn by hand: %s%s%s\n",
-           celeb & (1u << SD_JAG_CJCTEAM1) ? "CJCTEAM1 " : "",
-           celeb & (1u << SD_JAG_CJCTEAM2) ? "CJCTEAM2 " : "",
-           celeb & (1u << SD_JAG_CJCTEAM3) ? "CJCTEAM3" : "");
+           celeb & (1u << SG_JAG_CJCTEAM1) ? "CJCTEAM1 " : "",
+           celeb & (1u << SG_JAG_CJCTEAM2) ? "CJCTEAM2 " : "",
+           celeb & (1u << SG_JAG_CJCTEAM3) ? "CJCTEAM3" : "");
     for (int32_t i = 0; i < SD_JAG_FILE_COUNT; i++) {
-        Sd_PathJoin(path, sizeof path, argv[4], files[i].name);
-        if (Sd_WriteFile(path, files[i].data.data, files[i].data.size, err) != 0) {
+        Sg_PathJoin(path, sizeof path, argv[4], files[i].name);
+        if (Sg_WriteFile(path, files[i].data.data, files[i].data.size, err) != 0) {
             fprintf(stderr, "%s\n", err);
             bad = 1;
         }
@@ -113,22 +113,22 @@ int main(int argc, char **argv)
     Sd_JagFilesFree(files);
 
     if (argc > 6) {
-        SdImage banks[SD_JAG_BANK_COUNT], grafs;
-        SdBuf rom;
+        SgImage banks[SG_JAG_BANK_COUNT], grafs;
+        SgBuf rom;
 
-        if (Sd_ReadFile(argv[1], &rom, err) != 0 ||
-            Sd_JagBanks(&rom, argv[2], argv[3], banks, &grafs, NULL, err) != 0) {
+        if (Sg_ReadFile(argv[1], &rom, err) != 0 ||
+            Sg_JagBanks(&rom, argv[2], argv[3], banks, &grafs, NULL, err) != 0) {
             fprintf(stderr, "jag2amiga: %s\n", err);
             return 1;
         }
-        Sd_BufFree(&rom);
+        Sg_BufFree(&rom);
         printf("banks against %s:\n", argv[6]);
-        for (int32_t b = 0; b < SD_JAG_BANK_COUNT; b++) {
-            bad |= CompareBmp(&banks[b], argv[6], Sd_JagBankNames[b]);
-            SdImage_Free(&banks[b]);
+        for (int32_t b = 0; b < SG_JAG_BANK_COUNT; b++) {
+            bad |= CompareBmp(&banks[b], argv[6], Sg_JagBankNames[b]);
+            SgImage_Free(&banks[b]);
         }
         bad |= CompareBmp(&grafs, argv[6], "CJCGRAFS_JAGSHEET");
-        SdImage_Free(&grafs);
+        SgImage_Free(&grafs);
     }
     printf(bad ? "FAILED\n" : "all identical\n");
     return bad ? 1 : 0;

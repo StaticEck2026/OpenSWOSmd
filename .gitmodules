@@ -5,3 +5,6 @@
 	path = third_party/ggpo-x
 	url = https://github.com/benbaker76/ggpo-x.git
 	branch = openswos
+[submodule "third_party/swosgfx"]
+	path = third_party/swosgfx
+	url = https://github.com/benbaker76/swosgfx.git

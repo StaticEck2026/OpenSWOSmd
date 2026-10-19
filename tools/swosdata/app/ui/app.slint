@@ -1,20 +1,25 @@
 // OpenSWOS Setup: one window, top to bottom -- what is needed, where it was
 // found, where it goes, what will be made, and the button that makes it.
-import { ListView, ProgressIndicator } from "std-widgets.slint";
-import { Theme, TextButton, Link, Card } from "theme.slint";
+import { ListView, ProgressIndicator, Palette } from "std-widgets.slint";
+import { Theme, TextButton, Link, Card, IconButton, PathField } from "theme.slint";
 
 export { Theme }
 
+// One source: its path as shown, and its state -- 0 none, 1 found, 2 not usable.
 export struct SourceRow {
     label: string,
     value: string,
-    found: bool,
+    state: int,
+    placeholder: string,
 }
 
+// One step: `ready` when its sources are there (Install makes it), and what
+// the assets folder has of it already -- 0 nothing, 1 all of it, 2 some.
 export struct PlanStep {
     name: string,
     ready: bool,
     needs: string,
+    installed: int,
 }
 
 component PlanColumn inherits VerticalLayout {
@@ -26,22 +31,26 @@ component PlanColumn inherits VerticalLayout {
         HorizontalLayout {
             spacing: 8px;
             Text {
-                text: step.ready ? "✓" : "–";
+                text: step.ready || step.installed == 1 ? "✓" : "–";
                 width: 14px;
-                color: step.ready ? Theme.ok : Theme.text-dim;
+                color: step.ready || step.installed == 1 ? Theme.ok : Theme.text-dim;
             }
             Text {
                 text: step.name;
                 horizontal-stretch: 1;
-                color: step.ready ? Theme.text : Theme.text-dim;
+                color: step.ready || step.installed == 1 ? Theme.text : Theme.text-dim;
                 overflow: elide;
             }
             Text {
-                text: step.ready ? "ready" : "skipped";
-                color: step.ready ? Theme.ok : Theme.text-dim;
+                text: step.ready ? (step.installed == 1 ? "ready (installed)" : "ready")
+                    : step.installed == 1 ? "installed"
+                    : step.installed == 2 ? "incomplete"
+                    : "skipped";
+                color: step.ready || step.installed == 1 ? Theme.ok
+                     : step.installed == 2 ? Theme.danger : Theme.text-dim;
             }
         }
-        if !step.ready: Text {
+        if !step.ready && step.installed != 1: Text {
             x: 22px;
             text: "needs " + step.needs;
             font-size: 11px;
@@ -55,7 +64,7 @@ export component MainWindow inherits Window {
     title: "OpenSWOS Setup";
     icon: @image-url("../../../../packaging/linux/hicolor/256x256/apps/openswos.png");
     preferred-width: 820px;
-    preferred-height: 860px;
+    preferred-height: 900px;
     min-width: 700px;
     background: Theme.chrome;
     default-font-size: 13px;
@@ -65,7 +74,7 @@ export component MainWindow inherits Window {
     in property <bool> notice-error;
     in property <string> out-dir;
     in property <string> out-note;
-    // The plan in two columns, so the window fits a 900-pixel screen.
+    // The plan in two columns, so the window stays about 900 pixels tall.
     in property <[PlanStep]> plan-left;
     in property <[PlanStep]> plan-right;
     in property <bool> can-install;
@@ -80,15 +89,25 @@ export component MainWindow inherits Window {
     in property <string> drawer-status;
     in property <bool> drawer-error;
     in property <bool> can-pick: true;
+    in property <bool> scanning;
+    in property <string> scan-status;
 
+    callback choose-folder();
     callback browse-source(int);
-    callback search-folder();
+    callback source-edited(int, string);
+    callback source-committed(int, string);
+    callback stop-scan();
+    callback clear-sources();
     callback change-out();
     callback install();
     callback play();
     callback open-url(string);
     callback browse-drawer();
     callback fill-drawer();
+
+    init => {
+        Palette.color-scheme = ColorScheme.dark;
+    }
 
     // Each log line is one fixed-height row, so "scrolled to the bottom" is
     // arithmetic rather than a measurement that lags a frame behind.
@@ -121,7 +140,7 @@ export component MainWindow inherits Window {
                         color: Theme.text;
                     }
                     Text {
-                        text: "OpenSWOS does not include the original game's data. Point this at the copy you own — the PC version's game folder, the two Amiga floppy disk images (.adf) made from your disks, the Atari Jaguar cartridge and a SWOS 2020 install (for its pitches) if you have them — and it builds the files the game reads. Nothing is downloaded.";
+                        text: "OpenSWOS does not include the original game's data. Choose the folder your copy is in and it builds the files the game reads from it. Nothing is downloaded.";
                         wrap: word-wrap;
                         color: Theme.text-dim;
                     }
@@ -139,43 +158,69 @@ export component MainWindow inherits Window {
         // 2. Where the game is.
         Card {
             title: "Your copy of the game";
+            Text {
+                text: "Choose a folder and it, and every folder inside it, are searched for all of these. Or give each one yourself: paste its path, or press … to browse for it.";
+                wrap: word-wrap;
+                color: Theme.text-dim;
+                font-size: 12px;
+            }
             for row[i] in root.sources: HorizontalLayout {
-                spacing: 10px;
+                spacing: 8px;
                 Text {
                     text: row.label;
                     width: 190px;
                     color: Theme.text;
                     vertical-alignment: center;
                 }
-                Text {
-                    text: row.found ? "✓" : "–";
-                    width: 14px;
-                    color: row.found ? Theme.ok : Theme.text-dim;
-                    vertical-alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    Image {
+                        width: 16px;
+                        height: 16px;
+                        source: row.state == 1 ? @image-url("icons/circle-check.svg")
+                              : row.state == 2 ? @image-url("icons/alert-circle.svg")
+                              : @image-url("icons/circle-dashed.svg");
+                        colorize: row.state == 1 ? Theme.ok : row.state == 2 ? Theme.danger : Theme.text-dim;
+                    }
                 }
-                Text {
-                    text: row.value;
+                PathField {
                     horizontal-stretch: 1;
-                    color: row.found ? Theme.text : Theme.text-dim;
-                    overflow: elide;
-                    vertical-alignment: center;
+                    value: row.value;
+                    placeholder: row.placeholder;
+                    invalid: row.state == 2;
+                    enabled: !root.busy;
+                    edited(t) => { root.source-edited(i, t); }
+                    committed(t) => { root.source-committed(i, t); }
                 }
-                TextButton {
-                    label: "Browse…";
-                    width: 90px;
+                IconButton {
+                    icon: @image-url("icons/browse.svg");
+                    tooltip: "Browse for " + row.label;
                     enabled: !root.busy && root.can-pick;
                     clicked => { root.browse-source(i); }
                 }
             }
             HorizontalLayout {
                 spacing: 10px;
-                TextButton {
-                    label: "Search a folder…";
+                if !root.scanning: TextButton {
+                    label: "Choose a folder…";
+                    icon: @image-url("icons/folder-search.svg");
+                    primary: true;
                     enabled: !root.busy && root.can-pick;
-                    clicked => { root.search-folder(); }
+                    clicked => { root.choose-folder(); }
+                }
+                if root.scanning: TextButton {
+                    label: "Stop";
+                    icon: @image-url("icons/player-stop.svg");
+                    clicked => { root.stop-scan(); }
+                }
+                TextButton {
+                    label: "Start over";
+                    enabled: !root.busy;
+                    clicked => { root.clear-sources(); }
                 }
                 Text {
-                    text: root.notice;
+                    text: root.scanning ? root.scan-status : root.notice;
+                    overflow: elide;
                     horizontal-stretch: 1;
                     color: root.notice-error ? Theme.danger : Theme.text-dim;
                     wrap: word-wrap;
@@ -259,7 +304,7 @@ export component MainWindow inherits Window {
                 border-width: 1px;
                 border-color: Theme.line;
                 border-radius: 4px;
-                min-height: 76px;
+                min-height: 60px;
                 vertical-stretch: 1;
                 log-view := ListView {
                     x: 4px;

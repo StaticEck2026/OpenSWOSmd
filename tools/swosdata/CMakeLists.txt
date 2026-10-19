@@ -2,7 +2,7 @@
 # tool, and "OpenSWOS Setup", the window the Windows installer launches after
 # installing the game.
 #
-#   swosdata_lib     lib/*.c + the game's src/rnc.c. Plain C99, no UI.
+#   swosdata_lib     lib/*.c + third_party/swosgfx/lib/*.c. Plain C99, no UI.
 #   swosdata         cli/swosdata_cli.c (the Makefile builds the same tool).
 #   openswos-setup   app/main.cpp + app/ui/*.slint, on Slint.
 #
@@ -48,22 +48,26 @@ endif()
 
 # ------------------------------------------------------------------ library ---
 
+# lib/ is OpenSWOS's own half (the disks, the player's copy, the file lists, the
+# teams, the tiers); the converters are swosgfx's, the submodule
+# third_party/swosgfx (`git submodule update --init`).
+set(SWOSGFX_DIR "${OPENSWOS_ROOT}/third_party/swosgfx")
+if(NOT EXISTS "${SWOSGFX_DIR}/lib/sg_util.h")
+  message(FATAL_ERROR "third_party/swosgfx is empty: run `git submodule update --init` in the OpenSWOS checkout")
+endif()
 file(GLOB SD_LIB_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lib/*.c")
-add_library(swosdata_lib STATIC ${SD_LIB_SOURCES} "${OPENSWOS_ROOT}/src/rnc.c")
-# lib/ #includes the game's generated .inc tables from src/, and rnc.c the game's headers.
+file(GLOB SG_LIB_SOURCES CONFIGURE_DEPENDS "${SWOSGFX_DIR}/lib/*.c")
+add_library(swosdata_lib STATIC ${SD_LIB_SOURCES} ${SG_LIB_SOURCES})
 target_include_directories(swosdata_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/lib"
-  "${OPENSWOS_ROOT}/include"
-  "${OPENSWOS_ROOT}/src")
+  "${SWOSGFX_DIR}/lib")
 set_target_properties(swosdata_lib PROPERTIES OUTPUT_NAME swosdata)
 if(MSVC)
   target_compile_definitions(swosdata_lib PUBLIC _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_WARNINGS)
   target_compile_options(swosdata_lib PRIVATE /W3 /utf-8)
-  # src/rnc.c is the game's own file and uses __attribute__((used, ...)).
-  set_source_files_properties("${OPENSWOS_ROOT}/src/rnc.c" PROPERTIES
-    COMPILE_OPTIONS "/FI${CMAKE_CURRENT_SOURCE_DIR}/cmake/msvc_gcc_compat.h")
 else()
   target_compile_options(swosdata_lib PRIVATE -Wall -Wextra -Wno-unused-parameter)
+  target_link_libraries(swosdata_lib PUBLIC m)
 endif()
 
 # ---------------------------------------------------------------------- cli ---

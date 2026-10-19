@@ -146,6 +146,25 @@ void Adf_Close(Adf *adf)
 
 const char *Adf_VolumeName(const Adf *adf) { return adf->volume; }
 
+int32_t Adf_PeekVolumeName(const char *path, char out[32])
+{
+    uint8_t boot[4], root[BSIZE];
+    FILE *f = fopen(path, "rb");
+    if (!f)
+        return -1;
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    int32_t ok = (size == 901120 || size == 1802240) &&
+                 fseek(f, 0, SEEK_SET) == 0 && fread(boot, 1, 4, f) == 4 && memcmp(boot, "DOS", 3) == 0 &&
+                 fseek(f, (size / BSIZE / 2) * BSIZE, SEEK_SET) == 0 && fread(root, 1, BSIZE, f) == BSIZE &&
+                 field(root, 0) == T_HEADER && (int32_t)field(root, 508) == ST_ROOT && checksum_ok(root);
+    fclose(f);
+    if (!ok)
+        return -1;
+    block_name(root, out);
+    return 0;
+}
+
 /* Find `name` among the entries of directory block `dir`; 0 when it is not
  * there. Walks every hash chain rather than hashing, so the international and
  * plain name hashes both work. */

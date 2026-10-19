@@ -1,5 +1,6 @@
 // OpenSWOS Setup's look: StorageAgent's dark palette and buttons, cut down to
 // what a one-page setup window uses.
+import { LineEdit } from "std-widgets.slint";
 export global Theme {
     out property <color> chrome:   #0d1014;
     out property <color> panel:    #1a1f27;
@@ -17,12 +18,13 @@ export global Theme {
 
 export component TextButton inherits Rectangle {
     in property <string> label;
+    in property <image> icon;       // optional, one colour, left of the label
     in property <bool> primary: false;
     in property <bool> enabled: true;
     callback clicked();
 
     height: 28px;
-    min-width: t.preferred-width + 24px;
+    min-width: content.preferred-width + 24px;
     border-radius: 4px;
     border-width: 1px;
     border-color: root.primary && root.enabled ? Theme.accent : Theme.sunken;
@@ -33,15 +35,23 @@ export component TextButton inherits Rectangle {
         : area.has-hover ? Theme.hover
         : Theme.panel;
 
-    t := Text {
-        text: root.label;
-        font-size: 13px;
-        font-weight: root.primary ? 700 : 400;
-        color: !root.enabled ? Theme.sunken : root.primary ? #ffffff : Theme.text;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-        width: 100%;
-        height: 100%;
+    content := HorizontalLayout {
+        alignment: center;
+        spacing: 6px;
+        if root.icon.width > 0: Image {
+            source: root.icon;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+            colorize: !root.enabled ? Theme.sunken : root.primary ? #ffffff : Theme.text;
+        }
+        Text {
+            text: root.label;
+            font-size: 13px;
+            font-weight: root.primary ? 700 : 400;
+            color: !root.enabled ? Theme.sunken : root.primary ? #ffffff : Theme.text;
+            vertical-alignment: center;
+        }
     }
     area := TouchArea {
         enabled: root.enabled;
@@ -83,5 +93,78 @@ export component Card inherits Rectangle {
             color: Theme.text;
         }
         @children
+    }
+}
+
+// A square button with a one-colour icon, tinted to the theme.
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    in property <string> tooltip;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: Theme.sunken;
+    background: !root.enabled ? Theme.panel
+        : area.pressed ? Theme.line
+        : area.has-hover ? Theme.hover
+        : Theme.panel;
+    accessible-role: button;
+    accessible-label: root.tooltip;
+
+    Image {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        colorize: root.enabled ? Theme.text : Theme.sunken;
+    }
+    area := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}
+
+// A path to type or paste. edited() on every change, committed() on Enter
+// or when it loses focus; `invalid` draws it in the danger colour. `value` is
+// what the program says the path is: a change to it is put in the box even
+// after the player has typed there (which ends a plain binding).
+export component PathField inherits Rectangle {
+    in property <string> value;
+    in property <string> placeholder;
+    in property <bool> enabled: true;
+    in property <bool> invalid;
+    callback edited(string);
+    callback committed(string);
+
+    height: 28px;
+    edit := LineEdit {
+        width: 100%;
+        height: 100%;
+        init => { self.text = root.value; }
+        placeholder-text: root.placeholder;
+        enabled: root.enabled;
+        font-size: 13px;
+        edited(t) => { root.edited(t); }
+        accepted(t) => { root.committed(t); }
+        changed has-focus => {
+            if (!self.has-focus) {
+                root.committed(self.text);
+            }
+        }
+    }
+    changed value => {
+        if (edit.text != root.value) {
+            edit.text = root.value;
+        }
+    }
+    // The danger border over the widget's own, when the path is not usable.
+    if root.invalid: Rectangle {
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: Theme.danger;
     }
 }

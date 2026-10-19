@@ -196,9 +196,9 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `dist/` | everything a tester gets (zips, installer, `.nsp`, macOS archives), `dist/web/` the web build, `dist/playback/` the recordings player, `dist/swos.html` the downloads page (gitignored) |
 | `tests/` | `dos/` the replay-rig corpus (`.RGD.gz`), `replay/`, `replay-v2/`, `rollback/`, `netplay/`, `hunt/` |
 | `scripts/` | build, release, test and tooling scripts; `scripts/amiga/amigascope/` the AmigaScope submodule |
-| `third_party/` | `ggpo-x/` (submodule, branch `openswos`), `matchmaker/` (the server), `enet/`, `miniz/` |
+| `third_party/` | `swosgfx/` (submodule: the graphics converters `tools/swosdata` is built on), `ggpo-x/` (submodule, branch `openswos`), `matchmaker/` (the server), `enet/`, `miniz/` |
 | `tools/` | `matchmaker-admin/` (the server's admin page), `mm_refpeer/`, address/stub generators |
-| `tools/swosdata/` | the data setup: builds the original game's data (not in the repo) from the player's own copy into the assets folder. `lib/` (C: ADF reader, RNC pack/unpack, the SwosGfx conversions, team JSON, Jaguar), `cli/` (`swosdata`), `app/` (`openswos-setup`, Slint; `build.sh`/`build.bat static`) |
+| `tools/swosdata/` | the data setup: builds the original game's data (not in the repo) from the player's own copy into the assets folder. `lib/` (C: ADF reader, finding the player's copy, the file lists, team JSON, the Jaguar tier; the converters are `third_party/swosgfx`'s), `cli/` (`swosdata`), `app/` (`openswos-setup`, Slint; `build.sh`/`build.bat static`) |
 | `bin/setup/` | the setup's own inputs: `glyphs.txt` (the extended font) and the hand-drawn Jaguar goal celebrations |
 | `packaging/` | `web/` (`changelog.html`, `swos.html` template), `windows/` (Inno Setup), `macos/`, `linux/`, `switch/`, icons |
 | `wasm/` | `shell.html` (the game page), `player.html` + `playback-index.html` (the recordings player), `pre.js` |
@@ -215,7 +215,8 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `C:\Projects\GitHub\swos-2020` | SWOS 2020, which OpenSWOS continues: its online menus and netplay are the references |
 | `C:\Projects\GitHub\swos-port` | the DOS port whose recordings (`tests/data/`) seeded the replay rig |
 | `C:\Projects\AI\SWOS\swos-port-c` | partial C++ port with the Amiga game loop working; the verified game-loop reference |
-| `C:\Projects\GitHub\SwosGfx` | SWOS graphics converter (C#); `SwosGfx\AmigaTools.cs` is the authority for Amiga SPRITE/PITCH/PALETTE parsing; `bin\Debug\net8.0\Amiga_Images_16` the extracted graphics |
+| `C:\Projects\AI\SWOS\swosgfx` | swosgfx (github.com/benbaker76/swosgfx): the C99/C++ rewrite of SwosGfx, byte-identical to it; the converters `tools/swosdata` uses (submodule `third_party/swosgfx`). Converter changes go here |
+| `C:\Projects\GitHub\SwosGfx` | the C# SwosGfx (now github.com/benbaker76/SwosGfx-CSharp); `SwosGfx\AmigaTools.cs` is the authority for Amiga SPRITE/PITCH/PALETTE parsing; `bin\Debug\net8.0\Amiga_Images_16` the extracted graphics |
 | `C:\msys64\home\headk\rjp1player` | the RJP1 player for the music modules and SFX extraction |
 | `C:\Projects\AI\AmigaScope` | a standalone checkout of AmigaScope (the repo uses the submodule) |
 | `C:\Projects\Python\SWOS_Font` | the font tooling ([FONTS.md](FONTS.md)) |

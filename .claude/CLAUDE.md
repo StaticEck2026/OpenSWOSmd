@@ -660,7 +660,11 @@ lets the two targets share `src/`.
   JSON, with handlers in `src/online_menus.c` (docs/MENUS.md §10). Its netplay
   (`src/mpgame.cpp`, on GGPO-X) is the reference for `src/netplay.c` (docs/NETPLAY.md).
   `ggpo-x` and `cereal` are git submodules there — `git submodule update --init` first.
-- C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
+- **C:\Projects\AI\SWOS\swosgfx — swosgfx (github.com/benbaker76/swosgfx)**, the C99 library + C++
+  CLI rewrite of SwosGfx, byte-identical to the C# for every mode; `tools/swosdata` is built on it
+  (submodule `third_party/swosgfx`). A converter change goes there, then the submodule is bumped —
+  rerun `swosdata --compare` after.
+- C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#; on GitHub as SwosGfx-CSharp). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
 - C:\msys64\home\headk\rjp1player - RJP1 module player for the original Amiga music modules / SFX extraction.
 - github.com/benbaker76/AmigaScope - the gdb/profiling harness, a submodule at `scripts/amiga/amigascope`.
 

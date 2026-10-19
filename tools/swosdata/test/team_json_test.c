@@ -39,33 +39,33 @@ int main(int argc, char **argv)
     qsort(names, (size_t)n, sizeof names[0], cmp_names);
 
     for (i = 0; i < n; i++) {
-        SdBuf raw, json, ref;
-        Sd_PathJoin(path, sizeof path, argv[1], names[i]);
+        SgBuf raw, json, ref;
+        Sg_PathJoin(path, sizeof path, argv[1], names[i]);
         Sd_TeamJsonName(names[i], name, sizeof name);
-        if (Sd_ReadFile(path, &raw, err) || Sd_TeamFileToJson(names[i], &raw, &json, err)) {
+        if (Sg_ReadFile(path, &raw, err) || Sd_TeamFileToJson(names[i], &raw, &json, err)) {
             printf("FAIL %-14s %s\n", names[i], err);
             fails++;
             continue;
         }
-        Sd_BufFree(&raw);
-        Sd_PathJoin(path, sizeof path, argv[2], name);
-        if (Sd_WriteFile(path, json.data, json.size, err)) {
+        Sg_BufFree(&raw);
+        Sg_PathJoin(path, sizeof path, argv[2], name);
+        if (Sg_WriteFile(path, json.data, json.size, err)) {
             printf("FAIL %-14s %s\n", names[i], err);
             fails++;
         }
         if (argc > 3) {
-            Sd_PathJoin(path, sizeof path, argv[3], name);
-            if (Sd_ReadFile(path, &ref, err)) {
+            Sg_PathJoin(path, sizeof path, argv[3], name);
+            if (Sg_ReadFile(path, &ref, err)) {
                 printf("  %-14s -> %-24s no reference\n", names[i], name);
                 unmatched++;
             } else {
                 int ok = ref.size == json.size && !memcmp(ref.data, json.data, json.size);
                 printf("  %-14s -> %-24s %s\n", names[i], name, ok ? "identical" : "DIFFERS");
                 if (ok) same++; else differ++;
-                Sd_BufFree(&ref);
+                Sg_BufFree(&ref);
             }
         }
-        Sd_BufFree(&json);
+        Sg_BufFree(&json);
         free(names[i]);
     }
     printf("%d files: %d failed", n, fails);

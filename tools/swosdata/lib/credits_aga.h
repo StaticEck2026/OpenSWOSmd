@@ -15,11 +15,11 @@
 #define SWOSDATA_CREDITS_AGA_H
 
 #include <stdint.h>
-#include "sd_util.h"
-#include "sd_image.h"
+#include "sg_util.h"
+#include "sg_image.h"
 
 /* menubg: the AGA MENUBG picture (352x272); creditsIcons: the photo strip. Writes
  * the unpacked 8-plane RAW (malloc'd) to outRaw. 0 on success, else `err` says why. */
-int32_t Sd_MakeCreditsAga(const SdImage *menubg, const SdImage *creditsIcons, SdBuf *outRaw, char *err);
+int32_t Sd_MakeCreditsAga(const SgImage *menubg, const SgImage *creditsIcons, SgBuf *outRaw, char *err);
 
 #endif

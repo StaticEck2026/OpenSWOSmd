@@ -3,8 +3,10 @@
  * from the command line. The setup app does the same through the library.
  *
  *   swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE] [--swos2020 DIR]
- *            --out DIR [--res DIR]
+ *            [--out DIR [--res DIR]]    (no --out: only report what was found)
+ *   --scan looks through DIR and every folder inside it
  *   swosdata --compare OUT REF     every file in OUT equals REF's (RNC unpacked)
+ *   swosdata --installed DIR       what an earlier run left in the assets folder DIR
  */
 #include "swosdata.h"
 
@@ -23,13 +25,25 @@ static void on_log(void *user, const char *line)
     printf("%s\n", line);
 }
 
+/* --scan's progress: the count of folders looked through, every 500 to stderr. */
+static int32_t s_scanned;
+static int32_t on_scan(void *user, int32_t folders, const char *dir)
+{
+    (void)user;
+    s_scanned++;
+    if (folders % 500 == 0)
+        fprintf(stderr, "  ... %d folders (%s)\n", (int)folders, dir);
+    return 0;
+}
+
 static int32_t usage(void)
 {
     fprintf(stderr,
             "usage: swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE]\n"
             "                [--swos2020 DIR]\n"
-            "                --out DIR [--res DIR]\n"
-            "       swosdata --compare OUT REF\n");
+            "                [--out DIR [--res DIR]]   (no --out: report what was found)\n"
+            "       swosdata --compare OUT REF\n"
+            "       swosdata --installed ASSETSDIR\n");
     return 2;
 }
 
@@ -38,7 +52,7 @@ static int32_t usage(void)
 static int32_t compare_tree(const char *out, const char *ref, const char *rel, int32_t *same, int32_t *diff)
 {
     char dir[1100];
-    Sd_PathJoin(dir, sizeof dir, out, rel);
+    Sg_PathJoin(dir, sizeof dir, out, rel);
     DIR *d = opendir(dir);
     if (!d)
         return -1;
@@ -47,22 +61,22 @@ static int32_t compare_tree(const char *out, const char *ref, const char *rel, i
         if (e->d_name[0] == '.')
             continue;
         char sub[1100], po[1100], pr[1100];
-        Sd_PathJoin(sub, sizeof sub, rel, e->d_name);
-        Sd_PathJoin(po, sizeof po, out, sub);
+        Sg_PathJoin(sub, sizeof sub, rel, e->d_name);
+        Sg_PathJoin(po, sizeof po, out, sub);
         struct stat st;
         if (stat(po, &st) == 0 && S_ISDIR(st.st_mode)) {
             compare_tree(out, ref, sub, same, diff);
             continue;
         }
-        Sd_PathJoin(pr, sizeof pr, ref, sub);
+        Sg_PathJoin(pr, sizeof pr, ref, sub);
         char err[256];
-        SdBuf a, b, ua, ub;
-        if (Sd_ReadFile(po, &a, err) != 0 || Sd_ReadFile(pr, &b, err) != 0) {
+        SgBuf a, b, ua, ub;
+        if (Sg_ReadFile(po, &a, err) != 0 || Sg_ReadFile(pr, &b, err) != 0) {
             printf("MISSING %s\n", sub);
             (*diff)++;
             continue;
         }
-        if (Sd_RncUnpack(&a, &ua, err) != 0 || Sd_RncUnpack(&b, &ub, err) != 0) {
+        if (Sg_RncUnpack(&a, &ua, err) != 0 || Sg_RncUnpack(&b, &ub, err) != 0) {
             printf("BAD %s: %s\n", sub, err);
             (*diff)++;
         } else if (ua.size == ub.size && memcmp(ua.data, ub.data, ua.size) == 0) {
@@ -71,10 +85,10 @@ static int32_t compare_tree(const char *out, const char *ref, const char *rel, i
             printf("DIFFERS %s (%u vs %u bytes unpacked)\n", sub, ua.size, ub.size);
             (*diff)++;
         }
-        Sd_BufFree(&a);
-        Sd_BufFree(&b);
-        Sd_BufFree(&ua);
-        Sd_BufFree(&ub);
+        Sg_BufFree(&a);
+        Sg_BufFree(&b);
+        Sg_BufFree(&ua);
+        Sg_BufFree(&ub);
     }
     closedir(d);
     return 0;
@@ -86,6 +100,18 @@ int main(int argc, char **argv)
     static SdJob job;
     char err[256];
 
+    if (argc == 3 && strcmp(argv[1], "--installed") == 0) {
+        SdInstalled inst[SD_STEP_COUNT];
+        SdStepInfo info[SD_STEP_COUNT];
+        SdJob empty;
+        memset(&empty, 0, sizeof empty);
+        SwosData_Plan(&empty, info);
+        SwosData_Installed(argv[2], inst);
+        for (int32_t s = 0; s < SD_STEP_COUNT; s++)
+            printf("%-36s %4d of %4d%s\n", info[s].name, (int)inst[s].present, (int)inst[s].total,
+                   inst[s].present == inst[s].total ? "  installed" : inst[s].present ? "  incomplete" : "");
+        return 0;
+    }
     if (argc == 4 && strcmp(argv[1], "--compare") == 0) {
 #ifdef _WIN32
         fprintf(stderr, "--compare is not built on Windows\n");
@@ -104,7 +130,7 @@ int main(int argc, char **argv)
         if (!v)
             return usage();
         if (strcmp(a, "--scan") == 0)
-            SdSources_Scan(&job.src, v);
+            SdSources_ScanEx(&job.src, v, on_scan, NULL);
         else if (strcmp(a, "--adf") == 0 || strcmp(a, "--jag") == 0) {
             if (SdSources_AddFile(&job.src, v) != 0) {
                 fprintf(stderr, "not recognised: %s\n", v);
@@ -128,14 +154,16 @@ int main(int argc, char **argv)
             return usage();
         i++;
     }
-    if (!job.outDir[0])
-        return usage();
 
+    if (s_scanned)
+        printf("Searched %d folders\n", (int)s_scanned);
     printf("Amiga disk 1: %s\n", job.src.adf1[0] ? job.src.adf1 : "(not found)");
     printf("Amiga disk 2: %s\n", job.src.adf2[0] ? job.src.adf2 : "(not found)");
     printf("PC game:      %s\n", job.src.dosDir[0] ? job.src.dosDir : "(not found)");
     printf("Jaguar:       %s\n", job.src.jagRom[0] ? job.src.jagRom : "(not found)");
     printf("SWOS 2020:    %s\n", job.src.s2020Dir[0] ? job.src.s2020Dir : "(not found)");
+    if (!job.outDir[0])
+        return 0;       /* no --out: only say what was found */
 
     job.log = on_log;
     if (SwosData_Run(&job, err) != 0) {

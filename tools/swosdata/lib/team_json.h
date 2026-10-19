@@ -15,7 +15,7 @@
 #define SWOSDATA_TEAM_JSON_H
 
 #include <stdint.h>
-#include "sd_util.h"
+#include "sg_util.h"
 
 typedef enum {
     SD_TEAMFILE_NONE = 0,   /* not a team database file */
@@ -35,8 +35,8 @@ int32_t Sd_TeamJsonName(const char *fileName, char *out, uint32_t cap);
 /* Convert one file. `fileName` names it ("TEAM.033", "EUROCUP.TMD", "POOLPLYR.DAT";
  * a path is fine, case does not matter), `raw` is its contents, packed or not.
  * On success returns 0 and outJson holds the JSON (no trailing newline, as committed;
- * Sd_BufFree it). On failure returns -1 and `err` (256 bytes) says why. */
-int32_t Sd_TeamFileToJson(const char *fileName, const SdBuf *raw, SdBuf *outJson, char *err);
+ * Sg_BufFree it). On failure returns -1 and `err` (256 bytes) says why. */
+int32_t Sd_TeamFileToJson(const char *fileName, const SgBuf *raw, SgBuf *outJson, char *err);
 
 /* The building blocks, exposed for tests and the game-side checks. */
 void Sd_Sha1(const uint8_t *data, uint32_t size, uint8_t digest[20]);

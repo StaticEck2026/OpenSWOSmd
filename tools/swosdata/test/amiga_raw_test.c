@@ -12,8 +12,8 @@
  */
 #include "amiga_raw.h"
 #include "credits_aga.h"
-#include "sd_image.h"
-#include "sd_util.h"
+#include "sg_image.h"
+#include "sg_util.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -30,19 +30,19 @@ static const char *k_roundTrip[] = {
     "CJCTEAMG", "CJCBITS", "SOCCER_S", "CJCBENCH",
 };
 
-static int32_t LoadUnpacked(const char *dir, const char *name, SdBuf *out, char *err)
+static int32_t LoadUnpacked(const char *dir, const char *name, SgBuf *out, char *err)
 {
     char path[1024];
-    SdBuf in;
+    SgBuf in;
     snprintf(path, sizeof path, "%s/%s.RAW", dir, name);
-    if (Sd_ReadFile(path, &in, err))
+    if (Sg_ReadFile(path, &in, err))
         return -1;
-    int32_t rc = Sd_RncUnpack(&in, out, err);
-    Sd_BufFree(&in);
+    int32_t rc = Sg_RncUnpack(&in, out, err);
+    Sg_BufFree(&in);
     return rc;
 }
 
-static uint32_t CountDiff(const SdBuf *a, const SdBuf *b)
+static uint32_t CountDiff(const SgBuf *a, const SgBuf *b)
 {
     uint32_t n = a->size < b->size ? a->size : b->size, d = 0;
     for (uint32_t i = 0; i < n; i++)
@@ -50,7 +50,7 @@ static uint32_t CountDiff(const SdBuf *a, const SdBuf *b)
     return d + (a->size > b->size ? a->size - b->size : b->size - a->size);
 }
 
-static int32_t Report(const char *what, const char *name, const SdBuf *got, const SdBuf *want)
+static int32_t Report(const char *what, const char *name, const SgBuf *got, const SgBuf *want)
 {
     uint32_t d = CountDiff(got, want);
     if (d == 0) {
@@ -75,11 +75,11 @@ int main(int argc, char **argv)
     printf("Amiga-only pictures (original -> 256 colours -> AGA RAW):\n");
     for (size_t i = 0; i < sizeof k_pictures / sizeof k_pictures[0]; i++) {
         const char *name = k_pictures[i];
-        SdBuf orig, want, got;
-        SdImage img;
+        SgBuf orig, want, got;
+        SgImage img;
         snprintf(path, sizeof path, "%s/%s.RAW", amigaDir, name);
-        if (Sd_ReadFile(path, &orig, err) || Sd_AmigaPictureTo256(name, &orig, &img, err) ||
-            LoadUnpacked(agaDir, name, &want, err) || Sd_AmigaRawEncode(&img, 0, &got, err)) {
+        if (Sg_ReadFile(path, &orig, err) || Sg_AmigaPictureTo256(name, &orig, &img, err) ||
+            LoadUnpacked(agaDir, name, &want, err) || Sg_AmigaRawEncode(&img, 0, &got, err)) {
             printf("  FAIL  %s: %s\n", name, err);
             fails++;
             continue;
@@ -87,49 +87,49 @@ int main(int argc, char **argv)
         fails += Report("picture", name, &got, &want);
         if (bmpOut) {
             snprintf(path, sizeof path, "%s/%s.bmp", bmpOut, name);
-            if (SdImage_WriteBmp(&img, path, err))
+            if (SgImage_WriteBmp(&img, path, err))
                 printf("  FAIL  bmp %s: %s\n", name, err);
         }
-        SdImage_Free(&img);
-        Sd_BufFree(&orig); Sd_BufFree(&want); Sd_BufFree(&got);
+        SgImage_Free(&img);
+        Sg_BufFree(&orig); Sg_BufFree(&want); Sg_BufFree(&got);
     }
 
     printf("Round trip (decode, encode at the same depth):\n");
     for (size_t i = 0; i < sizeof k_roundTrip / sizeof k_roundTrip[0]; i++) {
         const char *name = k_roundTrip[i];
-        SdBuf raw, got;
-        SdImage img;
+        SgBuf raw, got;
+        SgImage img;
         int32_t w, h, planes = 4;
         if (LoadUnpacked(agaDir, name, &raw, err)) {
             printf("  skip  %s: %s\n", name, err);
             continue;
         }
-        if (Sd_AmigaRawDimensions(raw.size, 4, &w, &h)) {
+        if (Sg_AmigaRawDimensions(raw.size, 4, &w, &h)) {
             planes = 8;
-            if (Sd_AmigaRawDimensions(raw.size, 8, &w, &h)) {
+            if (Sg_AmigaRawDimensions(raw.size, 8, &w, &h)) {
                 printf("  skip  %s: %u bytes is no known size\n", name, (unsigned)raw.size);
-                Sd_BufFree(&raw);
+                Sg_BufFree(&raw);
                 continue;
             }
         }
-        if (Sd_AmigaRawDecode(&raw, w, h, planes, &img, err) || Sd_AmigaRawEncode(&img, planes, &got, err)) {
+        if (Sg_AmigaRawDecode(&raw, w, h, planes, &img, err) || Sg_AmigaRawEncode(&img, planes, &got, err)) {
             printf("  FAIL  %s: %s\n", name, err);
             fails++;
         } else {
             char what[32];
             snprintf(what, sizeof what, "%dx%dx%d", (int)w, (int)h, (int)planes);
             fails += Report(what, name, &got, &raw);
-            Sd_BufFree(&got);
-            SdImage_Free(&img);
+            Sg_BufFree(&got);
+            SgImage_Free(&img);
         }
-        Sd_BufFree(&raw);
+        Sg_BufFree(&raw);
     }
 
     printf("CREDITS.RAW:\n");
     {
-        SdImage bg, strip, bg2;
-        SdBuf want, got, mraw;
-        if (SdImage_ReadBmp(&bg, argv[3], err) || SdImage_ReadBmp(&strip, argv[4], err) ||
+        SgImage bg, strip, bg2;
+        SgBuf want, got, mraw;
+        if (SgImage_ReadBmp(&bg, argv[3], err) || SgImage_ReadBmp(&strip, argv[4], err) ||
             LoadUnpacked(agaDir, "CREDITS", &want, err)) {
             printf("  FAIL  %s\n", err);
             return 1;
@@ -139,15 +139,15 @@ int main(int argc, char **argv)
             fails++;
         } else {
             fails += Report("from bmp", "CREDITS", &got, &want);
-            Sd_BufFree(&got);
+            Sg_BufFree(&got);
         }
-        if (LoadUnpacked(agaDir, "MENUBG", &mraw, err) || Sd_AmigaRawDecode(&mraw, 352, 272, 8, &bg2, err) ||
+        if (LoadUnpacked(agaDir, "MENUBG", &mraw, err) || Sg_AmigaRawDecode(&mraw, 352, 272, 8, &bg2, err) ||
             Sd_MakeCreditsAga(&bg2, &strip, &got, err)) {
             printf("  FAIL  credits from MENUBG.RAW: %s\n", err);
             fails++;
         } else {
             fails += Report("from RAW", "CREDITS", &got, &want);
-            Sd_BufFree(&got);
+            Sg_BufFree(&got);
         }
     }
 

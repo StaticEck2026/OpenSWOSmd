@@ -21,6 +21,12 @@ void     Adf_Close(Adf *adf);
 /* The volume name from the root block, e.g. "SWOS". */
 const char *Adf_VolumeName(const Adf *adf);
 
+/* The volume name without opening the disk: reads the size, the boot block's
+ * "DOS" and the root block only -- cheap enough to ask of every .adf in a big
+ * collection. 0 with the name in out (31 chars + NUL), -1 when the file is not
+ * an AmigaDOS disk image. */
+int32_t     Adf_PeekVolumeName(const char *path, char out[32]);
+
 /* Read a file by its path from the root, '/'-separated. Returns a malloc'd
  * buffer (free it) and its size, or NULL when the file is not there or its
  * blocks do not hold together (`err` says which). */
