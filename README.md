@@ -10,6 +10,9 @@ with **online multiplayer**.
 
 ## Getting started
 
+**Official downloads: [baker76.itch.io/openswos](https://baker76.itch.io/openswos), linked
+from [openswos.net](https://openswos.net).** Nowhere else is OpenSWOS's own.
+
 1. **[Download it](https://baker76.itch.io/openswos)** for your computer.
 2. **[Install it](INSTALL.md)**: a step-by-step guide with pictures.
 

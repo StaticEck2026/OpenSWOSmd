@@ -39,7 +39,9 @@ Two extras are optional, for players who have them: the **Atari Jaguar** cartrid
 
 ## 2. Download
 
-Get OpenSWOS from **<https://baker76.itch.io/openswos>**. Pick the file for your computer:
+Get OpenSWOS from **<https://baker76.itch.io/openswos>**. That page and **openswos.net** are
+the only official places to get it: OpenSWOS is free, and never asks you to pay or sign up
+anywhere else. Pick the file for your computer:
 
 | Your computer | Download |
 |---|---|
@@ -184,4 +186,5 @@ Saves are in `save`, the settings in `SWOS.ini` ([docs/SETTINGS.md](docs/SETTING
 the game data from the setup in `assets`. Reinstalling or updating OpenSWOS never touches
 them.
 
-**Still stuck?** Ask on the OpenSWOS Discord, and attach your `SWOS.log`.
+**Still stuck?** Ask on the [OpenSWOS page on itch.io](https://baker76.itch.io/openswos), and
+include what your `SWOS.log` says.
