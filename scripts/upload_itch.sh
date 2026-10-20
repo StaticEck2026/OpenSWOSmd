@@ -60,10 +60,12 @@ DROP=$(sed -n 's/.* commit=\([^ ]*\).*/\1/p' <<<"$STATUS")
 [ -n "$DROP" ] || fail "dist/.build-status names no commit (a drop from before 2026-10-20) -- rebuild it"
 case "$DROP" in *-dirty) fail "the drop was built from a -dirty tree ($DROP)" ;; esac
 git rev-parse -q --verify "$DROP^{commit}" >/dev/null || fail "$DROP is not a commit here"
-# Only the changelog may have moved on since: it is written after the drop.
-git diff --quiet "$DROP" HEAD -- . ':!packaging/web/changelog.html' ||
+# Only what no archive holds may have moved on since: the changelog (written after
+# the drop), the docs, this script.
+NOT_SHIPPED=(':!packaging/web/changelog.html' ':!docs' ':!.claude' ':!scripts/upload_itch.sh')
+git diff --quiet "$DROP" HEAD -- . "${NOT_SHIPPED[@]}" ||
     fail "the tree has changed since the drop ($DROP) -- rebuild it"
-[ -z "$(git status --porcelain --untracked-files=no -- . ':!packaging/web/changelog.html')" ] ||
+[ -z "$(git status --porcelain --untracked-files=no -- . "${NOT_SHIPPED[@]}")" ] ||
     fail "tracked files are modified"
 MAC=$(cat dist/OpenSWOS-Setup-macOS.commit 2>/dev/null) || fail "no macOS part -- run scripts/build_macos.sh"
 [ "$(git rev-parse "$MAC^{commit}" 2>/dev/null)" = "$(git rev-parse "$DROP^{commit}")" ] ||

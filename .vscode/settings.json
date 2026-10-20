@@ -6,5 +6,6 @@
     "[m68k]": {
         "editor.rulers": []
     },
-    "m68k.vasm.provideDiagnostics": false
+    "m68k.vasm.provideDiagnostics": false,
+    "cmake.sourceDirectory": "C:/Projects/AI/SWOS/OpenSWOS/tools/swosdata"
 }
