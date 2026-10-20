@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <!--
-  The changelog on baker76.com/swos.html (embedded there in a scrolling frame) and at
-  baker76.com/changelog.html on its own.
+  The changelog: the record of every drop. Releases are on itch.io
+  (https://baker76.itch.io/openswos); each drop's entry also goes in its devlog post there.
+  (Until 2026-10-20 this page was published on baker76.com; it no longer is.)
 
   ADDING A RELEASE: copy the first <article>, put the new build (the short hash the main
-  menu shows) and its build time in it -- the "Build X . YYYY-MM-DD HH:MM UTC" line at the
-  top of dist/swos.html, which gen_downloads_page.sh prints as "built ...". Several drops
-  can land on one day, so the time is what tells them apart. Then add a few short lines
-  a player understands -- what changed for them, not how. Newest at the top. Then publish with
-      scripts/upload_dist.sh --insecure-tls --page-only
-  which sends this page with the downloads page; no new drop is needed.
+  menu shows) and its build time in it -- the commit and the "done" time in
+  dist/.build-status. Several drops can land on one day, so the time is what tells them
+  apart. Then add a few short lines a player understands -- what changed for them, not
+  how. Newest at the top.
 -->
 <html lang="en">
 <head>

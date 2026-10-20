@@ -18,7 +18,7 @@
  another computer.
 
  Downloads, the other versions and the changelog:
-        https://baker76.com/swos.html
+        https://baker76.itch.io/openswos
 
 
  RUNNING IT

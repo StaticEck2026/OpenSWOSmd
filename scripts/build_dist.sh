@@ -109,7 +109,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
 # ---- progress state ---------------------------------------------------------
-# Same contract as scripts/upload_dist.sh: one atomically-rewritten line saying
+# One atomically-rewritten line saying
 # what stage this is on, a terminal state on EVERY exit path (including a
 # signal), and a final "== DONE rc=N" line to grep for. A drop takes 40+ minutes
 # and a cross-compile can sit silent for several; without this the only way to
@@ -763,14 +763,6 @@ if [ "$DO_INSTALLER" = 1 ] && wanted installer; then
             *) record installer "FAIL"; echo "-- FAIL: installer" ;;
         esac
     fi
-fi
-
-# ---- the downloads page -----------------------------------------------------
-# baker76.com/swos.html, stamped with this build. Written here so a drop can be
-# looked at locally; scripts/upload_dist.sh regenerates it at publish time, when
-# the macOS archives (scripts/build_macos.sh, which runs after this) are in too.
-if [ "$DO_ZIP" = 1 ]; then
-    scripts/gen_downloads_page.sh || echo "-- WARN: downloads page not generated"
 fi
 
 # ---- summary ----------------------------------------------------------------

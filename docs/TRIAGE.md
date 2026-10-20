@@ -18,7 +18,7 @@ procedure rather than triage.
 scripts/build_dist.sh   + scripts/build_macos.sh    the drop
 scripts/build_setup_zip.sh                          then OpenSWOS-Setup.zip
 packaging/web/changelog.html                        an entry for the drop's build
-scripts/upload_dist.sh --insecure-tls               publish it
+upload dist/ to https://baker76.itch.io/openswos     publish it (by hand)
 reportctl status <id> done "fixed in <commit>" + archive
 /changelog              post the summary
 ```
@@ -158,37 +158,33 @@ handles its own `clean` (both makefiles) and the tester flags
 hand-roll it. See CLAUDE.md, "Release builds".
 
 **Then write the changelog entry.** Every published build has one in
-`packaging/web/changelog.html` (embedded in the downloads page, and at
-baker76.com/changelog.html); its header comment says how. The entry names the
-build the binaries carry and its build time — the `Build X · YYYY-MM-DD HH:MM
-UTC` line at the top of `dist/swos.html`, which `gen_downloads_page.sh` prints as
-"built …" — so it is written AFTER the drop is built, and committed. It lives
+`packaging/web/changelog.html`, the project's record of what each drop changed
+(its text also goes in the itch.io devlog post for the drop); its header comment
+says how. The entry names the build the binaries carry and its build time (the
+commit and `done` time in `dist/.build-status`), so it is written AFTER the drop
+is built, and committed. It lives
 outside the paths the `-dirty` stamp covers, so committing it does not
 invalidate the drop.
 
 ### Knowing when a long step is finished
 
-The drop takes 40+ minutes and the publish 20+, and both go quiet for minutes at
-a time — a cross-compile linking, or one 34 MB file in flight. Neither is
-distinguishable from a hang by looking at the log, so both scripts publish their
-own state instead:
+The drop takes 40+ minutes and goes quiet for minutes at a time — a
+cross-compile linking. That is not distinguishable from a hang by looking at the
+log, so the script publishes its own state instead:
 
 | | |
 |---|---|
-| `dist/.build-status` / `dist/.upload-status` | ONE line, rewritten atomically: `running phase=… elapsed=…`, then `done rc=0 …` or `failed rc=N …` |
+| `dist/.build-status` | ONE line, rewritten atomically: `running phase=… elapsed=…`, then `done rc=0 …` or `failed rc=N …` |
 | `== DONE rc=N …` | the last line of the log, on every exit path |
 
 Both are written from an EXIT trap, so a crash, a Ctrl-C or a `kill` still lands
 in a terminal state — a status file that can be left saying `running` after the
-process is gone teaches you to distrust it. The upload additionally runs its
-transfer as a background child and `wait`s on it, because bash defers a trap
-until the foreground child returns: with `curl` in front, a killed upload sat at
-`running` for up to `--max-time` (30 minutes) with the process already dead.
+process is gone teaches you to distrust it.
 
-To wait for either, block on the state — never on a guessed interval:
+To wait for it, block on the state — never on a guessed interval:
 
 ```bash
-until grep -qv '^running' dist/.upload-status 2>/dev/null; do sleep 10; done
+until grep -qv '^running' dist/.build-status 2>/dev/null; do sleep 10; done
 ```
 
 **Do not arm a timer that sleeps N seconds and then tails the log.** Run the long
@@ -199,24 +195,17 @@ exactly what happened on the first run of this procedure.
 
 ## 6. Publish
 
-```bash
-scripts/upload_dist.sh --insecure-tls
-```
+Releases go on **itch.io**, at <https://baker76.itch.io/openswos>, uploaded by the
+maintainer from the project's dashboard there: the archives in `dist/`
+(`SWOS-Setup.exe`, `SWOS-portable.zip`, `SWOS-macOS-app.zip`, `SWOS-macOS.zip`,
+`SWOS-Amiga.zip`, `SWOS.zip`, `OpenSWOS-Setup.zip`), each replacing the upload of
+the same name so the page's list does not grow a copy per drop, plus a devlog post
+with the drop's changelog entry. Upload only a drop whose every archive is from
+the one commit (step 5); `dist/.build-status` names it.
 
-4 WASM files to `/public_html/apps/swos`, 6 archives to
-`/public_html/download/swos`. It refuses to start unless **all six** archives are
-in `dist/`, macOS included — so step 5 is both scripts or the upload does not
-run. `--insecure-tls` is required and is not laziness: baker76.com is GoDaddy
-shared hosting whose FTP certificate is issued to the provider, not to the
-domain. `--verify-only` re-checks what is on the server without re-uploading
-111 MB.
-
-It also refuses when the drop's build has **no entry in
-`packaging/web/changelog.html`** (step 5) — add it, commit, and run again, or pass
-`--skip-changelog` when publishing without one is meant. The downloads page
-(`swos.html`) and `changelog.html` go to `/public_html` with every full or
-`--bin-only` upload; a changelog fix on its own needs no new drop:
-`scripts/upload_dist.sh --insecure-tls --page-only`.
+Until 2026-10-20 a drop went to baker76.com over FTP (`scripts/upload_dist.sh`,
+with a generated downloads page, `swos.html`): both are gone, and nothing is
+published to baker76.com any more.
 
 ## 7. Close the reports
 
@@ -269,8 +258,7 @@ Build: 590df05 (2026-09-17)
 That is what makes a later report answerable: "is the build in your title bar
 the one with the fix?" is a question with an answer, and "did you re-download?"
 is not. It is also how a tester reporting something already fixed is spotted in
-one line instead of a reproduction attempt. `dist/.build-status` and
-`dist/.upload-status` both record the commit, and `git log --oneline -1` after
+one line instead of a reproduction attempt. `dist/.build-status` records the commit, and `git log --oneline -1` after
 the drop is the same string — take it from there rather than from memory.
 
 `announce: Discord refused the post (403 Forbidden)` means the bot has no **View
@@ -279,26 +267,14 @@ Permissions → add the bot. A refused post changes nothing: the reports stay
 `done` and still `--unannounced`, so the same command works once the permission
 is there.
 
-**One link — the downloads page:**
+**One link — the itch.io page:**
 
 ```
-https://baker76.com/swos.html
+https://baker76.itch.io/openswos
 ```
 
-It lists every archive (Windows installer, full zip, both macOS ones, Amiga,
-binaries-only) and the web build, so the post does not carry seven URLs and does
-not go stale when the set changes. Do NOT link
-`https://baker76.com/download/swos/` instead: directory listing is off on the
-server, so the bare folder shows a player nothing.
-
-That page is **in this repo** — `packaging/web/swos.html`, a template whose
-`@BUILD@`, `@DATE@` and per-archive `@SIZE_*@` placeholders
-`scripts/gen_downloads_page.sh` fills from the drop in `dist/`.
-`upload_dist.sh` regenerates it and publishes it to the site root with
-everything else, so the page's build and sizes are always the ones going out.
-Edit the template, never the copy on the server: the next drop overwrites it.
-Adding or renaming an archive means editing both the template and the file lists
-in the two scripts.
+It lists every download, so the post does not carry seven URLs and does not go
+stale when the set changes.
 
 Write it for a player, not for us: what changed and what they will see. The
 offsets, the register names and the asm citation belong in the commit message —

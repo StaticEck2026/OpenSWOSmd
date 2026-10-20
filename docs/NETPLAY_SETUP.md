@@ -284,8 +284,7 @@ Players need the server's **public** address or a DNS name for it:
 - A VPS has a fixed public IP; give it a DNS name if you can (and you need one for §10).
 - A home connection has a public IP that can change. Use a **dynamic-DNS** name pointed at
   it, or hand out the current IP and expect to update it.
-- **`baker76.com` is the wrong name.** It resolves to the GoDaddy shared host the downloads
-  live on, not to whatever machine runs the server.
+- **`baker76.com` is the wrong name.** It resolves to a GoDaddy shared host, not to whatever machine runs the server.
 
 ## 6. Prove it before handing it out
 
@@ -481,7 +480,7 @@ once per browser.
 **5. Keep the tab in front.** A browser throttles a background tab's timers to about once a
 second, and a live match does not survive that.
 
-**The public build at baker76.com** is served over `https://`, so it reaches the server
+**A public web build** (itch.io's HTML5 player included) is served over `https://`, so it reaches the server
 with `wss://`, which us.swos.eu serves with its certificate (§10). The web build has
 netplay ON by default since that went in (`make WASM=1`; `NETPLAY=0` for one without).
 

@@ -193,14 +193,14 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `bin/data_json/` | editable JSON baked into C / loaded at run time ([DATA_PIPELINE.md](DATA_PIPELINE.md)) |
 | `build/<os>/<arch>/` | SDL objects (each with a `.build-flags` stamp); `build/matchmaker/` the server; `build/recordings/`, `build/reports/` fetched from the server; `build/recordings-pred/` sample PRED recordings |
 | `obj/` | Amiga objects (`make -f Makefile.amiga`); `obj-switch/`, `build-switch/` the Switch build |
-| `dist/` | everything a tester gets (zips, installer, `.nsp`, macOS archives), `dist/web/` the web build, `dist/playback/` the recordings player, `dist/swos.html` the downloads page (gitignored) |
+| `dist/` | everything a tester gets (zips, installer, `.nsp`, macOS archives), `dist/web/` the web build, `dist/playback/` the recordings player (gitignored) |
 | `tests/` | `dos/` the replay-rig corpus (`.RGD.gz`), `replay/`, `replay-v2/`, `rollback/`, `netplay/`, `hunt/` |
 | `scripts/` | build, release, test and tooling scripts; `scripts/amiga/amigascope/` the AmigaScope submodule |
 | `third_party/` | `swosgfx/` (submodule: the graphics converters `tools/swosdata` is built on), `ggpo-x/` (submodule, branch `openswos`), `matchmaker/` (the server), `enet/`, `miniz/` |
 | `tools/` | `matchmaker-admin/` (the server's admin page), `mm_refpeer/`, address/stub generators |
 | `tools/swosdata/` | the data setup: builds the original game's data (not in the repo) from the player's own copy into the assets folder. `lib/` (C: ADF reader, finding the player's copy, the file lists, team JSON, the Jaguar tier; the converters are `third_party/swosgfx`'s), `cli/` (`swosdata`), `app/` (`openswos-setup`, Slint; `build.sh`/`build.bat static`) |
 | `bin/setup/` | the setup's own inputs: `glyphs.txt` (the extended font) and the hand-drawn Jaguar goal celebrations |
-| `packaging/` | `web/` (`changelog.html`, `swos.html` template), `windows/` (Inno Setup), `macos/`, `linux/`, `switch/`, icons |
+| `packaging/` | `web/` (`changelog.html`, the record of every drop), `windows/` (Inno Setup), `macos/`, `linux/`, `switch/`, icons |
 | `wasm/` | `shell.html` (the game page), `player.html` + `playback-index.html` (the recordings player), `pre.js` |
 | `SWOS.svg` | the master icon (`scripts/generate_icons.py`) |
 | `docs/images/openswos-logo.png` | the OpenSWOS logo (README, the itch.io cover) |
@@ -242,8 +242,7 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `us.swos.eu` (the matchmaking server, run by Redhair) | repo at `/home/redhair/git/OpenSWOS`; deployed to `/srv/swos-matchmaker/`: `bin/swos-matchmaker`, `recordings/` (+ match cards, `index.json`), `reports/`, `playback/`, `tls/` (certificate), `matches.jsonl` (the ledger), `admin/` (the admin page's queue); emsdk in `~/git/emsdk` (the admin page sets `EMSDK_DIR`); systemd unit `swos-matchmaker` ([NETPLAY_SETUP.md](NETPLAY_SETUP.md)) |
 | `https://us.swos.eu/playback/`, `/recordings/`, `/reports/`, `/cc/` | the recordings player, the recordings and reports (fetched by `scripts/fetch_recordings.py` / `fetch_reports.py`), the admin page |
 | `us.swos.eu:19602` (UDP, and TCP for the recorder and the `wss://` gate) | the matchmaker the game logs in to |
-| `baker76.com` over FTP | the drop: `/public_html/download/swos/` (archives), `/public_html/apps/swos/` (web build), `/public_html/swos.html` + `changelog.html` (`scripts/upload_dist.sh`) |
-| `https://baker76.com/swos.html` | the one link to give testers |
+| `https://baker76.itch.io/openswos` | where releases go (uploaded by hand, [TRIAGE.md](TRIAGE.md) §6), and the one link to give testers. Until 2026-10-20 drops went to baker76.com over FTP; nothing is published there any more |
 | GitHub `benbaker76/OpenSWOS`, `benbaker76/SWOS-RE`, `benbaker76/AmigaScope`, `benbaker76/ggpo-x`, `benbaker76/vscode-amiga-debug` | this repo, the RE project, the submodules, the required toolchain fork |
 
 ## Where the game keeps its files (per platform)
