@@ -119,6 +119,10 @@ cd "$ROOT" || exit 1
 #   until grep -qv '^running' dist/.build-status 2>/dev/null; do sleep 30; done
 BUILD_STATUS_FILE="${BUILD_STATUS_FILE:-dist/.build-status}"
 BUILD_START_EPOCH="$(date +%s)"
+# The commit the drop is built from, in the terminal state: scripts/upload_itch.sh
+# refuses to publish a drop that is not one commit (or was built from a -dirty tree).
+BUILD_COMMIT="$(git rev-parse --short=8 HEAD)"
+[ -z "$(git status --porcelain --untracked-files=no)" ] || BUILD_COMMIT="$BUILD_COMMIT-dirty"
 build_elapsed() { echo $(( $(date +%s) - BUILD_START_EPOCH )); }
 
 build_status() {
@@ -133,7 +137,7 @@ build_finish() {
     local rc=$?
     local secs; secs="$(build_elapsed)"
     if [ "$rc" = 0 ]; then
-        build_status "done rc=0 elapsed=$secs"
+        build_status "done rc=0 commit=$BUILD_COMMIT elapsed=$secs"
     else
         build_status "failed rc=$rc elapsed=$secs"
     fi

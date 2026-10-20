@@ -18,7 +18,7 @@ procedure rather than triage.
 scripts/build_dist.sh   + scripts/build_macos.sh    the drop
 scripts/build_setup_zip.sh                          then OpenSWOS-Setup.zip
 packaging/web/changelog.html                        an entry for the drop's build
-upload dist/ to https://baker76.itch.io/openswos     publish it (by hand)
+scripts/upload_itch.sh                              publish it (+ the devlog by hand)
 reportctl status <id> done "fixed in <commit>" + archive
 /changelog              post the summary
 ```
@@ -195,13 +195,26 @@ exactly what happened on the first run of this procedure.
 
 ## 6. Publish
 
-Releases go on **itch.io**, at <https://baker76.itch.io/openswos>, uploaded by the
-maintainer from the project's dashboard there: the archives in `dist/`
-(`SWOS-Setup.exe`, `SWOS-portable.zip`, `SWOS-macOS-app.zip`, `SWOS-macOS.zip`,
-`SWOS-Amiga.zip`, `SWOS.zip`, `OpenSWOS-Setup.zip`), each replacing the upload of
-the same name so the page's list does not grow a copy per drop, plus a devlog post
-with the drop's changelog entry. Upload only a drop whose every archive is from
-the one commit (step 5); `dist/.build-status` names it.
+```bash
+scripts/upload_itch.sh --dry-run    # checks the drop, sends nothing
+scripts/upload_itch.sh
+```
+
+Releases go on **itch.io**, <https://baker76.itch.io/openswos>, pushed with
+**butler** (itch.io's uploader, `~/.local/bin/butler`; logged in once with
+`butler login`, which keeps its key in butler's own config). Each archive has a
+channel of its own (`windows-installer`, `windows-linux-portable`, `mac-app`,
+`mac-binary`, `amiga`, `setup-windows-mac-linux`, `binaries-windows-linux-mac-amiga`)
+and is versioned by the build, so a drop replaces the previous one's file rather
+than adding a copy. The script refuses a drop that is not one commit: the
+commit `build_dist.sh` writes to `dist/.build-status`, the Mac's part, and this
+tree (only `changelog.html` may have moved on since the drop).
+
+**Never published:** `SWOS.nsp` (the NDA SDK built it) and the web build, whose
+`SWOS.data` preloads the assets folder -- the original game's data.
+
+**The devlog post is by hand**: itch.io has no API for it. Post the drop's
+`changelog.html` entry on the page.
 
 Until 2026-10-20 a drop went to baker76.com over FTP (`scripts/upload_dist.sh`,
 with a generated downloads page, `swos.html`): both are gone, and nothing is
