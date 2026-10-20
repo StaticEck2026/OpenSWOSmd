@@ -22,6 +22,7 @@ docs drift: search by function name.
 | task | read |
 |---|---|
 | anything at all | `.claude/CLAUDE.md` |
+| the player-facing guides (split out of README.md 2026-10-20) | [../INSTALL.md](../INSTALL.md) (installing, for beginners, with the setup's screenshots), [PLAYING.md](PLAYING.md) (keys, pads, arcade), [SETTINGS.md](SETTINGS.md) (`SWOS.ini`, command line, display), [BUILDING.md](BUILDING.md) (from source), [DEVELOPERS.md](DEVELOPERS.md) (layout, conventions) -- current; README.md is now a short front page linking them |
 | a tester bug report, a drop, publishing | [TRIAGE.md](TRIAGE.md) |
 | changing the match simulation | [GAMEPLAY.md](GAMEPLAY.md), then [TESTS.md](TESTS.md) (the replay rig proves it) |
 | online play | [NETPLAY.md](NETPLAY.md) (design), [NETPLAY_SETUP.md](NETPLAY_SETUP.md) (server runbook) |
@@ -205,6 +206,7 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `SWOS.svg` | the master icon (`scripts/generate_icons.py`) |
 | `docs/images/openswos-logo.png` | the OpenSWOS logo (README, the itch.io cover) |
 | `docs/images/screenshots/` | the README's screenshots (the same as the itch.io page's) |
+| `docs/images/setup/` | OpenSWOS Setup on Windows (start, found, done) for INSTALL.md: retaken with the setup's `--snapshot` from neutral copies of the sources (never the disk images' own names) and its default assets folder |
 
 ## On the owner's PC
 
