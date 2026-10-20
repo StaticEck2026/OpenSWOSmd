@@ -151,6 +151,9 @@ check_playback() {
            "https://${host}/playback/SWOS.wasm" 2>/dev/null || true)
     case "$code" in
         "200 application/wasm"*) echo "nginx: https://${host}/playback/ serves the player." ;;
+        # Behind a login (online.openswos.net: the recordings are internal): nginx found the
+        # location and asks for the password, which this check does not have.
+        "401 "*) echo "nginx: https://${host}/playback/ serves the player, behind a login." ;;
         *) PLAYBACK_WARNING="https://${host}/playback/SWOS.wasm answered '${code}', not 200 application/wasm: check nginx (docs/PLAYBACK.md)." ;;
     esac
 }
