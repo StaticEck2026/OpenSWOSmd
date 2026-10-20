@@ -65,6 +65,9 @@ typedef struct {
     uint16_t tieBreak;              /* legs > 0: LOBBY_TIE_ET_PEN or LOBBY_TIE_PEN_ONLY */
     uint16_t leg;                   /* 2 legs: the one to play next, 1 or 2 */
     uint16_t firstLeg1, firstLeg2;  /* leg 2: how the first ended, top team first */
+    /* The host's switches, NETPLAY_SW_* (netplay_match.h): how the match is played where
+     * the builds since 7d9d6d9 changed it. Only the host's count; both play by them. */
+    uint16_t switches;
 } LobbyRules;
 
 enum { LOBBY_TIE_ET_PEN = 1, LOBBY_TIE_PEN_ONLY = 2 };
@@ -125,7 +128,9 @@ void               NetplayLobby_Peer(char *ip, uint32_t ipCap, uint16_t *peerPor
 int32_t            NetplayLobby_ApplyMatch(void);
 
 /* After the match (or a refused start): put back the six USER tactics the match
- * setup overwrote, so a player's own library is never changed by playing online. */
+ * setup overwrote, so a player's own library is never changed by playing online --
+ * and take back the host's switches ApplyMatch put in force (netplay_match.h), giving
+ * this player their own SHORT PRESSES again. */
 void               NetplayLobby_RestoreTactics(void);
 
 /* After a match, on both machines: back to this lobby with the same player. The link

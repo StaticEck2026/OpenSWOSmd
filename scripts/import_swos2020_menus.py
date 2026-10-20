@@ -38,6 +38,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(REPO, "bin", "data_json", "menus", "swos2020")
@@ -187,6 +188,54 @@ NAV_FIXUPS = {
         "registerUser":      {"up": "liveCast"},
     },
 }
+
+
+# ---------------------------------------------------------------- our entries
+#
+# Entries OpenSWOS ADDS to an imported menu, so a re-import keeps them. Appended after
+# the menu's own, so every SWOS 2020 ordinal stays what it was; the header names them
+# like the rest. Coordinates are the menu's own (origin 0,0). Keyed by menu stem.
+#
+# mpGameSetup: the HOST'S SWITCHES (include/netplay_match.h, report 0042), on the left
+# where SWOS 2020 has the chat this lobby hides -- one row each, level with the rules
+# column, a label and an ON/OFF value the host selects. Navigation is set in code
+# (online_menus.c lobby_layout), as for the rest of this screen.
+def _switch_rows():
+    rows = []
+    for i, (name, label) in enumerate((("ShortPresses", "SHORT PRESSES"), ("CatchUp", "CATCH UP"),
+                                       ("KickoffSync", "KICK-OFF SYNC"), ("Balance", "BALANCE"),
+                                       ("CardsInjuries", "CARDS/INJURIES"))):
+        y = 93 + 13 * i
+        rows.append({"kind": "entry", "name": "switch%sLabel" % name,
+                     "coords": {"x": -8, "y": y, "w": 120, "h": 12},
+                     "commands": [{"op": "text", "flags": "0x0", "literal": label},
+                                  {"op": "colors", "frame_color": 0, "background_color": 7}]})
+        rows.append({"kind": "entry", "name": "switch%s" % name,
+                     "coords": {"x": 113, "y": y, "w": 48, "h": 12},
+                     "commands": [{"op": "text_no_ptr", "flags": "0x0"},
+                                  {"op": "colors", "frame_color": 0, "background_color": 13},
+                                  {"op": "onselect_fire", "func": "selectSwitch%s" % name}]})
+    return rows
+
+
+EXTRA_ENTRIES = {
+    "mpGameSetup": _switch_rows(),
+}
+
+
+def apply_extra_entries(stem, items, entries, functions):
+    """Append EXTRA_ENTRIES[stem] to the built items, and to `entries` for the header."""
+    extra = EXTRA_ENTRIES.get(stem, [])
+    origin = next(((it["x"], it["y"]) for it in reversed(items) if it["kind"] == "set_origin"), (0, 0))
+    if extra and origin != (0, 0):
+        items.append({"kind": "set_origin", "x": 0, "y": 0})
+    for item in extra:
+        items.append(json.loads(json.dumps(item)))
+        entries.append(types.SimpleNamespace(name=item["name"], ordinal=len(entries)))
+        for c in item["commands"]:
+            if c.get("func"):
+                functions.add(c["func"])
+    return len(extra)
 
 
 def apply_nav_fixups(stem, items, entries):
@@ -384,7 +433,11 @@ class MenuImporter:
         if len(entries) > 255:
             die("%s: %d entries; ordinals are a byte" % (self.name, len(entries)))
 
-        apply_nav_fixups(self.src_rel.rsplit("/", 1)[-1][:-4], items, entries)
+        stem = self.src_rel.rsplit("/", 1)[-1][:-4]
+        apply_extra_entries(stem, items, entries, self.functions)
+        if len(entries) > 255:
+            die("%s: %d entries with ours; ordinals are a byte" % (self.name, len(entries)))
+        apply_nav_fixups(stem, items, entries)
 
         doc = {
             "name": self.name,

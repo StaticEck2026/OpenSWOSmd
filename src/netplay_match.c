@@ -32,6 +32,7 @@
 #include "netplay.h"
 #include "replay_test.h"
 #include "sim_state.h"
+#include "test_rules.h"      /* CARDS/INJURIES: the rule a match is played by */
 
 extern int      Platform_Present(void);
 extern void     Platform_DelayNextFrame(uint32_t us);
@@ -491,12 +492,33 @@ static void checkFirstRun(int32_t frame, int32_t checksum, const uint8_t *state)
  * spread over that many. The wait is all that is done here, as for the time sync, which
  * is left exactly as it was: wall time only. [netplay] balance = yes turns it on in the
  * library (Netplay_SetBalance; off by default; SWOS_LIVE_BALANCE=1 / =0 for a test), and
- * a peer with it off sends no depth, so both players must have it on. */
-static int32_t s_balanceOn;
+ * a peer with it off sends no depth, so both players must have it on -- which in a match
+ * from the lobby is the host's BALANCE switch, played by both (below). */
+static int32_t s_balanceSetting;    /* this player's [netplay] balance */
+static int32_t s_balanceOn;         /* what the match being played goes by */
 
 void NetplayMatch_SetBalance(int32_t on)
 {
-    s_balanceOn = on != 0;
+    s_balanceSetting = on != 0;
+}
+
+/* The host's switches (netplay_match.h), set by the lobby at kick-off on both machines. */
+static int32_t s_hostSwitches = -1;
+
+void NetplayMatch_SetHostSwitches(int32_t switches)
+{
+    s_hostSwitches = switches < 0 ? -1 : (switches & NETPLAY_SW_ALL);
+}
+
+int32_t NetplayMatch_HostSwitches(void) { return s_hostSwitches; }
+int32_t NetplayMatch_BalanceSetting(void) { return s_balanceSetting; }
+
+/* Whether switch `sw` is ON for the match: the host's, or as this build plays. */
+static int32_t switchOn(int32_t sw)
+{
+    if (s_hostSwitches >= 0)
+        return (s_hostSwitches & sw) != 0;
+    return (NETPLAY_SW_DEFAULT & sw) != 0;
 }
 
 /* ---- sound during a rollback ----
@@ -676,7 +698,11 @@ static int32_t cbSave(void *ctx, uint8_t **state, int32_t *len, int32_t *checksu
         int32_t n = packet ? StateWire_Encode(packet, cap, SIM_TIER_ALL, 0, NULL, 0) : -1;
         s_np.kickoffTaken = 1;
         if (n > 0)
-            ReplayRec_SetKickoff(packet, (uint32_t)n, SimState_LayoutHash(), P2PLink_GameplayFlags(),
+            /* With the host's CARDS/INJURIES off the match is played by the old tester
+             * builds' rule, and says so the way they did: --srp-resim replays it by it. */
+            ReplayRec_SetKickoff(packet, (uint32_t)n, SimState_LayoutHash(),
+                                 (uint8_t)(P2PLink_GameplayFlags() |
+                                           (TestRules_NoInjuriesCards() ? P2P_RULES_BUILD : 0)),
                                  (uint16_t)_sim_draw_width);
         else
             fprintf(stderr, "[netplay] the kick-off state could not be recorded (%s): the "
@@ -931,14 +957,24 @@ int32_t NetplayMatch_Start(void)
         }
     }
     {
-        /* SWOS_LIVE_BALANCE=1 / =0: for the tests, whatever SWOS.ini says. */
+        /* The host's BALANCE switch when the lobby set one, else this player's own.
+         * SWOS_LIVE_BALANCE=1 / =0: for the tests, whatever either says. */
         const char *e = getenv("SWOS_LIVE_BALANCE");
+        s_balanceOn = s_hostSwitches >= 0 ? switchOn(NETPLAY_SW_BALANCE) : s_balanceSetting;
         if (e)
             s_balanceOn = atoi(e) != 0;
         if (getenv("SWOS_LIVE_NO_BALANCE"))
             s_balanceOn = 0;
     }
     Netplay_SetBalance(s_np.session, s_balanceOn);      /* GGPO-X's prediction balance */
+    /* KICK-OFF SYNC: before the first input, as ggpo_set_kickoff_prediction wants. */
+    Netplay_SetKickoffPrediction(s_np.session, switchOn(NETPLAY_SW_KICKOFF_SYNC));
+    if (s_hostSwitches >= 0)
+        fprintf(stderr, "[netplay] the host's switches: short presses %s, catch up %s, kick-off sync %s, "
+                "balance %s, cards/injuries %s\n",
+                switchOn(NETPLAY_SW_SHORT_PRESSES) ? "ON" : "OFF", switchOn(NETPLAY_SW_CATCH_UP) ? "ON" : "OFF",
+                switchOn(NETPLAY_SW_KICKOFF_SYNC) ? "ON" : "OFF", s_balanceOn ? "ON" : "OFF",
+                switchOn(NETPLAY_SW_CARDS_INJURIES) ? "ON" : "OFF");
 
     Audio_SetSfxFilter(soundFilter);      /* sound during a rollback, above */
     if (Netem_Enabled())
@@ -1888,8 +1924,10 @@ static int32_t p2pFrame(void)
             s_np.lastProgressMs = now;
             /* A stall (the OS, a hitch) is caught up on, as far as the other game can be
              * ahead, so the player who stalled pays for it and not the other one
-             * (Platform_SetCatchUpFrames). Back to 1 in liveEnd. */
-            Platform_SetCatchUpFrames(MAX_PREDICTION);
+             * (Platform_SetCatchUpFrames). Back to 1 in liveEnd. The host's CATCH UP
+             * switch OFF leaves it at 1: the backlog dropped, as before fd911618. */
+            if (switchOn(NETPLAY_SW_CATCH_UP))
+                Platform_SetCatchUpFrames(MAX_PREDICTION);
             resetControlHistory();      /* before GGPO saves frame 0 */
             /* And the clock, AGAIN, here. StartLive zeroed it, but the pre-match screens
              * run in between -- the stadium line-up and its waits -- and the SDL timer

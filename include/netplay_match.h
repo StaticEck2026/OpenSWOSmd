@@ -77,6 +77,37 @@ int32_t     NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint
  * lobby does, at kick-off. Kept until changed. */
 void        NetplayMatch_SetPacketKey(const uint8_t *key);
 
+/* THE HOST'S SWITCHES: how an online match is played where the builds since 7d9d6d9
+ * changed it, each ON or OFF in the lobby by the host alone and played that way by
+ * both (report 0042, docs/NETPLAY.md "The host's switches"). ON is how this build plays.
+ *
+ *   SHORT PRESSES   the press latch (input_sdl.c): a fire tap between two reads counts
+ *   CATCH UP        after a stall, the frames missed are played back to back (fd911618)
+ *   KICK-OFF SYNC   GGPO-X predicts 1 frame until the other player's first input (4e7553f3)
+ *   BALANCE         GGPO-X's prediction balance (29009dbd), OFF by default
+ *   CARDS/INJURIES  bookings and injuries; OFF is the old tester builds' online game
+ *
+ * The first four only change when each game reads and plays its frames; CARDS/INJURIES
+ * changes the match itself, and goes into the recording's rules (P2P_RULES_BUILD), so
+ * --srp-resim replays it by the same rule. */
+enum {
+    NETPLAY_SW_SHORT_PRESSES  = 0x01,
+    NETPLAY_SW_CATCH_UP       = 0x02,
+    NETPLAY_SW_KICKOFF_SYNC   = 0x04,
+    NETPLAY_SW_BALANCE        = 0x08,
+    NETPLAY_SW_CARDS_INJURIES = 0x10,
+    NETPLAY_SW_ALL            = 0x1F,
+    NETPLAY_SW_DEFAULT        = NETPLAY_SW_SHORT_PRESSES | NETPLAY_SW_CATCH_UP |
+                                NETPLAY_SW_KICKOFF_SYNC | NETPLAY_SW_CARDS_INJURIES,
+};
+/* The switches the NEXT live match plays by, set at kick-off by the lobby on both
+ * machines; -1 lets go (this machine's own settings, and the rest as this build plays). */
+void        NetplayMatch_SetHostSwitches(int32_t switches);
+/* What the match being played (or the next) goes by, -1 for none set. */
+int32_t     NetplayMatch_HostSwitches(void);
+/* This player's own [netplay] balance (the lobby's default for the host's switch). */
+int32_t     NetplayMatch_BalanceSetting(void);
+
 /* GameLoop, in place of one pass of its loop: at most one frame, ended and shown. Returns a
  * GameFrameResult. */
 int32_t     NetplayMatch_Frame(void);

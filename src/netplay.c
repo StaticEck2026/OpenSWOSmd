@@ -305,6 +305,13 @@ int32_t Netplay_SetBalance(NetplaySession *s, int32_t on)
     return (int32_t)ggpo_set_prediction_balance(s->ggpo, on);
 }
 
+int32_t Netplay_SetKickoffPrediction(NetplaySession *s, int32_t on)
+{
+    if (!s || !s->ggpo)
+        return NETPLAY_ERR_UNAVAILABLE;
+    return (int32_t)ggpo_set_kickoff_prediction(s->ggpo, on);
+}
+
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                          int32_t *framesAheadX10)
 {
@@ -746,6 +753,7 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
 }
 
 int32_t Netplay_SetBalance(NetplaySession *s, int32_t on) { (void)s; (void)on; return NETPLAY_ERR_UNAVAILABLE; }
+int32_t Netplay_SetKickoffPrediction(NetplaySession *s, int32_t on) { (void)s; (void)on; return NETPLAY_ERR_UNAVAILABLE; }
 
 int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
                          int32_t *framesAheadX10)

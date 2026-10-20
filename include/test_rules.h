@@ -13,8 +13,10 @@
  * It is a SETTING -- `[testing] no_injuries_cards = true` in SWOS.ini, OFF by default --
  * and it applies to OFFLINE play only:
  *
- *   - an online match always plays the real rules, whatever either player's file says,
- *     so there is nothing for two players to disagree about;
+ *   - an online match plays the real rules, whatever either player's file says, so there
+ *     is nothing for two players to disagree about -- unless the HOST switches CARDS/
+ *     INJURIES off in the lobby (netplay_match.h, the host's switches): then both play
+ *     that match by this rule (TestRules_Force), and its recording says so;
  *   - the test rigs (the replay corpus, the rollback rig, the netplay tests) always play
  *     the real rules too: their recordings were made that way;
  *   - `--srp-resim` plays a recording by the rule it was RECORDED under (SIMV's rule

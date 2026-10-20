@@ -159,7 +159,8 @@ void SrpResim_Run(void)
 #endif
         TestRules_Force(rule ? 1 : 0);
         if (rule)
-            printf("[resim] recorded by a no-injuries tester build: replayed by that rule\n");
+            printf("[resim] played without cards and injuries (an old tester build, or the host's "
+                   "CARDS/INJURIES switch): replayed by that rule\n");
     }
     if (NetplaySetup_Apply(s_rec.setup, s_rec.setupLen) != 0) {
         printf("[resim] REFUSED: the recording's match setup does not apply here\n");

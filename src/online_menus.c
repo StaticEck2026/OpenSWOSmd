@@ -846,7 +846,8 @@ static void lobby_frame_hook(void)
  * SWOS_LOBBY_READY=1 says ready -- as it opens, and again each time it comes back
  * after a match -- SWOS_LOBBY_START=1 has the host press START the moment it can, and
  * SWOS_LOBBY_MATCHES=N has both leave the game after N matches, the host once the lobby
- * is back up and the joiner when the host has gone. */
+ * is back up and the joiner when the host has gone. SWOS_LOBBY_SWITCHES=<hex> sets the
+ * host's switches (NETPLAY_SW_*, netplay_match.h). */
 static int32_t s_lobbyAgain;        /* run_live_match: show the lobby again, for a rematch */
 static int32_t s_lobbyMatches;      /* matches played from this lobby */
 static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobby is open */
@@ -860,7 +861,14 @@ static void lobby_test_knobs(void)
     extern uint8_t _teamFileBuffer[];
     const char *team = getenv("SWOS_LOBBY_TEAM");
     const char *cup = getenv("SWOS_LOBBY_CUP");     /* host: <legs>:<1 ET+PEN | 2 PEN ONLY> */
-    unsigned file, ordinal, legs, tie;
+    const char *sw = getenv("SWOS_LOBBY_SWITCHES"); /* host: NETPLAY_SW_* in hex */
+    unsigned file, ordinal, legs, tie, mask;
+
+    if (sw && NetplayLobby_IsHost() && sscanf(sw, "%x", &mask) == 1) {
+        LobbyRules r = *NetplayLobby_Rules();
+        r.switches = (uint16_t)mask;
+        NetplayLobby_SetRules(&r);
+    }
 
     if (cup && NetplayLobby_IsHost() && sscanf(cup, "%u:%u", &legs, &tie) == 2) {
         LobbyRules r = *NetplayLobby_Rules();
@@ -1014,6 +1022,17 @@ static const char *length_name(uint16_t length)
  * neighbour is passed over along ITS link in the same direction (MenuProc), so one
  * layout serves both players: the joiner's DOWN runs through the host's rules to
  * CANCEL. */
+/* The host's switches (netplay_match.h), one row each on the left of the lobby: the
+ * entries scripts/import_swos2020_menus.py adds to SWOS 2020's screen. */
+enum { LOBBY_SWITCH_ROWS = 5 };
+static const struct { int32_t entry; uint16_t sw; } s_switchRows[LOBBY_SWITCH_ROWS] = {
+    { MpGameSetupMenu_switchShortPresses,  NETPLAY_SW_SHORT_PRESSES },
+    { MpGameSetupMenu_switchCatchUp,       NETPLAY_SW_CATCH_UP },
+    { MpGameSetupMenu_switchKickoffSync,   NETPLAY_SW_KICKOFF_SYNC },
+    { MpGameSetupMenu_switchBalance,       NETPLAY_SW_BALANCE },
+    { MpGameSetupMenu_switchCardsInjuries, NETPLAY_SW_CARDS_INJURIES },
+};
+
 static void lobby_nav(int32_t ordinal, int32_t left, int32_t right, int32_t up, int32_t down)
 {
     MenuEntry *e = entry_at(ordinal);
@@ -1048,6 +1067,30 @@ static void lobby_layout(void)
               MpGameSetupMenu_pitchType1, MpGameSetupMenu_start);
     lobby_nav(MpGameSetupMenu_cancel, -1, MpGameSetupMenu_start, MpGameSetupMenu_minSubs1, -1);
     lobby_nav(MpGameSetupMenu_start, MpGameSetupMenu_cancel, -1, MpGameSetupMenu_maxSubs1, -1);
+
+    /* The host's switches, a column on the left: RIGHT goes to the rules beside them,
+     * and the rules' LEFT comes back. The joiner's are disabled, so the cursor passes
+     * through them as it does through the joiner's rules. */
+    {
+        static const int32_t right[LOBBY_SWITCH_ROWS] = {
+            MpGameSetupMenu_legOpt1, MpGameSetupMenu_legOpt1, MpGameSetupMenu_legOpt1,
+            MpGameSetupMenu_gameLength1, MpGameSetupMenu_pitchType1,
+        };
+        for (i = 0; i < LOBBY_SWITCH_ROWS; i++)
+            lobby_nav(s_switchRows[i].entry, -1, right[i],
+                      i ? s_switchRows[i - 1].entry : teams,
+                      i + 1 < LOBBY_SWITCH_ROWS ? s_switchRows[i + 1].entry : MpGameSetupMenu_cancel);
+        entry_at(MpGameSetupMenu_legOpt1)->leftEntry = (int8_t)MpGameSetupMenu_switchKickoffSync;
+        entry_at(MpGameSetupMenu_gameLength1)->leftEntry = (int8_t)MpGameSetupMenu_switchBalance;
+        entry_at(MpGameSetupMenu_pitchType1)->leftEntry = (int8_t)MpGameSetupMenu_switchCardsInjuries;
+        entry_at(MpGameSetupMenu_minSubs1)->leftEntry = (int8_t)MpGameSetupMenu_switchCardsInjuries;
+        entry_at(MpGameSetupMenu_cancel)->upEntry = (int8_t)MpGameSetupMenu_switchCardsInjuries;
+#ifndef SWOS_TEST_RULES
+        /* A release has the old rule compiled out: nothing to switch. */
+        lobby_hide(MpGameSetupMenu_switchCardsInjuriesLabel);
+        lobby_hide(MpGameSetupMenu_switchCardsInjuries);
+#endif
+    }
 
     lobby_hide(MpGameSetupMenu_teamDB);
     lobby_hide(MpGameSetupMenu_latency);
@@ -1179,6 +1222,12 @@ static void mpGameSetupMenu_OnDraw(void)
         snprintf(s_ruleDelay, sizeof s_ruleDelay, "%d", delay);
         set_text(MpGameSetupMenu_ggpoFrameDelay_, s_ruleDelay);
     }
+
+    /* The host's switches: the host's to change, the joiner's to see -- both play by
+     * the host's. */
+    for (row = 0; row < LOBBY_SWITCH_ROWS; row++)
+        set_entry(s_switchRows[row].entry, (rules->switches & s_switchRows[row].sw) ? "ON" : "OFF",
+                  host && open, host && open ? kLightBlue : kGray);
 
     if (host) {
         int32_t can = NetplayLobby_CanStart();
@@ -1529,6 +1578,19 @@ static void selectGameLength1(void) { change_rules(next_length); }
 static void selectPitchType1(void)  { change_rules(next_pitch); }
 static void selectMinSubs1(void)    { change_rules(next_min_subs); }
 static void selectMaxSubs1(void)    { change_rules(next_max_subs); }
+
+/* The host's switches: each row flips its own. */
+static void flip_short_presses(LobbyRules *r)  { r->switches ^= NETPLAY_SW_SHORT_PRESSES; }
+static void flip_catch_up(LobbyRules *r)       { r->switches ^= NETPLAY_SW_CATCH_UP; }
+static void flip_kickoff_sync(LobbyRules *r)   { r->switches ^= NETPLAY_SW_KICKOFF_SYNC; }
+static void flip_balance(LobbyRules *r)        { r->switches ^= NETPLAY_SW_BALANCE; }
+static void flip_cards_injuries(LobbyRules *r) { r->switches ^= NETPLAY_SW_CARDS_INJURIES; }
+
+static void selectSwitchShortPresses(void)  { change_rules(flip_short_presses); }
+static void selectSwitchCatchUp(void)       { change_rules(flip_catch_up); }
+static void selectSwitchKickoffSync(void)   { change_rules(flip_kickoff_sync); }
+static void selectSwitchBalance(void)       { change_rules(flip_balance); }
+static void selectSwitchCardsInjuries(void) { change_rules(flip_cards_injuries); }
 
 static void selectMPSettingStart(void)
 {
@@ -1995,6 +2057,11 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(selectPitchType1),
     HANDLER(selectMinSubs1),
     HANDLER(selectMaxSubs1),
+    HANDLER(selectSwitchShortPresses),
+    HANDLER(selectSwitchCatchUp),
+    HANDLER(selectSwitchKickoffSync),
+    HANDLER(selectSwitchBalance),
+    HANDLER(selectSwitchCardsInjuries),
     HANDLER(selectMPSettingStart),
     HANDLER(selectMPSettingExit),
 

@@ -53,6 +53,7 @@
 #include "replay_v2.h"     /* ReplayRec_SetSetup: the resumable recording */
 #include "custom_team.h"   /* CustomTeam_Allowed: what a team from the other player may be */
 #include "team_proto.h"    /* the server's word on both teams */
+#include "test_rules.h"     /* the host's CARDS/INJURIES switch */
 
 #include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
 #include <time.h>
@@ -80,12 +81,12 @@ enum {
 #define STATE_MAGIC   0x53554C42u       /* "SULB" */
 #define START_MAGIC   0x53555354u       /* "SUST" */
 #define ANSWER_MAGIC  0x5355414Eu       /* "SUAN" */
-#define LOBBY_VERSION 4     /* 2: START carries the match's packet key; 3: and the kick-off state;
-                               4: the cup rules */
+#define LOBBY_VERSION 5     /* 2: START carries the match's packet key; 3: and the kick-off state;
+                               4: the cup rules; 5: the host's switches */
 
-/* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the nine
+/* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the ten
  * rules, the name, the team, the USER tactic. */
-enum { RULE_WORDS = 9 };
+enum { RULE_WORDS = 10 };
 enum { STATE_BYTES = 4 + 2 + 4 + 2 + 2 + RULE_WORDS * 2 + LOBBY_NAME_MAX + NETPLAY_TEAM_BYTES +
                      TACTIC_BYTES };
 /* START: magic, version, the joiner STATE generation it was built on, rulesGen, the
@@ -173,6 +174,10 @@ static void clamp_rules(LobbyRules *r)
         r->firstLeg1 = 99;
     if (r->firstLeg2 > 99)
         r->firstLeg2 = 99;
+    r->switches &= NETPLAY_SW_ALL;
+#ifndef SWOS_TEST_RULES
+    r->switches |= NETPLAY_SW_CARDS_INJURIES;   /* a release has the old rule compiled out */
+#endif
 }
 
 /* ---- the STATE message ---- */
@@ -204,6 +209,7 @@ static int32_t encode_state(uint8_t *out)
     BE_WRITE_U16(q, s_lobby.rules.leg);           q += 2;
     BE_WRITE_U16(q, s_lobby.rules.firstLeg1);     q += 2;
     BE_WRITE_U16(q, s_lobby.rules.firstLeg2);     q += 2;
+    BE_WRITE_U16(q, s_lobby.rules.switches);      q += 2;
     memset(q, 0, LOBBY_NAME_MAX);
     memcpy(q, p->name, strnlen(p->name, LOBBY_NAME_MAX)); q += LOBBY_NAME_MAX;
     NetplaySetup_WriteTeam(q, &p->team);          q += NETPLAY_TEAM_BYTES;
@@ -277,6 +283,7 @@ static void read_peer_state(void)
     rules.leg        = BE_READ_U16(q);            q += 2;
     rules.firstLeg1  = BE_READ_U16(q);            q += 2;
     rules.firstLeg2  = BE_READ_U16(q);            q += 2;
+    rules.switches   = BE_READ_U16(q);            q += 2;
     memcpy(got.name, q, LOBBY_NAME_MAX);          q += LOBBY_NAME_MAX;
     got.name[LOBBY_NAME_MAX] = '\0';
     NetplaySetup_ReadTeam(&got.team, q);          q += NETPLAY_TEAM_BYTES;
@@ -326,9 +333,44 @@ static void save_tactics(void)
     s_lobby.tacticsSaved = 1;
 }
 
+/* The host's switches in force on this machine for one match (ApplyMatch), and this
+ * player's own SHORT PRESSES to give back afterwards. */
+static int32_t s_switchesHeld, s_ownLatch;
+
+static void apply_switches(uint16_t sw)
+{
+    extern int  InputSDL_PressLatch(void);
+    extern void InputSDL_SetPressLatch(int on);
+    if (!s_switchesHeld)
+        s_ownLatch = InputSDL_PressLatch();
+    s_switchesHeld = 1;
+    NetplayMatch_SetHostSwitches(sw);
+    InputSDL_SetPressLatch((sw & NETPLAY_SW_SHORT_PRESSES) != 0);
+    /* CARDS/INJURIES off: the old tester builds' rule, for this match, on both machines,
+     * from the kick-off on (test_rules.h; the recording says so -- netplay_match.c). */
+    TestRules_Force((sw & NETPLAY_SW_CARDS_INJURIES) ? -1 : 1);
+    fprintf(stderr, "[lobby] the host's switches: short presses %s, catch up %s, kick-off sync %s, "
+            "balance %s, cards/injuries %s\n",
+            (sw & NETPLAY_SW_SHORT_PRESSES) ? "ON" : "OFF", (sw & NETPLAY_SW_CATCH_UP) ? "ON" : "OFF",
+            (sw & NETPLAY_SW_KICKOFF_SYNC) ? "ON" : "OFF", (sw & NETPLAY_SW_BALANCE) ? "ON" : "OFF",
+            (sw & NETPLAY_SW_CARDS_INJURIES) ? "ON" : "OFF");
+}
+
+static void release_switches(void)
+{
+    extern void InputSDL_SetPressLatch(int on);
+    if (!s_switchesHeld)
+        return;
+    s_switchesHeld = 0;
+    NetplayMatch_SetHostSwitches(-1);
+    InputSDL_SetPressLatch(s_ownLatch);
+    TestRules_Force(-1);
+}
+
 void NetplayLobby_RestoreTactics(void)
 {
     int32_t i;
+    release_switches();
     if (!s_lobby.tacticsSaved)
         return;
     for (i = 0; i < 6; i++)
@@ -597,6 +639,17 @@ void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
         s_lobby.rules.pitchType  = _pitchType <= 6 ? _pitchType : RANDOM_PITCH;
         s_lobby.rules.minSubs    = 2;
         s_lobby.rules.maxSubs    = 5;
+        /* The switches as this build plays, with the host's own SHORT PRESSES and
+         * BALANCE settings: what the host played by before there were switches. */
+        {
+            extern int InputSDL_PressLatch(void);
+            uint16_t sw = NETPLAY_SW_DEFAULT & ~(NETPLAY_SW_SHORT_PRESSES | NETPLAY_SW_BALANCE);
+            if (InputSDL_PressLatch())
+                sw |= NETPLAY_SW_SHORT_PRESSES;
+            if (NetplayMatch_BalanceSetting())
+                sw |= NETPLAY_SW_BALANCE;
+            s_lobby.rules.switches = sw;
+        }
         clamp_rules(&s_lobby.rules);
         s_lobby.rulesGen = 1;
     }
@@ -1030,6 +1083,9 @@ int32_t NetplayLobby_ApplyMatch(void)
         return 1;
     if (!s_lobby.setup)
         return 1;
+    /* The host's switches, before anything of the match is set up: CARDS/INJURIES
+     * decides what the init below does with injured and booked players. */
+    apply_switches(s_lobby.rules.switches);
     /* Both of us from the host's state, then the setup, then the match's own init: the
      * same state through the same steps. This machine keeps its own LOCAL fields -- the
      * HUD is placed for this display, not the host's (sim_state.c). */

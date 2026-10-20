@@ -14,7 +14,7 @@
     X(newsMenu, "swos2020/newsMenu", NewsMenu, 52) \
     X(messageMenu, "swos2020/messageMenu", MessageMenu, 11) \
     X(AboutMPMenu, "swos2020/AboutMPMenu", AboutMPMenuNS, 10) \
-    X(mpGameSetupMenu, "swos2020/mpGameSetupMenu", MpGameSetupMenu, 64) \
+    X(mpGameSetupMenu, "swos2020/mpGameSetupMenu", MpGameSetupMenu, 74) \
     X(matchMakingMenu, "swos2020/matchMakingMenu", MatchMakingMenu, 53) \
     X(openLobbyMenu, "swos2020/openLobbyMenu", OpenLobbyMenu, 9) \
     X(mpWaitingMenu, "swos2020/mpWaitingMenu", MpWaitingMenu, 7) \
@@ -41,7 +41,7 @@
     X(myFriendlyStatsMenu, "swos2020/myFriendlyStatsMenu", MyFriendlyStatsMenu, 107) \
     X(selectUniformMenu, "swos2020/selectUniformMenu", SelectUniformMenu, 39) \
 
-/* Every handler name the imported menus reference (258), sorted. */
+/* Every handler name the imported menus reference (263), sorted. */
 #define SWOS2020_MENU_CALLBACKS(X) \
     X(LeftBasicColor_Dec_onSelect) \
     X(LeftBasicColor_Inc_onSelect) \
@@ -282,6 +282,11 @@
     X(selectPlayer) \
     X(selectRanked) \
     X(selectRankedModeOption1) \
+    X(selectSwitchBalance) \
+    X(selectSwitchCardsInjuries) \
+    X(selectSwitchCatchUp) \
+    X(selectSwitchKickoffSync) \
+    X(selectSwitchShortPresses) \
     X(selectTeamDB1) \
     X(selectTournament) \
     X(selectUniformMenuOnDraw) \
@@ -526,8 +531,18 @@ enum {
     MpGameSetupMenu_scrollDown = 61,
     MpGameSetupMenu_inputChatMsg = 62,
     MpGameSetupMenu_dummy = 63,
+    MpGameSetupMenu_switchShortPressesLabel = 64,
+    MpGameSetupMenu_switchShortPresses = 65,
+    MpGameSetupMenu_switchCatchUpLabel = 66,
+    MpGameSetupMenu_switchCatchUp = 67,
+    MpGameSetupMenu_switchKickoffSyncLabel = 68,
+    MpGameSetupMenu_switchKickoffSync = 69,
+    MpGameSetupMenu_switchBalanceLabel = 70,
+    MpGameSetupMenu_switchBalance = 71,
+    MpGameSetupMenu_switchCardsInjuriesLabel = 72,
+    MpGameSetupMenu_switchCardsInjuries = 73,
 };
-#define MpGameSetupMenu_numEntries 64
+#define MpGameSetupMenu_numEntries 74
 #define MpGameSetupMenu_kGS_ADJUSTY (0)
 #define MpGameSetupMenu_kGS_MaxRows (3)
 #define MpGameSetupMenu_kGS_ButtonY0 (25)

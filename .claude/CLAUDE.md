@@ -373,9 +373,17 @@ scripts/build_installer.sh --stage-only    # inspect dist/windows first
 **No injuries, no cards is a SETTING, off by default, offline only**
 (`[testing] no_injuries_cards = true` in `SWOS.ini`, or `SWOS_TEST_NO_INJURIES_CARDS=1` in
 the environment for one run; `include/test_rules.h`). With it a tester can hit VIEW RESULT
-through a season: no substitution menus, no booking prompts. An online match ALWAYS plays
-the real rules, whatever either file says, and so do the rigs (replay corpus, rollback,
-netplay tests); `--srp-resim` plays a recording by the rule it was recorded under.
+through a season: no substitution menus, no booking prompts. An online match plays the
+real rules whatever either file says -- unless the HOST switches CARDS/INJURIES off in the
+lobby (the host's switches, below) -- and so do the rigs (replay corpus, rollback, netplay
+tests); `--srp-resim` plays a recording by the rule it was recorded under.
+**The host's switches** (`include/netplay_match.h`, report 0042, docs/NETPLAY.md "The lobby"):
+SHORT PRESSES, CATCH UP, KICK-OFF SYNC, BALANCE and CARDS/INJURIES, ON/OFF on the left of
+the lobby -- each a netplay change since 7d9d6d9 -- decided by the host ALONE and played by
+both (they travel in the host's rules; `NetplayLobby_ApplyMatch` puts them in force,
+`NetplayLobby_RestoreTactics` takes them back). The rows are entries OpenSWOS adds to SWOS
+2020's menu through `EXTRA_ENTRIES` in `scripts/import_swos2020_menus.py`, never by hand.
+`SWOS_LOBBY_SWITCHES=<hex>` sets them for a test (`HOST_ENV=` of the lobby/relay tests).
 Until 2026-10-11 it was a compile-time flag of the same name, on in every tester drop: a
 tester's binary was a different game, took the rule online, and a build with it could not
 play one without. Those old tester builds are refused at the handshake ("YOUR BUILDS PLAY

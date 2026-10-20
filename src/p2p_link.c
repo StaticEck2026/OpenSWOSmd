@@ -219,12 +219,13 @@ static uint32_t now_ms(void)
  * style, arcade mode, the fire-hold lockout). Two peers that differ in any bit play
  * different matches from the same inputs.
  *
- * P2P_RULE_NO_BOOKINGS / P2P_RULE_NO_INJURIES are never set any more: they said a build
+ * P2P_RULE_NO_BOOKINGS / P2P_RULE_NO_INJURIES are never set here: they said a build
  * was compiled without cards and injuries (SWOS_TEST_NO_INJURIES_CARDS, the tester
- * builds until 2026-10-11). That is a setting now and never applies online
- * (include/test_rules.h), so every build sends 0 -- which is also what makes this build
- * refuse an old tester build, whose match really would be a different one. The bits
- * stay defined for the recordings those builds made (srp_resim.c). */
+ * builds until 2026-10-11). Every build sends 0, which is what makes this build refuse
+ * an old tester build, whose match really would be a different one. Online the rule is
+ * now the host's CARDS/INJURIES switch, decided in the lobby after this handshake; a
+ * match played without it says so in its RECORDING's rules (netplay_match.c), as the
+ * old builds' did, so srp_resim.c replays both the same way. */
 uint8_t P2PLink_GameplayFlags(void)
 {
     extern int _gDosGameplay;               /* dos_mode.h */

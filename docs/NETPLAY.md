@@ -817,6 +817,28 @@ the host and the top team.
 | GAME LENGTH, PITCH TYPE, SUBSTITUTES | host | the friendly menu's own cycles; the joiner sees them change |
 | START | host | lit when both are ready on the current rules |
 | FRAME DELAY | — | the delay the link agreed; shown, not chosen |
+| SHORT PRESSES, CATCH UP, KICK-OFF SYNC, BALANCE, CARDS/INJURIES | host | the host's switches, ON/OFF, on the left; below |
+
+**The host's switches** (`NETPLAY_SW_*`, `include/netplay_match.h`). Report 0042 said online
+play changed after 7d9d6d9; each netplay change since then that can be turned off is a
+switch, so a host can A/B them in real matches. **Only the host's count**: they travel in
+the host's rules like the game length (a change takes the joiner's GO down), the joiner sees
+them greyed, and at kick-off both machines put them in force (`NetplayLobby_ApplyMatch`) and
+take them back after (`NetplayLobby_RestoreTactics`). ON is how this build plays.
+
+| Switch | Default | OFF means |
+|---|---|---|
+| SHORT PRESSES | the host's own `[input] latch_presses` | a fire tap shorter than a frame is lost, as before 6976feaf (`input_sdl.c`, the press latch) |
+| CATCH UP | ON | after a stall the backlog is dropped, as before fd911618 (`Platform_SetCatchUpFrames`) |
+| KICK-OFF SYNC | ON | GGPO-X predicts the whole window from frame 0, as before 4e7553f3 (`ggpo_set_kickoff_prediction`) |
+| BALANCE | the host's own `[netplay] balance` | GGPO-X's prediction balance off (docs/NETPLAY_BALANCE.md); ON turns it on for BOTH |
+| CARDS/INJURIES | ON | nobody booked or injured: the old tester builds' online game (`TestRules_Force`); the recording's rules say 0xD8 and `--srp-resim` replays it by that rule. Hidden in a `--release` build, which has the rule compiled out |
+
+Not a switch: the time sync's frame advantage (29009dbd). The old builds sent garbage there
+that was nearly always 0, and 0 is what is sent now (`GGPO_SEND_FRAME_ADVANTAGE=0`).
+`[lobby]` and `[netplay] the host's switches: ...` lines in both logs (so in the match report)
+say what a match was played by. `SWOS_LOBBY_SWITCHES=<hex>` sets them in the lobby and relay
+tests: `HOST_ENV=SWOS_LOBBY_SWITCHES=0 scripts/netplay_lobby_test.sh`.
 
 The protocol is three messages, each on a link channel of its own:
 
@@ -1079,8 +1101,8 @@ New-NetFirewallHyperVRule -Name SWOS-MM -DisplayName "SWOS matchmaker" `
 **3. Forward it on the router**: UDP 19602 → the host machine's LAN address.
 
 **4. Tell the testers the address.** `SWOS_MM_HOST=<public IP or DNS name>`; the port only
-if it is not 19602. **`baker76.com` is the wrong name to hand out** — it resolves to the
-GoDaddy shared host the downloads live on, not to whatever machine is running this. A home
+if it is not 19602. **`baker76.com` is the wrong name to hand out** — it resolves to a
+GoDaddy shared host, not to whatever machine is running this. A home
 connection needs its current public IP, or a dynamic-DNS name pointed at it.
 
 **5. Prove it from another machine before handing it out**, rather than trusting the
@@ -1538,8 +1560,8 @@ way the native tests drive a binary. Headless Chrome is Playwright's
 `--enable-logging=stderr`, so no browser driver is needed. `SWOS_NO_LOG=1` matters there:
 without it the game's stderr goes to a `SWOS.log` in the browser's memory.
 
-**Done since:** **`wss://` on the public server.** A page served over https (baker76.com
-is) may only open `wss://`. The gate speaks it (`--tls-cert`/`--tls-key`, TLS on the same
+**Done since:** **`wss://` on the public server.** A page served over https may only open
+`wss://`. The gate speaks it (`--tls-cert`/`--tls-key`, TLS on the same
 port, `TLS=1 scripts/wasm_netplay_test.sh`; docs/NETPLAY_SETUP.md §10), and `wasm/pre.js`
 picks `wss://` on an https page. us.swos.eu has its certificate, and the web build has
 netplay on by default since (2026-09-24).
