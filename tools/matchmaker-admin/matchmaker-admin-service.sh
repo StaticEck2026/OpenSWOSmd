@@ -27,6 +27,10 @@ usage() {
 }
 
 install_service() {
+    # Every ReadWritePaths below must exist before the gateway starts, or systemd refuses
+    # it (226/NAMESPACE): a first install on a new server has no admin/ yet.
+    sudo install -d -o "$RUN_USER" -g "$RUN_USER" /srv/swos-matchmaker/admin \
+        /srv/swos-matchmaker/reports /srv/swos-matchmaker/recordings /srv/swos-matchmaker/playback
     echo "Writing ${SERVICE_FILE} ..."
     sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
