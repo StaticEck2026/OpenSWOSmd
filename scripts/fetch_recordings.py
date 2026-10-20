@@ -11,13 +11,15 @@ This mirrors the folder's nginx index, fetching only what is new or has grown (t
 recorder rewrites a match's file as it goes), and prints one line a recording, beside
 the match report for the same match when scripts/fetch_reports.py has fetched it.
 
-  scripts/fetch_recordings.py                  # mirror + list, oldest first
+  scripts/fetch_recordings.py                  # mirror, delete what we now hold from the server, list
+  scripts/fetch_recordings.py --keep           # ... and leave it on the server
   scripts/fetch_recordings.py --match 4d33222c # only that match (a prefix of its id)
   scripts/fetch_recordings.py --no-fetch       # list what is already here
   scripts/fetch_recordings.py --url URL --out DIR
-  scripts/fetch_recordings.py --clear          # then delete from the server what we now hold
-                                               # (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD, as
-                                               # fetch_reports.py --clear)
+
+Like fetch_reports.py: every request carries SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD (the
+recordings are behind the admin page's login), and what was fetched is deleted from the
+server unless --keep -- a recording still growing (a match in progress) stays.
 
 Default folder: build/recordings (gitignored).
 """
@@ -33,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fetch_reports  # noqa: E402  -- the index parser and the report summary
 
 REPO = fetch_reports.REPO
-DEFAULT_URL = "https://us.swos.eu/recordings/"
+DEFAULT_URL = "https://online.openswos.net/recordings/"
 DEFAULT_OUT = os.path.join(REPO, "build", "recordings")
 DEFAULT_REPORTS = fetch_reports.DEFAULT_OUT
 NAME = re.compile(r"^(\d{8})-(\d{6})-([0-9a-f]{8})\.SRP$", re.I)
@@ -48,7 +50,7 @@ def is_index(url):
 
 def fetch(url, out_dir):
     """Returns (new, held): recordings that came down or grew, and every file now here at
-    the size the server lists it, as 'name:size' -- what --clear may delete there."""
+    the size the server lists it, as 'name:size' -- what may be deleted there after the fetch."""
     new, held = 0, []
     for href, size in fetch_reports.listing(url):
         name = fetch_reports.safe_name(href)
@@ -98,12 +100,14 @@ def main():
     ap.add_argument("--reports", default=DEFAULT_REPORTS, help="where fetch_reports.py keeps reports")
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--match", help="only recordings whose match id starts with this")
-    ap.add_argument("--clear", action="store_true", help="then delete from the server what is now held here")
+    ap.add_argument("--keep", action="store_true", help="leave what was fetched on the server")
+    ap.add_argument("--clear", action="store_true", help=argparse.SUPPRESS)   # the default now
     ap.add_argument("--admin-url", default=fetch_reports.DEFAULT_ADMIN)
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
     if not args.no_fetch:
+        fetch_reports.install_login("fetch_recordings")
         url = args.url if args.url.endswith("/") else args.url + "/"
         if not is_index(url):
             print("fetch_recordings: %s is not a file listing -- the server does not publish its "
@@ -112,7 +116,7 @@ def main():
             n, held = fetch(url, args.out)
             print("fetch_recordings: %d new or grown recording(s) from %s -> %s"
                   % (n, url, os.path.relpath(args.out, REPO)), file=sys.stderr)
-            if args.clear:
+            if not args.keep:
                 fetch_reports.clear_on_server(held, args.admin_url, "fetch_recordings")
 
     for name in sorted(os.listdir(args.out)):

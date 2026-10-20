@@ -43,7 +43,8 @@ in `/srv/swos-matchmaker/recordings`, which nginx publishes for
 `scripts/fetch_reports.py` and `scripts/fetch_recordings.py` to download. Once they
 are downloaded they can go:
 
-- **From the fetch scripts** (the usual way): `--clear` sends `POST /cc/clear` with
+- **From the fetch scripts** (the usual way, and their default since 2026-10-20; `--keep`
+  skips it): after a fetch they send `POST /cc/clear` with
   exactly the files that run downloaded, each at the size it downloaded it; the
   gateway deletes only those, and only if they are still that size -- a report that
   arrived, or a recording that grew, since the fetch stays. Names are checked against

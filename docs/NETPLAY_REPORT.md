@@ -116,7 +116,8 @@ the worst detected ghosts. docs/NETPLAY_GHOSTING.md has what they are, and
   usual suspects flagged: a relay, a 60 Hz display against a 50 Hz game, a player far
   ahead, a silence.
 - **Retention on the server.** Nothing prunes `DIR/` by itself; a report is ~5 KB, so it
-  is years of testing before it matters. By hand: `scripts/fetch_reports.py` mirrors the
-  reports and `--clear` then deletes from the server what was fetched (through the admin
+  is years of testing before it matters. `scripts/fetch_reports.py` mirrors the
+  reports (behind the admin page's login) and then deletes from the server what was fetched
+  (`--keep` to leave it) (through the admin
   gateway, `tools/matchmaker-admin`; docs/NETPLAY_GHOSTING.md, "Reading them").
 - **Low-rated matches to ReportBot**, as reports of their own.

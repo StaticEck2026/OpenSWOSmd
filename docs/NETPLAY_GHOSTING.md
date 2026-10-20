@@ -113,9 +113,8 @@ that the match is recorded:
 scripts/fetch_reports.py --grep CONTROL     # matches whose rating mentions it
 scripts/fetch_recordings.py                 # their recordings, paired with the reports
 scripts/ghost_view.py build/reports/<match id>/player1.zip
-scripts/fetch_reports.py --clear            # then empty the server of what we now hold
-scripts/fetch_recordings.py --clear         #   (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD:
-                                            #   tools/matchmaker-admin/README.md)
+# Both fetch with the admin page's login (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD) and then
+# delete from the server what they now hold (--keep to leave it): tools/matchmaker-admin.
 ```
 
 **Did they arrange their team?** The lobby logs every use of the team screen
