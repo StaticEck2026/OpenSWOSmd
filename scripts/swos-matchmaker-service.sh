@@ -5,8 +5,10 @@ set -euo pipefail
 
 SERVICE_NAME="swos-matchmaker"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-REPO_DIR="/home/redhair/git/OpenSWOS"
-RUN_USER="redhair"
+# The checkout this script is in, run as the user who owns it (us.swos.eu:
+# /home/redhair/git/OpenSWOS, redhair; online.openswos.net: /home/swos/OpenSWOS, swos).
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUN_USER="${RUN_USER:-$(stat -c %U "$REPO_DIR")}"
 BUILT_BINARY="${REPO_DIR}/build/matchmaker/swos-matchmaker"
 DEPLOY_DIR="/srv/swos-matchmaker"
 BINARY="${DEPLOY_DIR}/bin/swos-matchmaker"

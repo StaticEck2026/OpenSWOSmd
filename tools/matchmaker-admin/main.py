@@ -30,7 +30,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 LISTEN_ADDR = ("127.0.0.1", 8899)
-REPO_DIR = "/home/redhair/git/OpenSWOS"
+# The checkout this file is in (tools/matchmaker-admin/main.py).
+REPO_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADMIN_DIR = "/srv/swos-matchmaker/admin"
 REQUESTS_DIR = os.path.join(ADMIN_DIR, "requests")
 PROCESSED_DIR = os.path.join(ADMIN_DIR, "processed")

@@ -11,7 +11,7 @@
 # QUEUED_ACTIONS split).
 #
 # Install: root's crontab, once a minute -
-#   * * * * * /home/redhair/git/OpenSWOS/tools/matchmaker-admin/admin-cron-worker.sh >/dev/null 2>&1
+#   * * * * * <the checkout>/tools/matchmaker-admin/admin-cron-worker.sh >/dev/null 2>&1
 #
 # A request file's NAME is the whole request (empty contents, never read/eval'd)
 # - `<unixnano>-<action>.req`, action checked against the fixed case statement
@@ -26,14 +26,15 @@ set -uo pipefail
 # "Bereits aktuell." otherwise).
 export LC_ALL=C LANGUAGE=C
 
-REPO_DIR="/home/redhair/git/OpenSWOS"
+# The checkout this script is in; its owner is the user everything else runs as.
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ADMIN_DIR="/srv/swos-matchmaker/admin"
 REQUESTS_DIR="$ADMIN_DIR/requests"
 PROCESSED_DIR="$ADMIN_DIR/processed"
 LATEST_LOG="$PROCESSED_DIR/latest.log"
 LOCK_FILE="$ADMIN_DIR/worker.lock"
 
-RUN_USER="redhair"
+RUN_USER="${RUN_USER:-$(stat -c %U "$REPO_DIR")}"
 
 # Whichever of this (root, once a minute) or main.py (redhair, on startup)
 # happens to create these dirs FIRST owns them - if this runs first, they'd

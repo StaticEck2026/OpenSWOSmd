@@ -15,8 +15,9 @@ set -euo pipefail
 
 SERVICE_NAME="swos-matchmaker-admin"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-REPO_DIR="/home/redhair/git/OpenSWOS"
-RUN_USER="redhair"
+# The checkout this script is in, run as the user who owns it (as swos-matchmaker-service.sh).
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUN_USER="${RUN_USER:-$(stat -c %U "$REPO_DIR")}"
 TOOL_DIR="${REPO_DIR}/tools/matchmaker-admin"
 PYTHON_BIN="$(command -v python3)"
 

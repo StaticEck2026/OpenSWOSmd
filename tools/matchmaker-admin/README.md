@@ -106,6 +106,9 @@ and `latest.log` - the page polls `latest.log` regardless of which tier ran.
    ```
    * * * * * /home/redhair/git/OpenSWOS/tools/matchmaker-admin/admin-cron-worker.sh >/dev/null 2>&1
    ```
+   (the path of the checkout on that server: the scripts take their checkout from where
+   they are, and the user they run as from who owns it -- online.openswos.net's is
+   `/home/swos/OpenSWOS`, user `swos`.)
 
 3. **nginx: password + reverse proxy.** Create the password file once:
    ```
