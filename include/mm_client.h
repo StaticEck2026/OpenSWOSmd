@@ -39,10 +39,11 @@
 #define MM_ADDR_TEXT_MAX   24      /* "255.255.255.255:65535" + slack */
 
 #define MM_DEFAULT_PORT    19602   /* third_party/matchmaker/OPENSWOS.md */
-/* The public server, run by a team member (docs/NETPLAY_SETUP.md). A default, not a lock:
+/* The public server, OpenSWOS's own since 2026-10-20 (was us.swos.eu, Redhair's;
+ * docs/NETPLAY_SETUP.md, docs/INDEX.md). A default, not a lock:
  * the SERVER row and [netplay] matchmaker override it, and SWOS_MM_HOST overrides both --
  * which every local test sets, so none of them reaches this server by accident. */
-#define MM_DEFAULT_HOST    "us.swos.eu"
+#define MM_DEFAULT_HOST    "online.openswos.net"
 
 typedef enum {
     MM_IDLE,          /* no socket */
