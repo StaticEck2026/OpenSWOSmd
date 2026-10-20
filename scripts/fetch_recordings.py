@@ -107,8 +107,8 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     if not args.no_fetch:
-        fetch_reports.install_login("fetch_recordings")
         url = args.url if args.url.endswith("/") else args.url + "/"
+        fetch_reports.install_login("fetch_recordings", url)
         if not is_index(url):
             print("fetch_recordings: %s is not a file listing -- the server does not publish its "
                   "recordings there (yet)" % url, file=sys.stderr)
@@ -116,7 +116,7 @@ def main():
             n, held = fetch(url, args.out)
             print("fetch_recordings: %d new or grown recording(s) from %s -> %s"
                   % (n, url, os.path.relpath(args.out, REPO)), file=sys.stderr)
-            if not args.keep:
+            if not args.keep and urllib.parse.urlsplit(url).hostname == fetch_reports.LOGIN_HOST:
                 fetch_reports.clear_on_server(held, args.admin_url, "fetch_recordings")
 
     for name in sorted(os.listdir(args.out)):

@@ -38,20 +38,30 @@ DEFAULT_OUT = os.path.join(REPO, "build", "reports")
 DEFAULT_ADMIN = "https://online.openswos.net/cc/clear"
 
 
+# The ONE server the login belongs to (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD are the admin
+# login of OpenSWOS's own server). Never sent anywhere else, whatever --url says: fetching
+# from another server (us.swos.eu) must not hand it our password.
+LOGIN_HOST = "online.openswos.net"
+
+
 class _Login(urllib.request.BaseHandler):
-    """The admin page's login on every https request (the server asks for it on all of
-    /reports/, /recordings/ and /cc/). Never sent over plain http, never printed."""
+    """The admin page's login on https requests to LOGIN_HOST only (the server asks for it
+    on all of /reports/, /recordings/ and /cc/). Never over plain http, never printed."""
 
     def __init__(self, user, password):
         self.header = "Basic " + base64.b64encode(("%s:%s" % (user, password)).encode()).decode()
 
     def https_request(self, req):
-        req.add_unredirected_header("Authorization", self.header)
+        if urllib.parse.urlsplit(req.full_url).hostname == LOGIN_HOST:
+            req.add_unredirected_header("Authorization", self.header)
         return req
 
 
-def install_login(tag):
-    """Send SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD with every request from here on."""
+def install_login(tag, url):
+    """Send SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD with every request to LOGIN_HOST from here
+    on -- and to nothing else."""
+    if urllib.parse.urlsplit(url).hostname != LOGIN_HOST:
+        return False                    # another server: no login of ours goes there
     user, password = os.environ.get("SWOS_ADMIN_USER"), os.environ.get("SWOS_ADMIN_PASSWORD")
     if not user or not password:
         print("%s: no SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD -- the server will refuse (401)" % tag,
@@ -197,12 +207,12 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     if not args.no_fetch:
-        install_login("fetch_reports")
         url = args.url if args.url.endswith("/") else args.url + "/"
+        install_login("fetch_reports", url)
         n, held = fetch(url, args.out)
         print("fetch_reports: %d new zip(s) from %s -> %s" % (n, url, os.path.relpath(args.out, REPO)),
               file=sys.stderr)
-        if not args.keep:
+        if not args.keep and urllib.parse.urlsplit(url).hostname == LOGIN_HOST:
             clear_on_server(held, args.admin_url, "fetch_reports")
 
     rows = []
