@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--
+  openswos.net: the landing page. Served by nginx on the OpenSWOS server from
+  /var/www/openswos.net (this folder, copied there). Releases are on itch.io.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenSWOS</title>
+<meta name="description" content="OpenSWOS: Sensible World of Soccer, rebuilt in C from the original Amiga game, with online multiplayer.">
+<link rel="icon" type="image/png" href="openswos-logo.png">
+<style>
+  :root {
+    --bg: #0f2a16;
+    --bg-edge: #08170c;
+    --text: #e8f0e6;
+    --muted: #9fb59c;
+    --button: #fa5c5c;
+    --button-hover: #ff7373;
+    --button-text: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(ellipse at center, var(--bg) 0%, var(--bg-edge) 100%);
+    background-color: var(--bg-edge);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    text-align: center;
+  }
+  img {
+    width: min(440px, 86vw);
+    height: auto;
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+  }
+  a.button {
+    display: inline-block;
+    margin-top: 36px;
+    padding: 14px 32px;
+    border-radius: 8px;
+    background: var(--button);
+    color: var(--button-text);
+    font-weight: 700;
+    font-size: 1.15rem;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+  a.button:hover, a.button:focus-visible { background: var(--button-hover); }
+  a.button:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  p {
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+  <img src="openswos-logo.png" alt="OpenSWOS" width="927" height="783">
+  <a class="button" href="https://baker76.itch.io/openswos">Download on itch.io</a>
+  <p>Sensible World of Soccer, rebuilt from the original Amiga game.</p>
+</body>
+</html>
