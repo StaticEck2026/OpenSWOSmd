@@ -832,7 +832,7 @@ take them back after (`NetplayLobby_RestoreTactics`). ON is how this build plays
 | CATCH UP | ON | after a stall the backlog is dropped, as before fd911618 (`Platform_SetCatchUpFrames`) |
 | KICK-OFF SYNC | ON | GGPO-X predicts the whole window from frame 0, as before 4e7553f3 (`ggpo_set_kickoff_prediction`) |
 | BALANCE | the host's own `[netplay] balance` | GGPO-X's prediction balance off (docs/NETPLAY_BALANCE.md); ON turns it on for BOTH |
-| CARDS/INJURIES | ON | nobody booked or injured: the old tester builds' online game (`TestRules_Force`); the recording's rules say 0xD8 and `--srp-resim` replays it by that rule. Hidden in a `--release` build, which has the rule compiled out |
+| CARDS/INJURIES | ON | nobody booked or injured: the old tester builds' online game (`TestRules_Force`); the recording's rules say 0xD8 and `--srp-resim` replays it by that rule. Hidden in a `--release` build, which has the rule compiled out: as host it always plays with cards, and as joiner it will not ready up for a host with them off ("HOST PLAYS WITHOUT CARDS: NOT IN YOUR BUILD") |
 
 Not a switch: the time sync's frame advantage (29009dbd). The old builds sent garbage there
 that was nearly always 0, and 0 is what is sent now (`GGPO_SEND_FRAME_ADVANTAGE=0`).

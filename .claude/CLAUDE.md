@@ -385,6 +385,10 @@ both (they travel in the host's rules; `NetplayLobby_ApplyMatch` puts them in fo
 `NetplayLobby_RestoreTactics` takes them back). The rows are entries OpenSWOS adds to SWOS
 2020's menu through `EXTRA_ENTRIES` in `scripts/import_swos2020_menus.py`, never by hand.
 `SWOS_LOBBY_SWITCHES=<hex>` sets them for a test (`HOST_ENV=` of the lobby/relay tests).
+A RELEASE build (no-cards rule compiled out) plays with cards as host, and as joiner will
+not ready up for a host with CARDS/INJURIES off ("HOST PLAYS WITHOUT CARDS: NOT IN YOUR
+BUILD") -- it used to force the switch on silently, which would have desynced a tester
+host's no-cards match at the first booking.
 Until 2026-10-11 it was a compile-time flag of the same name, on in every tester drop: a
 tester's binary was a different game, took the rule online, and a build with it could not
 play one without. Those old tester builds are refused at the handshake ("YOUR BUILDS PLAY

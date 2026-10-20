@@ -176,7 +176,25 @@ static void clamp_rules(LobbyRules *r)
         r->firstLeg2 = 99;
     r->switches &= NETPLAY_SW_ALL;
 #ifndef SWOS_TEST_RULES
-    r->switches |= NETPLAY_SW_CARDS_INJURIES;   /* a release has the old rule compiled out */
+    /* A release has the no-cards rule compiled out: as the host it always plays with them.
+     * As the joiner it keeps what the host sent -- forcing it on here would play a tester
+     * host's no-cards match by other rules, a desync at the first booking -- and
+     * rules_playable() keeps it from readying up instead. */
+    if (s_lobby.me != 2)
+        r->switches |= NETPLAY_SW_CARDS_INJURIES;
+#endif
+}
+
+/* Whether this build can play the host's rules: a release cannot play without cards and
+ * injuries (a tester build's host switch, test_rules.h). */
+#define NOT_IN_YOUR_BUILD "HOST PLAYS WITHOUT CARDS: NOT IN YOUR BUILD"
+static int32_t rules_playable(const LobbyRules *r)
+{
+#ifdef SWOS_TEST_RULES
+    (void)r;
+    return 1;
+#else
+    return (r->switches & NETPLAY_SW_CARDS_INJURIES) != 0;
 #endif
 }
 
@@ -315,6 +333,12 @@ static void read_peer_state(void)
             s_lobby.rules    = rules;
             s_lobby.rulesGen = rulesGen;
             s_lobby.dirty    = 1;               /* echo the generation we now have */
+            if (!rules_playable(&rules)) {
+                drop_my_ready();
+                set_notice(NOT_IN_YOUR_BUILD);
+                fprintf(stderr, "[lobby] the host's rules have cards and injuries off, which this "
+                        "release build cannot play: not ready until the host turns them on\n");
+            }
         }
     } else {
         s_lobby.peerRulesSeen = rulesGen;
@@ -821,6 +845,10 @@ void NetplayLobby_SetReady(int32_t ready)
     LobbyPlayer *p = mine();
     if (s_lobby.state != LOBBY_OPEN || (ready && !p->hasTeam))
         return;
+    if (ready && s_lobby.me == 2 && !rules_playable(&s_lobby.rules)) {
+        set_notice(NOT_IN_YOUR_BUILD);
+        return;
+    }
     if (p->ready != (ready ? 1 : 0)) {
         p->ready = ready ? 1 : 0;
         s_lobby.dirty = 1;
