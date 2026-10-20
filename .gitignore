@@ -182,3 +182,6 @@ bin/grafs_2020/
 uae/artifacts/
 uae/dh0/data/
 data/SWOS2.REL
+
+# Claude Code's per-machine permissions: local, never shared.
+.claude/settings.local.json
