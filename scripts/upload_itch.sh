@@ -9,7 +9,9 @@
 # Run after the drop (docs/TRIAGE.md §5): build_dist.sh, build_macos.sh, build_setup_zip.sh.
 # Each archive goes to a channel of its own with butler, versioned by the build the
 # binaries carry, so a new drop REPLACES the previous one's file instead of adding a
-# copy. butler sends only what changed; --if-changed skips an archive that did not.
+# copy. butler sends only what changed. (Not --if-changed: it compares a zip with the
+# last build as if the zip were a folder, and fails -- "lstat X.zip/grafs_aga: not a
+# directory".)
 #
 # butler must be logged in once (`butler login`, or BUTLER_API_KEY in the
 # environment); its key lives in butler's own config, never here.
@@ -103,7 +105,7 @@ fi
 
 for c in "${CHANNELS[@]}"; do
     echo "== ${c%%:*}"
-    "$BUTLER" push --if-changed "dist/${c%%:*}" "$TARGET:${c#*:}" --userversion "$DROP" ||
+    "$BUTLER" push "dist/${c%%:*}" "$TARGET:${c#*:}" --userversion "$DROP" ||
         fail "pushing dist/${c%%:*} failed"
 done
 echo ""
