@@ -136,11 +136,11 @@ static int      s_arcDebugCycleReq;       /* DEBUG (F10 in attract): show the ne
 static uint32_t s_overlayFrame;           /* blink phase for the attract overlay */
 
 #define ARC_LOGO_MAXW  1024
-#define ARC_LOGO_SCALE 1     /* DOS LOADER1 LOGO.bmp is already full-size (320x200) */
-#define ARC_LOGO_TRANSPARENT 0   /* DOS LOADER1 uses index 0 as the transparent background */
-static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOGO.bmp pixels (indexed) */
-static uint32_t s_logoPal[256];                             /* LOGO.bmp 256-colour palette (ARGB) */
-static int      s_logoW, s_logoH;                           /* LOGO.bmp dimensions */
+#define ARC_LOGO_SCALE 1     /* the PC game's LOADER1 is already full-size (320x200) */
+#define ARC_LOGO_TRANSPARENT 0   /* LOADER1 uses index 0 as the transparent background */
+static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOADER1 pixels (indexed) */
+static uint32_t s_logoPal[256];                             /* LOADER1 256-colour palette (ARGB) */
+static int      s_logoW, s_logoH;                           /* LOADER1 dimensions */
 static int      s_logoLoaded;
 static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* INSERT COIN / prompts, menu-palette idx */
 static int      s_overlayActive;
@@ -300,20 +300,49 @@ static void arc_drain_input(void)
                 s_startGame, s_credits);
 }
 
-/* Load the arcade LOGO.bmp once: indexed pixels into s_logoBuf + its own 256-colour
- * palette into s_logoPal. Composited (scaled up, centred) over the attract reels by
- * Arcade_CompositeOverlay — index 0 is transparent. */
+/* A picture from the player's own PC game, grafs_dos/<NAME>.256 in the assets folder (the
+ * data setup copies it there; OpenSWOS ships none of the game's art): 320x200 pixels, then
+ * a 768-byte VGA palette of 6-bit channels, widened x4 as SwosGfx does. Same output as
+ * Platform_LoadIndexedBMP: indexed pixels and an ARGB palette. 0 on success. */
+#define ARC_256_W 320
+#define ARC_256_H 200
+static int arc_load_256(const char *rel, uint8_t *out8, int out_cap,
+                        uint32_t *outPal, int *outW, int *outH)
+{
+    char buf[1024];
+    uint8_t pal[768];
+    FILE *f = fopen(swos_data_path(rel, buf, (uint32_t)sizeof buf), "rb");
+    int rc = 1;
+    if (!f) {
+        fprintf(stderr, "[arcade] %s not found (it comes from the PC game: run OpenSWOS Setup)\n", rel);
+        return 1;
+    }
+    if (out_cap >= ARC_256_W * ARC_256_H &&
+        fread(out8, 1, ARC_256_W * ARC_256_H, f) == ARC_256_W * ARC_256_H &&
+        fread(pal, 1, sizeof pal, f) == sizeof pal) {
+        for (int i = 0; i < 256; i++)
+            outPal[i] = 0xFF000000u | ((uint32_t)(pal[i * 3] << 2) << 16) |
+                        ((uint32_t)(pal[i * 3 + 1] << 2) << 8) | (uint32_t)(pal[i * 3 + 2] << 2);
+        *outW = ARC_256_W;
+        *outH = ARC_256_H;
+        rc = 0;
+    } else {
+        fprintf(stderr, "[arcade] %s is not a 320x200 .256 picture\n", rel);
+    }
+    fclose(f);
+    return rc;
+}
+
+/* Load the arcade logo once -- the PC game's LOADER1 -- indexed pixels into s_logoBuf + its
+ * own 256-colour palette into s_logoPal. Composited (scaled up, centred) over the attract
+ * reels by Arcade_CompositeOverlay — index 0 is transparent. */
 static void arc_load_logo(void)
 {
-    extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
-                                       uint32_t *outPal, int *outW, int *outH);
     if (s_logoLoaded) return;
-    if (Platform_LoadIndexedBMP("grafs_arcade/LOGO.bmp", s_logoBuf, (int)sizeof s_logoBuf,
-                                s_logoPal, &s_logoW, &s_logoH) == 0) {
+    if (arc_load_256("grafs_dos/LOADER1.256", s_logoBuf, (int)sizeof s_logoBuf,
+                     s_logoPal, &s_logoW, &s_logoH) == 0) {
         s_logoLoaded = 1;
-        fprintf(stderr, "[arcade] LOGO.bmp %dx%d loaded\n", s_logoW, s_logoH);
-    } else {
-        fprintf(stderr, "[arcade] LOGO.bmp failed to load\n");
+        fprintf(stderr, "[arcade] LOADER1.256 %dx%d loaded\n", s_logoW, s_logoH);
     }
 }
 
@@ -450,7 +479,7 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
     if (h > SCREEN_HEIGHT)  h = SCREEN_HEIGHT;
     if (w > _screen_width)  w = _screen_width;
 
-    /* LOGO.bmp, centred horizontally in the area above the prompt row. */
+    /* The logo (LOADER1), centred horizontally in the area above the prompt row. */
     const int lscale = ARC_LOGO_SCALE;
     const int lw = s_logoW * lscale, lh = s_logoH * lscale;
     const int lx0 = (_screen_width - lw) / 2;
@@ -522,30 +551,27 @@ static int      s_flagSheetW, s_flagSheetH, s_flagsLoaded;
 static uint32_t s_flagScreenRGBA[ARC_LOGO_MAXW * SCREEN_HEIGHT];
 static int      s_flagScreenActive;
 static int      s_arcadeFade = 256;   /* full-screen brightness 0..256 (256 = full) */
-static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* BALLNOTE.bmp, indexed pixels */
-static uint32_t s_menubgPal[256];                           /* BALLNOTE.bmp 256-colour palette (ARGB) */
-static int      s_menubgW, s_menubgH;                       /* BALLNOTE.bmp dimensions */
+static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* BALLNOTE, indexed pixels */
+static uint32_t s_menubgPal[256];                           /* BALLNOTE 256-colour palette (ARGB) */
+static int      s_menubgW, s_menubgH;                       /* BALLNOTE dimensions */
 static int      s_menubgLoaded;
 
 extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
                                    uint32_t *outPal, int *outW, int *outH);
 
-/* Load the arcade screen background BALLNOTE.bmp (256-colour indexed) into
- * s_menubgBuf + its own palette, behind the flag/pitch selectors, high-score
- * table, message/continue and name-entry screens. (Was grafs/menubg.raw, the
- * plain SWOS menu background — the arcade uses its own artwork.) */
+/* Load the arcade screen background -- the PC game's BALLNOTE (256-colour indexed) -- into
+ * s_menubgBuf + its own palette, behind the flag/pitch selectors, high-score table,
+ * message/continue and name-entry screens. Without the PC game it stays black. */
 static void arc_load_menubg(void)
 {
-    if (Platform_LoadIndexedBMP("grafs_arcade/BALLNOTE.bmp", s_menubgBuf, (int)sizeof s_menubgBuf,
-                                s_menubgPal, &s_menubgW, &s_menubgH) == 0) {
+    if (arc_load_256("grafs_dos/BALLNOTE.256", s_menubgBuf, (int)sizeof s_menubgBuf,
+                     s_menubgPal, &s_menubgW, &s_menubgH) == 0) {
         s_menubgLoaded = 1;
-        fprintf(stderr, "[arcade] BALLNOTE.bmp %dx%d loaded\n", s_menubgW, s_menubgH);
-    } else {
-        fprintf(stderr, "[arcade] BALLNOTE.bmp failed to load\n");
+        fprintf(stderr, "[arcade] BALLNOTE.256 %dx%d loaded\n", s_menubgW, s_menubgH);
     }
 }
 
-/* Paint BALLNOTE.bmp (its own 256-colour palette -> ARGB) into the full-screen
+/* Paint BALLNOTE (its own 256-colour palette -> ARGB) into the full-screen
  * RGBA. Scale UNIFORMLY to fill the height (keep aspect ratio, no distortion);
  * the wider-than-screen result is centred and cropped at the sides. */
 static void arc_fill_menubg(void)

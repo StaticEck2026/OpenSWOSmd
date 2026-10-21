@@ -32,6 +32,14 @@ normal build is unchanged.
 
 ## 2. Attract mode
 
+**The game's own pictures come from the player's copy** (2026-10-20): the attract logo is
+the PC game's `LOADER1.256` (index 0 transparent, so the reel shows through) and the
+selector/table background its `BALLNOTE.256`, both read from `grafs_dos/` in the assets
+folder, where OpenSWOS Setup copies them (`arc_load_256`). Without the PC game the logo is
+skipped and the background is black. They used to be committed as `grafs_arcade/LOGO.bmp`
+(an edited LOADER1) and `BALLNOTE.bmp`, beside two unused copies of `SWTITLE`/`STAD`; all four
+were the PC game's art and are gone from the repo and its history.
+
 **At switch-on**, once, before the attract loop: `grafs_arcade/WINNERS.bmp` (320x200, its
 own palette), the "Winners Don't Use Drugs" screen of arcade boards of the time
 (`arc_winners_screen` in `src/arcade.c`). Shown at its own size in the middle of the
@@ -158,7 +166,8 @@ Model on NBA Hangtime's "GAME ADJUSTMENT" screen; start minimal and grow:
 
 ## 4. Pitches (arcade-exclusive art)
 
-Seven themed pitches (art already ripped to `bin/grafs_arcade/pitch-*.png`):
+Seven themed pitches (the project's own art: AI-generated pitches with the PC game's pitch
+lines drawn on, now `bin/grafs_arcade/SWCPICH*.bmp`):
 Beach, Park, Yard, Skate Park, Prison, City, Stadium. These slot into the DOS
 pitch pipeline (`docs/DOS_GRAPHICS.md`) as additional pitch sets — selectable per
 match (random or rotating in attract). (Conversion of the PNGs into the

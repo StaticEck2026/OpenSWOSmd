@@ -131,10 +131,12 @@ const char *const g_sdAmigaCopy[] = {
 
 /* Copied from the PC game folder: { where it lands, where it is in the game folder }. */
 const SdCopy g_sdDosCopy[] = {
+    { "grafs_dos/BALLNOTE.256", "BALLNOTE.256" },   /* the arcade's screen background */
     { "grafs_dos/BENCH.DAT", "BENCH.DAT" },
     { "grafs_dos/CHARSET.DAT", "CHARSET.DAT" },
     { "grafs_dos/FILL.256", "FILL.256" },
     { "grafs_dos/GOAL1.DAT", "GOAL1.DAT" },
+    { "grafs_dos/LOADER1.256", "LOADER1.256" },     /* the arcade's logo */
     { "grafs_dos/PITCH1.BLK", "PITCH1.BLK" },
     { "grafs_dos/PITCH1.DAT", "PITCH1.DAT" },
     { "grafs_dos/PITCH2.BLK", "PITCH2.BLK" },
