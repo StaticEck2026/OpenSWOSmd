@@ -58,7 +58,7 @@ EOF
     rm -f "$LOG.new"
     systemctl daemon-reload
     systemctl enable --now "$UNIT.timer"
-    systemctl list-timers --no-pager "$UNIT.timer" | head -2
+    systemctl list-timers --no-pager "$UNIT.timer" | sed -n 1,2p
 }
 
 while [ $# -gt 0 ]; do
