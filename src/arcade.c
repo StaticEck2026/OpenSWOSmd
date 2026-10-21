@@ -35,12 +35,6 @@ int _gArcadeMode = 0;
  * actual match (real crowd SFX wanted). SDL-only. */
 int _gArcadeSfxSuppressed = 0;
 
-/* When set, the arcade themed pitch (a diced SWCPICH BMP) is active for the match:
- * LoadPitchMap dices the BMP into the tile bank instead of loading PITCH*.BLK, and
- * refresh_palette_from_copper builds the pitch palette (16..255) from the BMP. On
- * only during the arcade MATCH (attract reels use the normal DOS pitch). SDL-only. */
-int _gArcadePitchActive = 0;
-
 /* Match-title shown on the pre-match stadium/line-up screen in arcade mode, in
  * place of "FRIENDLY" (set into _gameName by InitAndPlayGame). */
 uint8_t _aArcadeMatchName[] = "GOLDEN GOAL";
@@ -818,7 +812,7 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
 }
 
 static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
-static int arc_load_pitch(int idx);  /* defined in the pitch-select section */
+static int arc_load_pitch(int type);  /* defined in the pitch-select section */
 
 /* High-score session screens (defined in the high-score section, before ArcadeMainLoop). */
 static void arc_run_over(int mode, uint32_t wins, uint32_t totalSecs, int flag);
@@ -1115,7 +1109,7 @@ static void arc_start_game(void)
     if (numPlayers < 2) {                    /* 1P: opponent isn't user-picked -> random CPU */
         do { p2 = (int)(arc_rand() % FLAG_COUNT); } while (p2 == p1);
     }
-    int pitch = arc_pitch_select();         /* 0..6 -> SWCPICH1..7 (RANDOM already resolved) */
+    int pitch = arc_pitch_select();         /* the game's pitch type 0..6 (RANDOM already resolved) */
 
     /* Selectors done (each faded out to black on exit); make sure no arcade frame
      * composites over the match. */
@@ -1126,7 +1120,7 @@ static void arc_start_game(void)
      * run (mirrors GoGetTeamsForPlay + PlayFriendly, minus the team-select UI). */
     _gameType = 0;                          /* non-career friendly path */
     _pitchTypeOrSeason = 0;                 /* fixed pitch condition, not seasonal */
-    _friendlyPitchType = 4;                 /* a normal pitch (themed pitch overrides at dice time) */
+    _friendlyPitchType = (uint16_t)pitch;  /* the game's own pitch, of the chosen type */
     _maxSubstitutes = 0;                    /* arcade: no subs */
     _minSubstitutes = 0;
     _gameLength = 3;                        /* slowest match clock: engine half/full-time
@@ -1180,12 +1174,9 @@ static void arc_start_game(void)
           if (_frontbufferBaseAltPtr) memset((void *)_frontbufferBaseAltPtr, 0, fbn); }
         StopMusic();                        /* silence menu music before kickoff */
         arc_begin_match_rules();            /* arm golden-goal / time-limit / penalties */
-        arc_load_pitch(pitch);              /* chosen pitch -> s_pitchSheet / s_pitchPal */
-        _gArcadePitchActive = 1;            /* themed pitch (DOS pipeline) for this match */
         s_arcInMatch = 1;                   /* suppress the attract overlay during goal replays */
         InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
         s_arcInMatch = 0;
-        _gArcadePitchActive = 0;
 
         if (_quitToDos) { aborted = 1; break; }
 
@@ -1443,60 +1434,68 @@ static void arc_service_menu(void)
 /* ====================================================================
  * Phase 3c (part 1) — pitch select (themed arcade pitches + RANDOM)
  * ==================================================================== */
-#define PITCH_OPTIONS 8   /* BEACH..STADIUM (SWCPICH1..7) + RANDOM (SWCPICHR) */
+#define PITCH_OPTIONS 8   /* the game's seven pitch types (0..6, as _friendlyPitchType) + RANDOM */
 static const char *const s_pitchNames[PITCH_OPTIONS] = {
-    "BEACH", "PARK", "YARD", "SKATE PARK", "PRISON", "CITY", "STADIUM", "RANDOM"
+    "FROZEN", "MUDDY", "WET", "SOFT", "NORMAL", "DRY", "HARD", "RANDOM"
 };
 static uint8_t  s_pitchSheet[672 * 880];
 static uint32_t s_pitchPal[256];
 static int      s_pitchW, s_pitchH;
 
-static int arc_load_pitch(int idx)   /* 0..6 = SWCPICH1..7, 7 = SWCPICHR */
+/* The selector's preview: the player's own PC pitch (grafs_dos/PITCH1.BLK + .DAT, from
+ * OpenSWOS Setup) put back together from its 42x55 tiles, in pitch type `type`'s colours
+ * (DosGfx_BuildPalette). Which of the six pitch patterns a match gets comes from the teams,
+ * so one pattern stands for all; the type is what the player picks. The tiles are read
+ * once; a new type only changes the palette. Without the PC game there is no preview. */
+static int arc_load_pitch(int type)
 {
-    char path[64];
-    if (idx >= PITCH_OPTIONS - 1) snprintf(path, sizeof path, "grafs_arcade/SWCPICHR.bmp");
-    else                          snprintf(path, sizeof path, "grafs_arcade/SWCPICH%d.bmp", idx + 1);
-    return Platform_LoadIndexedBMP(path, s_pitchSheet, (int)sizeof s_pitchSheet,
-                                   s_pitchPal, &s_pitchW, &s_pitchH);
-}
+    enum { COLS = 42, ROWS = 55, TILE = 16, W = COLS * TILE, TILES_MAX = COLS * ROWS };
+    static uint8_t  bank[TILES_MAX * TILE * TILE];
+    static uint16_t map[TILES_MAX];
+    static int      state;          /* 0 not tried, 1 loaded, -1 not there */
+    static uint32_t tiles;
+    static int      mapped;
+    extern void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out);
+    extern int  DosGfx_ParsePitchMap(const uint8_t *datBuf, uint32_t datSize,
+                                     uint16_t *tileIndexOut, int maxOut);
+    uint8_t rgb[768];
 
-/* Dice the loaded arcade pitch (s_pitchSheet, 672x880 chunky 8bpp) into the DOS
- * chunky tile bank: 42x55 = 2310 row-major 16x16 tiles, identity-mapped — exactly
- * what dos_load_pitch produces from PITCH*.BLK, so DrawChunkyPitch + the DOS pitch
- * pipeline render it. Called from LoadPitchMap when _gArcadePitchActive. */
-void Arcade_DicePitchTiles(void)
-{
-    extern uint8_t  _pitchChunkyBuffer[];
-    extern uint8_t *_s_pitchFullPtrs[];
-    extern uint8_t  _pitchDatBuffer[];
-    enum { COLS = 42, ROWS = 55, TILE = 16, SRCW = COLS * TILE /*672*/ };
-
-    if (s_pitchW < SRCW || s_pitchH < ROWS * TILE) {
-        fprintf(stderr, "[arcade] pitch BMP %dx%d, expected %dx%d — skipping dice\n",
-                s_pitchW, s_pitchH, SRCW, ROWS * TILE);
-        return;
-    }
-    for (int gridY = 0; gridY < ROWS; gridY++) {
-        for (int gridX = 0; gridX < COLS; gridX++) {
-            int slot = gridY * COLS + gridX;
-            uint8_t *tile = _pitchChunkyBuffer + (size_t)slot * (TILE * TILE);
-            for (int row = 0; row < TILE; row++)
-                memcpy(tile + row * TILE,
-                       s_pitchSheet + (size_t)(gridY * TILE + row) * SRCW + gridX * TILE,
-                       TILE);
-            _s_pitchFullPtrs[slot] = tile;
+    if (state == 0) {
+        static uint8_t dat[TILES_MAX * 4];
+        char buf[1024];
+        FILE *fb = fopen(swos_data_path("grafs_dos/PITCH1.BLK", buf, (uint32_t)sizeof buf), "rb");
+        FILE *fd = fb ? fopen(swos_data_path("grafs_dos/PITCH1.DAT", buf, (uint32_t)sizeof buf), "rb") : NULL;
+        state = -1;
+        if (fb && fd) {
+            tiles  = (uint32_t)(fread(bank, 1, sizeof bank, fb) / (TILE * TILE));
+            mapped = DosGfx_ParsePitchMap(dat, (uint32_t)fread(dat, 1, sizeof dat, fd), map, TILES_MAX);
+            state  = tiles > 0 && mapped > 0 ? 1 : -1;
+        }
+        if (fb) fclose(fb);
+        if (fd) fclose(fd);
+        if (state < 0)
+            fprintf(stderr, "[arcade] no PC pitch for the preview (grafs_dos/PITCH1: run OpenSWOS Setup)\n");
+        else {
+            for (int slot = 0; slot < TILES_MAX; slot++) {
+                uint8_t *dst = s_pitchSheet + (size_t)(slot / COLS) * TILE * W + (size_t)(slot % COLS) * TILE;
+                int      t   = slot < mapped && map[slot] < tiles ? map[slot] : -1;
+                for (int row = 0; row < TILE; row++) {
+                    if (t >= 0) memcpy(dst + (size_t)row * W, bank + ((size_t)t * TILE + row) * TILE, TILE);
+                    else        memset(dst + (size_t)row * W, 0, TILE);   /* unmapped: the surround */
+                }
+            }
+            s_pitchW = W;
+            s_pitchH = ROWS * TILE;
         }
     }
-    /* Mirror each slot's tile pointer into pitchDatBuffer (the animated-pattern /
-     * surround code reads these), same as dos_load_pitch. */
-    uint32_t *slots = (uint32_t *)_pitchDatBuffer;
-    for (int i = 0; i < COLS * ROWS; i++)
-        slots[i] = (uint32_t)(uintptr_t)_s_pitchFullPtrs[i];
+    if (state < 0)
+        return 1;
+    DosGfx_BuildPalette(type, rgb);
+    for (int i = 0; i < 256; i++)
+        s_pitchPal[i] = 0xFF000000u | ((uint32_t)rgb[i * 3] << 16) |
+                        ((uint32_t)rgb[i * 3 + 1] << 8) | (uint32_t)rgb[i * 3 + 2];
+    return 0;
 }
-
-/* The active arcade pitch's 256-entry palette (0xAARRGGBB), used by the palette
- * hook to fill pitch slots 16..255. Slots 0..15 hold the DOS sprite palette. */
-const uint32_t *Arcade_PitchPaletteArgb(void) { return s_pitchPal; }
 
 /* Nearest-neighbour scale the loaded pitch into the preview rect (RGBA). */
 static void arc_pitch_preview(int px, int py, int pw, int ph)
@@ -1514,9 +1513,13 @@ static void arc_pitch_preview(int px, int py, int pw, int ph)
     }
 }
 
-/* Themed-pitch selector: a column of buttons (green; RANDOM in red) with the
+/* The menu-font glyphs, scaled (defined with the countdown, below). */
+static SpriteGraphics *arc_menu_glyph(char c);
+static void arc_big_glyph(char c, int dx, int dy, int scale, const uint32_t pal[16]);
+
+/* Pitch selector: a column of buttons (green; RANDOM in red) with the
  * selected pitch previewed on the right. Joystick up/down, fire confirms.
- * Returns 0..6 (SWCPICH1..7); RANDOM resolves to a random 0..6. */
+ * Returns the game's pitch type 0..6; RANDOM resolves to a random 0..6. */
 static int arc_pitch_select(void)
 {
     extern uint8_t _pl1Up, _pl1Down, _pl1ShortFire;
@@ -1557,7 +1560,7 @@ static int arc_pitch_select(void)
         if (_pl1Down && !d) sel = (sel + 1) % PITCH_OPTIONS;
         u = _pl1Up; d = _pl1Down;
         int pick = (_pl1ShortFire && !f); f = _pl1ShortFire;
-        if (loaded != sel) { arc_load_pitch(sel); loaded = sel; }
+        if (loaded != sel) { arc_load_pitch(sel < PITCH_OPTIONS - 1 ? sel : 4); loaded = sel; }
         if (pick) break;
 
         arc_fill_menubg();
@@ -1595,8 +1598,15 @@ static int arc_pitch_select(void)
         for (size_t i = 0; i < n; i++)
             if (s_overlayBuf[i]) s_flagScreenRGBA[i] = mpal[s_overlayBuf[i] & 15];
 
-        /* the pitch preview (its own palette, drawn directly in RGBA) */
+        /* the pitch preview (its own palette, drawn directly in RGBA); RANDOM is the
+         * normal pitch with a large '?' from the game's own menu font over it */
         arc_pitch_preview(pvx, pvy, pvw, pvh);
+        if (sel == PITCH_OPTIONS - 1) {
+            SpriteGraphics *q = arc_menu_glyph('?');
+            if (q)
+                arc_big_glyph('?', pvx + (pvw - q->pixWidth * 8) / 2,
+                              pvy + (pvh - q->nlines * 8) / 2, 8, mpal);
+        }
         arc_flag_rect(pvx - 1, pvy - 1, pvw + 2, pvh + 2, 0xFFFFFFFFu);
 
         if (s_arcadeFade < 256) { s_arcadeFade += 24; if (s_arcadeFade > 256) s_arcadeFade = 256; }

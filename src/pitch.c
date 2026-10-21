@@ -407,12 +407,7 @@ __attribute__((used, externally_visible))
 void LoadPitchMap(uint16_t mapIndex)
 {
 #ifdef SWOS_SDL_BUILD
-    /* Arcade themed pitch: dice the chosen SWCPICH BMP into the tile bank instead
-     * of loading a pitch-map file (it's already 256-colour chunky, like the DOS
-     * bank). FixupAndColorPitchFile then takes the _gDosGraphics short-circuit. */
     PitchMap_Drop();                /* until a map is loaded for this pitch */
-    { extern int _gArcadePitchActive; extern void Arcade_DicePitchTiles(void);
-      if (_gArcadePitchActive) { Arcade_DicePitchTiles(); return; } }
     if (_gDosGraphics) {
         dos_load_pitch(mapIndex);
         return;
@@ -863,9 +858,8 @@ void FixupAndColorPitchFile(void)
     }
 
     /* The pitch from its map, now that every fan tile of the bank has its kit. */
-    { extern int _gArcadePitchActive;
-      if (dosPitch && !_gArcadePitchActive)
-          PitchMap_Bake(); }
+    if (dosPitch)
+        PitchMap_Bake();
 #endif
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
     copyPitchTilesToFast();     /* the fans are coloured: the tiles are final */

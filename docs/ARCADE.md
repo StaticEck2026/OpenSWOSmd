@@ -164,14 +164,21 @@ Model on NBA Hangtime's "GAME ADJUSTMENT" screen; start minimal and grow:
 - Settings persist to an operator config file (own file, not the player
   `SWOS.ini`).
 
-## 4. Pitches (arcade-exclusive art)
+## 4. Pitches: the game's own
 
-Seven themed pitches (the project's own art: AI-generated pitches with the PC game's pitch
-lines drawn on, now `bin/grafs_arcade/SWCPICH*.bmp`):
-Beach, Park, Yard, Skate Park, Prison, City, Stadium. These slot into the DOS
-pitch pipeline (`docs/DOS_GRAPHICS.md`) as additional pitch sets — selectable per
-match (random or rotating in attract). (Conversion of the PNGs into the
-`PITCH*.BLK`/`.DAT` tile-bank format is a separate art-pipeline task.)
+The arcade plays on **the game's own pitches**, from the player's PC game (the arcade runs the
+DOS graphics): the selector offers the seven pitch types, FROZEN MUDDY WET SOFT NORMAL DRY
+HARD, plus RANDOM, and the match sets `_friendlyPitchType` to the one picked. The preview is
+the PC game's `grafs_dos/PITCH1` put back together from its 42x55 tiles in that type's
+colours (`arc_load_pitch`, `DosGfx_BuildPalette`); which of the six pitch patterns a match
+gets comes from the teams, as in a friendly. RANDOM previews the normal pitch with a large
+`?` from the game's menu font (`arc_big_glyph`).
+
+Until 2026-10-20 there were seven themed pitches instead (Beach, Park, Yard, Skate Park,
+Prison, City, Stadium: AI-generated art with the PC game's pitch lines on, plus a RANDOM
+image made from an original pitch), committed as `grafs_arcade/SWCPICH*.bmp` and cut into
+the DOS tile bank by their own code path (`_gArcadePitchActive`). Being partly the game's
+art they were removed, with that path, from the repo and its history.
 
 ## 5. Hardware target (real cabinet)
 
@@ -228,11 +235,8 @@ User-confirmed concrete requirements as we build it:
   Any credit interrupts attract → match. (Rebindable: `[arcade] key_p1_credit`,
   `key_p2_credit`, `key_p1_start` (1), `key_p2_start` (2), `key_service` (F2), as
   SDL key names.)
-- **Arcade pitches** (`bin/grafs_arcade/SWCPICH1.bmp … SWCPICH7.bmp`, plus
-  `SWCPICHR.bmp` for RANDOM in the pitch selector) are the
-  **match playing field**, chosen at random **when a game starts** (not in
-  attract). Full 672×880 RGB → quantised to a per-pitch 256-colour palette, loaded
-  into the 8bpp pitch pipeline. (SDL-only direct load, not DOS `PITCH*.BLK`/`.DAT`.)
+- **Pitches:** the game's own, by pitch type, picked on the pitch selector when a game
+  starts (§4).
 - **Service menu:** **F2** opens it (pauses attract/game). Start with a **basic**
   menu showing the **current mode** + the obvious arcade settings. Font =
   `bin/grafs_arcade/SVCFONT.bmp` (§3.2). Visual ref: NBA Hangtime
@@ -256,9 +260,7 @@ User-confirmed concrete requirements as we build it:
   triggers are suppressed (`_gArcadeSfxSuppressed`) — otherwise a reel sound event
   retriggers one of HERO's own samples (its vocal track). The actual match always
   plays real crowd SFX.
-- **Attract RPL/HIL reels also render on the random arcade pitches** — the same
-  `SWCPICH*` → 8bpp tile-bank pipeline used for the match, a random pitch per reel
-  (the recorded pitch is replaced).
+- **Attract RPL/HIL reels** play on the pitch they were recorded on.
 
 ### Game modes
 
@@ -426,7 +428,7 @@ contexts:
    free-running (camera-follow as normal, fade in/out between reels) with the SWOS logo
    + the INSERT-COIN overlay; any coin interrupts → match.
 3. ✅ DONE: Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
-4. ✅ DONE: Arcade match — random `SWCPICH*` pitch (→8bpp) + golden-goal, draw→penalties,
+4. ✅ DONE: Arcade match — the game's pitch of the chosen type (§4) + golden-goal, draw→penalties,
    launched on credit; winner-stays-on run (1P).
 5. ✅ DONE: High-score tables + name entry + attract high-score display; goal-replay fix
    (golden goal waits for the celebration + AUTO REPLAYS to finish).

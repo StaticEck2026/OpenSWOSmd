@@ -556,13 +556,12 @@ static void grassColour(uint8_t out[3])
 {
     extern uint16_t  _pitchNumberAndType;
     extern const uint16_t *_pitchPalettePtrs[];
-    extern int       _gArcadePitchActive;
     uint16_t pitch = (uint16_t)(_pitchNumberAndType & 0xFF);
 
     if (_gDosGraphics) {
         uint8_t rgb[768];
-        /* The pitch platform_sdl.c will draw with, arcade cabinet included. */
-        DosGfx_BuildPalette(_gArcadePitchActive ? 4 : (int)pitch, rgb);
+        /* The pitch platform_sdl.c will draw with. */
+        DosGfx_BuildPalette((int)pitch, rgb);
         out[0] = (uint8_t)(rgb[0] >> 4);
         out[1] = (uint8_t)(rgb[1] >> 4);
         out[2] = (uint8_t)(rgb[2] >> 4);

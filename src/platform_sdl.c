@@ -342,7 +342,7 @@ int Platform_ArcadeDebugWin(void)
     return edge;
 }
 
-/* Load an indexed (8bpp paletted) BMP — the arcade FLAGS sheet / SWCPICH pitches.
+/* Load an indexed (8bpp paletted) BMP — the arcade FLAGS, WINNERS and SVCFONT sheets.
  * Copies up to out_cap index bytes into out8 (row-packed at width *outW) and the
  * 256-entry palette as ARGB8888 into outPal. Returns 0 on success. SDL-only. */
 int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
@@ -1279,21 +1279,8 @@ static void refresh_palette_from_copper(void)
         /* The pitch-condition overlay keys off the low byte of
          * pitchNumberAndType (the high byte is which pitch graphic). */
         extern uint16_t _pitchNumberAndType;
-        extern int _gArcadePitchActive;
-        extern const uint32_t *Arcade_PitchPaletteArgb(void);
         uint8_t rgb[768];
-        DosGfx_BuildPalette(_gArcadePitchActive ? 4 : (int)(_pitchNumberAndType & 0xFF), rgb);
-        if (_gArcadePitchActive) {
-            /* Themed arcade pitch: keep the DOS sprite/kit colours (slots 0..15) but
-             * take the pitch colours (16..255) from the BMP's own palette. */
-            const uint32_t *bp = Arcade_PitchPaletteArgb();
-            for (int i = 16; i < 256; i++) {
-                uint32_t a = bp[i];
-                rgb[i * 3 + 0] = (uint8_t)((a >> 16) & 0xFF);
-                rgb[i * 3 + 1] = (uint8_t)((a >> 8) & 0xFF);
-                rgb[i * 3 + 2] = (uint8_t)(a & 0xFF);
-            }
-        }
+        DosGfx_BuildPalette((int)(_pitchNumberAndType & 0xFF), rgb);
         /* Apply the current fade level so fades work on the DOS palette like the
          * copper path does (g_fadeLevel: 0x80 bright .. 0 black; rgb*level/0x80).
          * DosGfx_BuildPalette rebuilds full-bright RGB each frame, so without
