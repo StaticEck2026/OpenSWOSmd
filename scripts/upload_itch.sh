@@ -63,10 +63,11 @@ DROP=$(sed -n 's/.* commit=\([^ ]*\).*/\1/p' <<<"$STATUS")
 case "$DROP" in *-dirty) fail "the drop was built from a -dirty tree ($DROP)" ;; esac
 git rev-parse -q --verify "$DROP^{commit}" >/dev/null || fail "$DROP is not a commit here"
 # Only what no archive holds may have moved on since: the changelog (written after
-# the drop), the server's nginx sites and landing page, the docs, this script and the
+# the drop), the server's nginx sites and landing page, the docs (README and INSTALL too),
+# this script and the
 # fetch scripts (tools for us, in no archive).
 NOT_SHIPPED=(':!packaging/web/changelog.html' ':!packaging/server' ':!packaging/web/site' ':!docs' ':!.claude' ':!scripts/upload_itch.sh'
-             ':!scripts/fetch_reports.py' ':!scripts/fetch_recordings.py')
+             ':!scripts/fetch_reports.py' ':!scripts/fetch_recordings.py' ':!README.md' ':!INSTALL.md')
 git diff --quiet "$DROP" HEAD -- . "${NOT_SHIPPED[@]}" ||
     fail "the tree has changed since the drop ($DROP) -- rebuild it"
 [ -z "$(git status --porcelain --untracked-files=no -- . "${NOT_SHIPPED[@]}")" ] ||
