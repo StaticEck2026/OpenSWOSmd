@@ -162,6 +162,8 @@ typedef struct {
     char                   arcade_key_service[16];
     char                   dos_dir[256];     /* DOS asset dir (default "grafs_dos"). PC-only */
     char                   language[16];     /* UI language code, e.g. "en" — selects data_json/translations/<lang>.json */
+    char                   assets_reminder_off[64]; /* [general] assets_reminder_off: the data versions whose "update your
+                                                     * game data" reminder was dismissed (src/assets_check.c), "" none */
     char                   currency[8];      /* "pound" (default) or "dollar" — money symbol */
 } PlatformInitOptions;
 

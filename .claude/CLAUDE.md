@@ -574,6 +574,16 @@ all save types are proven."
 > only** (`scripts/stage_runtime.sh`) -- never sweep `bin/` into a release.
 > Check a change to the converters with `swosdata ... --out X` then
 > `swosdata --compare X <a bin/ that has the data>`.
+> **ASSETS.ini** (`include/assets_ini.h`), written by the setup in the assets folder: a DATA
+> VERSION per part (the setup's steps) and the sources it used, which it fills back in next
+> time. A part's version goes up ONLY when the setup makes that part differently -- then the
+> setup shows "update needed" / an Update button, and the game says so once at start-up
+> (`src/assets_check.c`, "Don't remind me" = `[general] assets_reminder_off`). An assets folder
+> without ASSETS.ini is an older setup's. `scripts/check_data_versions.py` runs the setup on the
+> reference copies and FAILS when a part's files change and its version did not (record:
+> `tools/swosdata/data_versions.txt`, `--update` after raising one): run it after touching
+> tools/swosdata, third_party/swosgfx or bin/setup. The AGA ball (setup/*_AGA.bmp) is the Amiga
+> drawer's only: `assets/amiga/grafs_aga/`, copied over the drawer's by "Add the game data".
 
 `bin/` is the **single** data directory, shared by both targets. The SDL binary
 runs with `bin/` as its CWD; FS-UAE mounts `bin/` as **DH1:** and `cd`s into it,

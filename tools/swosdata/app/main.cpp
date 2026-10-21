@@ -383,17 +383,26 @@ struct App {
   // when the folder is changed.
   SdInstalled installed[SD_STEP_COUNT] = {};
 
+  // 0 nothing, 1 installed, 2 incomplete, 3 installed but by an older setup: its
+  // data version in ASSETS.ini is below this setup's (include/assets_ini.h).
   int InstalledState(int s) const {
     const SdInstalled& n = installed[s];
-    return n.total > 0 && n.present == n.total ? 1 : n.present > 0 ? 2 : 0;
+    if (n.total > 0 && n.present == n.total)
+      return n.version < SwosData_PartVersion(SdStep(s)) ? 3 : 1;
+    return n.present > 0 ? 2 : 0;
+  }
+  bool Has(int s) const { const int st = InstalledState(s); return st == 1 || st == 3; }
+  bool Outdated() const {
+    for (int s = 0; s < SD_STEP_COUNT; s++)
+      if (InstalledState(s) == 3) return true;
+    return false;
   }
 
   // Enough to play: the Amiga files, or the PC version's (its sound plus the
-  // AGA graphics made from it); and the teams either way.
+  // AGA graphics made from it); and the teams either way. Out of date still plays.
   bool Playable() const {
-    return (InstalledState(SD_STEP_AMIGA_FILES) == 1 ||
-            (InstalledState(SD_STEP_DOS_FILES) == 1 && InstalledState(SD_STEP_AGA_PC) == 1)) &&
-           InstalledState(SD_STEP_TEAMS) == 1;
+    return (Has(SD_STEP_AMIGA_FILES) || (Has(SD_STEP_DOS_FILES) && Has(SD_STEP_AGA_PC))) &&
+           Has(SD_STEP_TEAMS);
   }
 
   void CheckInstalled() {
@@ -407,7 +416,21 @@ struct App {
     w().set_can_play(playable && !game.empty());
     bool any = false;
     for (int s = 0; s < SD_STEP_COUNT; s++) any = any || installed[s].present > 0;
-    if (playable)
+    const bool outdated = Outdated();
+    w().set_outdated(outdated);
+    if (outdated) {
+      SdJob job{};
+      job.src = src;
+      SdStepInfo info[SD_STEP_COUNT];
+      SwosData_Plan(&job, info);
+      bool sources = false;
+      for (int s = 0; s < SD_STEP_COUNT; s++) sources = sources || info[s].ready;
+      w().set_status(Str("Some of the game's data in " + Shown(outDir) +
+                         " was made by an older OpenSWOS Setup. " +
+                         (sources ? "Click Update to make it again from your copy."
+                                  : "Choose the folder your copy is in, then click Update.")));
+    }
+    else if (playable)
       w().set_status(Str("The game's data is already installed in " + Shown(outDir) +
                          (game.empty() ? ". Install again from your copy to add to it."
                                        : ". Play, or install again from your copy to add to it.")));
@@ -750,6 +773,8 @@ int main(int argc, char** argv) {
 #endif
 
   for (const auto& s : scans) SdSources_Scan(&app.src, s.c_str());
+  // What the last install was made from (ASSETS.ini), where --scan found nothing.
+  SwosData_LoadSources(app.outDir.c_str(), &app.src);
   app.Refresh();
   if (app.resDir.empty())
     app.Notice("The game's own files (setup/glyphs.txt) were not found beside this program. "
@@ -776,6 +801,7 @@ int main(int argc, char** argv) {
     const std::string dir = PickFolder(sd::IsDir(app.outDir) ? app.outDir : std::string());
     if (dir.empty()) return;
     app.outDir = dir;
+    SwosData_LoadSources(app.outDir.c_str(), &app.src);   // that folder's last install
     app.CheckInstalled();
     app.Refresh();
   });

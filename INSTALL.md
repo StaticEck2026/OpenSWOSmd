@@ -133,8 +133,9 @@ Each part it finds gets a green tick. Here it found the PC version and both Amig
 
 ![OpenSWOS Setup when it's done](docs/images/setup/setup-3-done.png)
 
-You only need to do this once. If a new version needs more from your copy, its release
-notes say so: then open OpenSWOS Setup again and click **Install again**.
+You only need to do this once. OpenSWOS Setup remembers where your copy of the game is.
+If a new version of OpenSWOS makes some of the data differently, the game tells you when it
+starts: open OpenSWOS Setup, where those parts say **update needed**, and click **Update**.
 
 *(The screenshots are from Windows; the setup looks the same on a Mac and on Linux.)*
 

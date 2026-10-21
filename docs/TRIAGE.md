@@ -147,6 +147,11 @@ scripts/build_macos.sh      # the two macOS archives, over ssh to the Mac mini
 scripts/build_setup_zip.sh  # OpenSWOS-Setup.zip: the setup for Windows, macOS, Linux
 ```
 
+Changed `tools/swosdata`, `third_party/swosgfx` or `bin/setup` since the last release? First
+`scripts/check_data_versions.py`: it fails when the setup now makes a part differently and that
+part's data version in `include/assets_ini.h` was not raised -- raise it (players with that part
+are then asked to Update), `--update`, commit. Mention it in the changelog entry.
+
 The first two can run together (different machines; neither wipes `dist/`). The
 setup zip comes after both: it takes the Mac's part from `build_macos.sh` and
 refuses one built from another commit.

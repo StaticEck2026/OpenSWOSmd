@@ -31,6 +31,13 @@
 #include <mach-o/dyld.h>
 #endif
 
+static void list_part_file(void *user, SdStep step, const char *rel, int32_t present)
+{
+    (void)user;
+    if (present)
+        printf("%s\t%d\t%s\n", SwosData_PartKey(step), (int)SwosData_PartVersion(step), rel);
+}
+
 static void on_log(void *user, const char *line)
 {
     (void)user;
@@ -53,9 +60,11 @@ static int32_t usage(void)
     fprintf(stderr,
             "usage: swosdata [--scan DIR]... [--adf FILE]... [--dos DIR] [--jag FILE]\n"
             "                [--swos2020 DIR]\n"
-            "                [--out DIR [--res DIR]]   (no --out: report what was found)\n"
+            "                [--out DIR [--res DIR]]   (no --out: report what was found;\n"
+            "                                           no sources: the last install's, from --out's ASSETS.ini)\n"
             "       swosdata --compare OUT REF\n"
-            "       swosdata --installed ASSETSDIR\n");
+            "       swosdata --installed ASSETSDIR\n"
+            "       swosdata --list-parts ASSETSDIR   (part, data version, file: check_data_versions.py)\n");
     return 2;
 }
 
@@ -182,9 +191,20 @@ int main(int argc, char **argv)
         memset(&empty, 0, sizeof empty);
         SwosData_Plan(&empty, info);
         SwosData_Installed(argv[2], inst);
-        for (int32_t s = 0; s < SD_STEP_COUNT; s++)
-            printf("%-36s %4d of %4d%s\n", info[s].name, (int)inst[s].present, (int)inst[s].total,
-                   inst[s].present == inst[s].total ? "  installed" : inst[s].present ? "  incomplete" : "");
+        for (int32_t s = 0; s < SD_STEP_COUNT; s++) {
+            const int32_t want = SwosData_PartVersion((SdStep)s);
+            const char *state = inst[s].present == 0 ? ""
+                              : inst[s].present < inst[s].total ? "  incomplete"
+                              : inst[s].version < want ? "  update needed"
+                              : "  installed";
+            printf("%-36s %4d of %4d  data v%d (this setup: v%d)%s\n", info[s].name,
+                   (int)inst[s].present, (int)inst[s].total, (int)inst[s].version, (int)want, state);
+        }
+        return 0;
+    }
+    if (argc == 3 && strcmp(argv[1], "--list-parts") == 0) {
+        /* part key, data version, file: the files of each part that are there. */
+        SwosData_ListFiles(argv[2], list_part_file, NULL);
         return 0;
     }
     if (argc == 4 && strcmp(argv[1], "--compare") == 0) {
@@ -232,6 +252,10 @@ int main(int argc, char **argv)
 
     if (s_scanned)
         printf("Searched %d folders\n", (int)s_scanned);
+    /* Nothing named on the command line: what the last install used (ASSETS.ini in --out). */
+    if (job.outDir[0] && !job.src.adf1[0] && !job.src.adf2[0] && !job.src.dosDir[0] &&
+        !job.src.jagRom[0] && !job.src.s2020Dir[0] && SwosData_LoadSources(job.outDir, &job.src) > 0)
+        printf("Sources: from %s/%s, the last install's\n", job.outDir, "ASSETS.ini");
     printf("Amiga disk 1: %s\n", job.src.adf1[0] ? job.src.adf1 : "(not found)");
     printf("Amiga disk 2: %s\n", job.src.adf2[0] ? job.src.adf2 : "(not found)");
     printf("PC game:      %s\n", job.src.dosDir[0] ? job.src.dosDir : "(not found)");

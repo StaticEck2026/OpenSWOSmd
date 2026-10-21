@@ -31,26 +31,29 @@ component PlanColumn inherits VerticalLayout {
         HorizontalLayout {
             spacing: 8px;
             Text {
-                text: step.ready || step.installed == 1 ? "✓" : "–";
+                text: step.installed == 3 ? "!" : step.ready || step.installed == 1 ? "✓" : "–";
                 width: 14px;
-                color: step.ready || step.installed == 1 ? Theme.ok : Theme.text-dim;
+                color: step.installed == 3 ? Theme.warn
+                     : step.ready || step.installed == 1 ? Theme.ok : Theme.text-dim;
             }
             Text {
                 text: step.name;
                 horizontal-stretch: 1;
-                color: step.ready || step.installed == 1 ? Theme.text : Theme.text-dim;
+                color: step.ready || step.installed == 1 || step.installed == 3 ? Theme.text : Theme.text-dim;
                 overflow: elide;
             }
             Text {
-                text: step.ready ? (step.installed == 1 ? "ready (installed)" : "ready")
+                text: step.installed == 3 ? (step.ready ? "update needed" : "update needed: add its source")
+                    : step.ready ? (step.installed == 1 ? "ready (installed)" : "ready")
                     : step.installed == 1 ? "installed"
                     : step.installed == 2 ? "incomplete"
                     : "skipped";
-                color: step.ready || step.installed == 1 ? Theme.ok
+                color: step.installed == 3 ? Theme.warn
+                     : step.ready || step.installed == 1 ? Theme.ok
                      : step.installed == 2 ? Theme.danger : Theme.text-dim;
             }
         }
-        if !step.ready && step.installed != 1: Text {
+        if !step.ready && step.installed != 1 && step.installed != 3: Text {
             x: 22px;
             text: "needs " + step.needs;
             font-size: 11px;
@@ -80,6 +83,8 @@ export component MainWindow inherits Window {
     in property <bool> can-install;
     in property <bool> busy;
     in property <bool> done;
+    // Some installed part was made by an older setup: Install becomes Update.
+    in property <bool> outdated;
     in property <float> progress;
     in property <string> status;
     in property <bool> status-error;
@@ -272,7 +277,7 @@ export component MainWindow inherits Window {
             HorizontalLayout {
                 spacing: 12px;
                 TextButton {
-                    label: root.busy ? "Installing…" : root.done ? "Install again" : "Install";
+                    label: root.busy ? "Installing…" : root.outdated ? "Update" : root.done ? "Install again" : "Install";
                     primary: true;
                     width: 130px;
                     enabled: root.can-install && !root.busy;
@@ -295,7 +300,7 @@ export component MainWindow inherits Window {
             }
             Text {
                 text: root.status;
-                color: root.status-error ? Theme.danger : root.done ? Theme.ok : Theme.text-dim;
+                color: root.status-error ? Theme.danger : root.outdated ? Theme.warn : root.done ? Theme.ok : Theme.text-dim;
                 font-weight: root.done ? 700 : 400;
                 wrap: word-wrap;
             }

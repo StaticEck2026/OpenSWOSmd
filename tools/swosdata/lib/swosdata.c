@@ -11,6 +11,7 @@
 #include "dos2amiga.h"
 #include "font_extend.h"
 #include "jag_tier.h"
+#include "../../../include/assets_ini.h"   /* the parts, their data versions, ASSETS.ini */
 #include "rnc_pack.h"
 
 #include <stdarg.h>
@@ -477,6 +478,8 @@ static int32_t step_swos2020(SdJob *job, int32_t *done, int32_t total, char *err
     return 0;
 }
 
+static int32_t write_assets_ini(SdJob *job, const SdStepInfo info[SD_STEP_COUNT], char *err);
+
 int32_t SwosData_Run(SdJob *job, char *err)
 {
     SdStepInfo info[SD_STEP_COUNT];
@@ -518,15 +521,180 @@ int32_t SwosData_Run(SdJob *job, char *err)
         }
     }
     SdSources_Close(&job->src);
+    if (rc == 0)
+        rc = write_assets_ini(job, info, err);
     return rc;
 }
 
+/* ---- ASSETS.ini ----------------------------------------------------------- */
+
+#define SD_PART_KEY(name, key, ver) key,
+#define SD_PART_VER(name, key, ver) ver,
+static const char *const kPartKey[SD_STEP_COUNT]  = { ASSETS_PARTS(SD_PART_KEY) };
+static const int32_t     kPartVersion[SD_STEP_COUNT] = { ASSETS_PARTS(SD_PART_VER) };
+#undef SD_PART_KEY
+#undef SD_PART_VER
+
+int32_t     SwosData_PartVersion(SdStep step) { return step < SD_STEP_COUNT ? kPartVersion[step] : 0; }
+const char *SwosData_PartKey(SdStep step)     { return step < SD_STEP_COUNT ? kPartKey[step] : ""; }
+
+/* The [sources] keys, beside the SdSources field each one is. */
+enum { SRC_ADF1, SRC_ADF2, SRC_DOS, SRC_JAG, SRC_2020, SRC_COUNT };
+static const char *const kSourceKey[SRC_COUNT] = {
+    ASSETS_SRC_AMIGA_DISK1, ASSETS_SRC_AMIGA_DISK2, ASSETS_SRC_PC, ASSETS_SRC_JAGUAR, ASSETS_SRC_SWOS2020
+};
+static char *source_field(SdSources *s, int32_t i)
+{
+    switch (i) {
+    case SRC_ADF1: return s->adf1;
+    case SRC_ADF2: return s->adf2;
+    case SRC_DOS:  return s->dosDir;
+    case SRC_JAG:  return s->jagRom;
+    default:       return s->s2020Dir;
+    }
+}
+
+typedef struct {
+    int32_t version[SD_STEP_COUNT];     /* 0: not listed */
+    char    source[SRC_COUNT][1024];    /* "": not listed */
+} SdAssetsIni;
+
+static char *trim(char *t)
+{
+    while (*t == ' ' || *t == '\t') t++;
+    char *e = t + strlen(t);
+    while (e > t && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n')) *--e = '\0';
+    return t;
+}
+
+/* ASSETS.ini in assetsDir, if it is there: 0 when read. */
+static int32_t ini_read(const char *assetsDir, SdAssetsIni *ini)
+{
+    char path[1100], line[1200], section[32] = "";
+    FILE *f;
+    memset(ini, 0, sizeof *ini);
+    Sg_PathJoin(path, sizeof path, assetsDir, ASSETS_INI_NAME);
+    if ((f = fopen(path, "r")) == NULL)
+        return -1;
+    while (fgets(line, sizeof line, f)) {
+        char *t = trim(line), *eq;
+        if (*t == ';' || *t == '#' || *t == '\0')
+            continue;
+        if (*t == '[') {
+            char *e = strchr(t, ']');
+            if (e) { *e = '\0'; snprintf(section, sizeof section, "%s", t + 1); }
+            continue;
+        }
+        if ((eq = strchr(t, '=')) == NULL)
+            continue;
+        *eq = '\0';
+        char *key = trim(t), *val = trim(eq + 1);
+        if (strcmp(section, "data") == 0) {
+            for (int32_t i = 0; i < SD_STEP_COUNT; i++)
+                if (strcmp(key, kPartKey[i]) == 0)
+                    ini->version[i] = (int32_t)atoi(val);
+        } else if (strcmp(section, "sources") == 0) {
+            for (int32_t i = 0; i < SRC_COUNT; i++)
+                if (strcmp(key, kSourceKey[i]) == 0)
+                    snprintf(ini->source[i], sizeof ini->source[i], "%s", val);
+        }
+    }
+    fclose(f);
+    return 0;
+}
+
+static int32_t ini_write(const char *assetsDir, const SdAssetsIni *ini, char *err)
+{
+    char path[1100], tmp[1110];
+    FILE *f;
+    Sg_PathJoin(path, sizeof path, assetsDir, ASSETS_INI_NAME);
+    snprintf(tmp, sizeof tmp, "%s.new", path);
+    if ((f = fopen(tmp, "w")) == NULL) {
+        snprintf(err, 256, "cannot write %.200s", path);
+        return -1;
+    }
+    fprintf(f, "; " ASSETS_INI_NAME " -- written by OpenSWOS Setup: what it made in this folder.\n"
+               "; [data]: the data version of each part made (OpenSWOS Setup asks you to install\n"
+               "; again when a newer setup makes a part differently). [sources]: what it was made\n"
+               "; from, filled in for you next time. Your own paths: do not share this file.\n"
+               "\n[data]\n");
+    for (int32_t i = 0; i < SD_STEP_COUNT; i++)
+        if (ini->version[i] > 0)
+            fprintf(f, "%s = %d\n", kPartKey[i], (int)ini->version[i]);
+    fprintf(f, "\n[sources]\n");
+    for (int32_t i = 0; i < SRC_COUNT; i++) {
+        char p[1024];
+        snprintf(p, sizeof p, "%s", ini->source[i]);
+#ifdef _WIN32
+        for (char *c = p; *c; c++)      /* the scan joins with '/': show Windows paths as such */
+            if (*c == '/') *c = '\\';
+#endif
+        fprintf(f, "%s = %s\n", kSourceKey[i], p);
+    }
+    if (fclose(f) != 0) {
+        snprintf(err, 256, "cannot write %.200s", path);
+        remove(tmp);
+        return -1;
+    }
+    remove(path);                       /* Windows will not rename over a file */
+    if (rename(tmp, path) != 0) {
+        snprintf(err, 256, "cannot write %.200s", path);
+        return -1;
+    }
+    return 0;
+}
+
+/* After a run: the steps that ran at this setup's versions, the sources it used. */
+static int32_t write_assets_ini(SdJob *job, const SdStepInfo info[SD_STEP_COUNT], char *err)
+{
+    SdAssetsIni ini;
+    ini_read(job->outDir, &ini);
+    for (int32_t i = 0; i < SD_STEP_COUNT; i++)
+        if (info[i].ready)
+            ini.version[i] = kPartVersion[i];
+    for (int32_t i = 0; i < SRC_COUNT; i++) {
+        const char *used = source_field(&job->src, i);
+        if (used[0])
+            snprintf(ini.source[i], sizeof ini.source[i], "%s", used);
+    }
+    return ini_write(job->outDir, &ini, err);
+}
+
+int32_t SwosData_LoadSources(const char *assetsDir, SdSources *s)
+{
+    SdAssetsIni ini;
+    int32_t n = 0;
+    if (!assetsDir || !assetsDir[0] || ini_read(assetsDir, &ini) != 0)
+        return 0;
+    for (int32_t i = 0; i < SRC_COUNT; i++) {
+        const char *p = ini.source[i];
+        char probe[1100];
+        if (!p[0] || source_field(s, i)[0])
+            continue;
+        if (i == SRC_DOS) {
+            /* The PC game folder: recognised by its SPRITE.DAT, like the scan does. */
+            if (Sg_FindNoCase(p, "SPRITE.DAT", probe, sizeof probe) == 0 &&
+                SdSources_AddFile(s, probe) == 0 && s->dosDir[0])
+                n++;
+        } else if (SdSources_AddFile(s, p) == 0 && source_field(s, i)[0]) {
+            n++;
+        }
+    }
+    return n;
+}
+
 /* ---- what is installed already ------------------------------------------ */
+
+/* SwosData_ListFiles: every file SwosData_Installed counts, with its step. */
+static void (*s_listFile)(void *user, SdStep step, const char *rel, int32_t present);
+static void *s_listUser;
+static const SdInstalled *s_listBase;
 
 static void count_file(const char *assetsDir, const char *rel, SdInstalled *n)
 {
     char path[1100];
     FILE *f;
+    const int32_t before = n->present;
     n->total++;
     Sg_PathJoin(path, sizeof path, assetsDir, rel);
     if ((f = fopen(path, "rb")) != NULL) {
@@ -535,6 +703,8 @@ static void count_file(const char *assetsDir, const char *rel, SdInstalled *n)
     } else if (Sg_FindNoCase(assetsDir, rel, path, sizeof path) == 0) {
         n->present++;   /* the game finds its files in any case, and so do we */
     }
+    if (s_listFile)
+        s_listFile(s_listUser, (SdStep)(n - s_listBase), rel, n->present > before);
 }
 
 /* The files each step writes, from the same lists the steps use. */
@@ -575,6 +745,15 @@ void SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT])
         count_file(assetsDir, rel, n);
     }
 
+    /* The AGA Amiga's own copies (kAgaPatches), with the step that makes each. */
+    for (uint32_t i = 0; i < sizeof kAgaPatches / sizeof kAgaPatches[0]; i++) {
+        int32_t amiga = 0;
+        for (uint32_t k = 0; k < sizeof kAmigaPictures / sizeof kAmigaPictures[0]; k++)
+            amiga = amiga || strcmp(kAmigaPictures[k], kAgaPatches[i].name) == 0;
+        snprintf(rel, sizeof rel, AGA_ONLY_DIR "/grafs_aga/%s.RAW", kAgaPatches[i].name);
+        count_file(assetsDir, rel, &out[amiga ? SD_STEP_AGA_AMIGA : SD_STEP_AGA_PC]);
+    }
+
     n = &out[SD_STEP_TEAMS];
     for (int32_t i = 0; g_sdAmigaCopy[i]; i++) {
         char name[64];
@@ -601,6 +780,23 @@ void SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT])
         snprintf(rel, sizeof rel, "grafs_aga/P2020_%d.MAP", (int)p);
         count_file(assetsDir, rel, n);
     }
+
+    SdAssetsIni ini;
+    if (ini_read(assetsDir, &ini) == 0)
+        for (int32_t s = 0; s < SD_STEP_COUNT; s++)
+            out[s].version = ini.version[s];
+}
+
+void SwosData_ListFiles(const char *assetsDir,
+                        void (*file)(void *user, SdStep step, const char *rel, int32_t present),
+                        void *user)
+{
+    SdInstalled n[SD_STEP_COUNT];
+    s_listFile = file;
+    s_listUser = user;
+    s_listBase = n;
+    SwosData_Installed(assetsDir, n);
+    s_listFile = NULL;
 }
 
 void SwosData_DefaultAssetsDir(char *out, uint32_t cap)

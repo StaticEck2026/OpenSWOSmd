@@ -445,6 +445,7 @@ int main(int argc, char **argv)
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.netplay_name[0] = '\0';
     opts.netplay_remember = 1;    /* REMEMBER LOGIN INFO: on, as the login screen shows it */
+    opts.assets_reminder_off[0] = '\0';  /* remind about older game data (src/assets_check.c) */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.record[0] = '\0';        /* default: "server" once SWOS.ini is read (below) */
     opts.netplay_balance = 0;     /* [netplay] balance: off unless asked for (docs/NETPLAY_BALANCE.md) */
@@ -1350,6 +1351,10 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
+
+    /* Game data an older OpenSWOS Setup made (ASSETS.ini): say so, once. */
+    { extern void AssetsCheck_Run(PlatformInitOptions *opts, const char *iniPath);
+      AssetsCheck_Run(&opts, ini_path); }
 
     /* Hand off to the (ported) Amiga bootstrap. startShim runs _start()
      * (hardware init -- now no-ops via stubs) then mainC() which is the

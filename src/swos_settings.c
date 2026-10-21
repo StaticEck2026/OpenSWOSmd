@@ -280,6 +280,8 @@ static int handler(void *user, const char *section,
             snprintf(opts->language, sizeof opts->language, "%s", value);
         else if (eqi(name, "currency") && value && value[0])
             snprintf(opts->currency, sizeof opts->currency, "%s", value);
+        else if (eqi(name, "assets_reminder_off"))
+            snprintf(opts->assets_reminder_off, sizeof opts->assets_reminder_off, "%s", value ? value : "");
     }
     /* Return nonzero on success, even for ignored keys — we don't want
      * inih to flag unknown sections as parse errors. */
@@ -595,6 +597,10 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
 #endif
     SETTING(n) = (IniEntry){ "general","language",   "; language: en | de | fr | es | it | nl", opts->language[0] ? opts->language : "en" };
     SETTING(n) = (IniEntry){ "general","currency",   "; currency: pound | dollar | euro", opts->currency[0] ? opts->currency : "pound" };
+    SETTING(n) = (IniEntry){ "general","assets_reminder_off",
+        "; assets_reminder_off: set by \"Don't remind me\" on the reminder that your game data was made by\n"
+        "; an older OpenSWOS Setup -- the data versions it was about. Empty: remind (src/assets_check.c).",
+        opts->assets_reminder_off };
     if (n >= SETTINGS_MAX)
         fprintf(stderr, "[settings] the settings table is full (%d): raise SETTINGS_MAX\n", n);
     return n;

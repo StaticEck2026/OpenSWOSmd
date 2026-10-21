@@ -53,14 +53,35 @@ void    SwosData_Plan(const SdJob *job, SdStepInfo info[SD_STEP_COUNT]);
 void    SwosData_DefaultAssetsDir(char *out, uint32_t cap);
 
 /* What an earlier run left in `assetsDir`: for each step, how many of the
- * files it writes are there, of how many. A step is installed when all are. */
+ * files it writes are there, of how many, and the data version ASSETS.ini says it
+ * was made at (0: no ASSETS.ini, or not listed -- an older setup's, include/assets_ini.h).
+ * A step is installed when all its files are, and up to date when its version is
+ * SwosData_PartVersion's. */
 typedef struct {
     int32_t present, total;
+    int32_t version;
 } SdInstalled;
 void    SwosData_Installed(const char *assetsDir, SdInstalled out[SD_STEP_COUNT]);
 
-/* Run every step whose sources are there. 0 when everything that ran
- * succeeded; otherwise `err` (256 bytes) names the first failure. */
+/* Every file SwosData_Installed counts, with the step that makes it, and whether it is
+ * there: what scripts/check_data_versions.py fingerprints per part. */
+void    SwosData_ListFiles(const char *assetsDir,
+                           void (*file)(void *user, SdStep step, const char *rel, int32_t present),
+                           void *user);
+
+/* The data version this setup makes each step at, and its ASSETS.ini key. */
+int32_t     SwosData_PartVersion(SdStep step);
+const char *SwosData_PartKey(SdStep step);
+
+/* Fill in `s` from the folders and files ASSETS.ini in `assetsDir` says the last
+ * install was made from -- those still there and still recognised. A source already
+ * set is left as it is. Returns how many it filled in. */
+int32_t SwosData_LoadSources(const char *assetsDir, SdSources *s);
+
+/* Run every step whose sources are there, then write ASSETS.ini: the steps that ran
+ * at this setup's data versions (the others keep what it said), and the sources used
+ * (the others keep theirs). 0 when everything that ran succeeded; otherwise `err`
+ * (256 bytes) names the first failure. */
 int32_t SwosData_Run(SdJob *job, char *err);
 
 /* The Amiga version: copy what the Amiga binary reads (data/, grafs/,
