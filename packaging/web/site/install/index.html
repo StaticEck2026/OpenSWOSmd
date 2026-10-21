@@ -2,7 +2,8 @@
 <!--
   openswos.net/install: the install guide, the web version of INSTALL.md in the repo. Keep
   the two saying the same; the screenshots are docs/images/setup's, copied beside this file.
-  Served from /var/www/openswos.net/install/ (packaging/web/site is that folder).
+  Served from /var/www/openswos.net/install/ (packaging/web/site is that folder). The
+  background is the landing page's /background.png (not in git, see ../index.html).
 -->
 <html lang="en">
 <head>
@@ -29,9 +30,10 @@
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
-    background: var(--bg-edge);
-    background-image: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-edge) 70%);
-    background-attachment: fixed;
+    /* the landing page's stadium, dimmed further so the guide's text stays readable */
+    background: linear-gradient(rgba(9, 20, 11, 0.55), rgba(9, 20, 11, 0.55)),
+                url(/background.png) center top no-repeat;
+    background-color: #09140b;
     color: var(--text);
     font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }

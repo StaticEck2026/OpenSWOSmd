@@ -187,3 +187,6 @@ data/SWOS2.REL
 
 # Claude Code's per-machine permissions: local, never shared.
 .claude/settings.local.json
+
+# openswos.net background: drawn from the game art, copied to the server, never committed
+/packaging/web/site/background.png

@@ -2,6 +2,8 @@
 <!--
   openswos.net: the landing page. Served by nginx on the OpenSWOS server from
   /var/www/openswos.net (this folder, copied there). Releases are on itch.io.
+  background.png (the itch page's: the pitch and Jaguar players, darkened) is drawn from
+  the game's own art, so it is NOT in git -- it is copied to the server beside this file.
 -->
 <html lang="en">
 <head>
@@ -12,8 +14,7 @@
 <link rel="icon" type="image/png" href="openswos-logo.png">
 <style>
   :root {
-    --bg: #0f2a16;
-    --bg-edge: #08170c;
+    --bg-edge: #09140b;       /* what background.png fades into at its edges */
     --text: #e8f0e6;
     --muted: #9fb59c;
     --button: #fa5c5c;
@@ -23,8 +24,7 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    background: radial-gradient(ellipse at center, var(--bg) 0%, var(--bg-edge) 100%);
-    background-color: var(--bg-edge);
+    background: var(--bg-edge) url(background.png) center top no-repeat;
     color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex;
