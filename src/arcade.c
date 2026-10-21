@@ -77,8 +77,7 @@ extern uint16_t _poolplyrLoaded;
 extern void ViewHighlights(void);
 extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
                                           void *name, void *dest, uint32_t *outFileSize);
-extern int  DosReplay_IsDosHil(const uint8_t *buf, uint32_t size);
-extern int  DosReplay_ConvertHilInPlace(uint32_t fileSize);
+extern int  DosReplay_LoadHil(uint8_t *filename);
 extern int  DosReplay_LoadRpl(uint8_t *filename);
 extern void DosReplay_ClearRpl(void);
 extern uint32_t _kHilFileSig;
@@ -194,13 +193,13 @@ static void arc_scan_one_dir(const char *sub)
         if (!(arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL") ||
               arc_ends_with(e->d_name, ".SRP")))
             continue;
-        /* The .HIL converter reads the (larger) DOS source into _hilFileBuffer
-         * (192254 B), so skip reels too big for it; RPLs use the 2.76 MB buffer. */
+        /* A DOS/2020 .HIL and an RPL are read into dos_replay_load.c's 2.76 MB
+         * buffer, so skip reels too big for it (our own .HIL is checked on load). */
         char p[512];
         snprintf(p, sizeof p, "%s/%s", dir, e->d_name);
         struct stat st;
         uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) :
-                         arc_ends_with(e->d_name, ".SRP") ? (64u * 1024u * 1024u) : 192254u;
+                         arc_ends_with(e->d_name, ".SRP") ? (64u * 1024u * 1024u) : (2700u * 1024u);
         if (stat(p, &st) == 0 && (uint32_t)st.st_size > limit) {
             fprintf(stderr, "[arcade] skip oversized reel %s (%ld B)\n",
                     e->d_name, (long)st.st_size);
@@ -258,13 +257,18 @@ static int arc_load_reel(const char *name)
     if (arc_ends_with(name, ".RPL"))
         return DosReplay_LoadRpl((uint8_t *)path);
 
-    /* .HIL: read into the HIL buffer, then convert if it's the DOS/2020 layout */
+    /* .HIL: the DOS/2020 layout is read and converted by dos_replay_load.c (a 2020
+     * .HIL is bigger than _hilFileBuffer); anything else is read as our own */
+    int dr = DosReplay_LoadHil((uint8_t *)path);
+    if (dr >= 0)
+        return dr;
+    struct stat st;
+    if (stat(path, &st) != 0 || st.st_size > 192254)   /* our .HIL's most: 2254 + 10 x 19000 */
+        return 1;
     uint32_t size = 0;
     CAssetSys_DispatchGetSize(ARC_ASSET_INIT, 0, path, _hilFileBuffer, &size);
     if (size == 0)
         return 1;
-    if (DosReplay_IsDosHil(_hilFileBuffer, size))
-        return DosReplay_ConvertHilInPlace(size);
     /* native Amiga HIL: already in our layout — accept if the signature matches */
     return 0;
 }

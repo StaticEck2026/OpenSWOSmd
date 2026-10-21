@@ -2047,25 +2047,28 @@ static void render_frame_impl(int pump_full)
         s_screenshot_request = 0;
     }
     if (s_screenshot_interval > 0) {
-        static int frame_mod, presented, from = -1;
+        static int frame_mod, presented, from = -1, cap = 200;
         /* SWOS_SCREENSHOT_FROM=N: start the interval shots at the N-th present, so the
-         * 200 of them can cover one moment of a long replay (docs/NETPLAY_GHOSTING.md). */
+         * 200 of them can cover one moment of a long replay (docs/NETPLAY_GHOSTING.md).
+         * SWOS_SCREENSHOT_MAX=N raises the 200, e.g. to film a whole highlight. */
         if (from < 0) {
             const char *v = getenv("SWOS_SCREENSHOT_FROM");
             from = (v && v[0]) ? atoi(v) : 0;
+            v = getenv("SWOS_SCREENSHOT_MAX");
+            if (v && atoi(v) > 0) cap = atoi(v);
         }
         if (++presented < from)
             goto shots_done;
         if (++frame_mod >= s_screenshot_interval) {
             frame_mod = 0;
-            if (s_screenshot_auto_count < 200) {
+            if (s_screenshot_auto_count < cap) {
                 uint32_t *shot = screenshot_frame_with_hud(fb);
                 write_screenshot(shot);
                 screenshot_frame_release(shot, fb);
                 s_screenshot_auto_count++;
-            } else if (s_screenshot_auto_count == 200) {
+            } else if (s_screenshot_auto_count == cap) {
                 fprintf(stderr,
-                    "[screenshot] interval mode hit 200-shot cap; disabling\n");
+                    "[screenshot] interval mode hit the %d-shot cap; disabling\n", cap);
                 s_screenshot_interval = 0;
                 s_screenshot_auto_count++;
             }

@@ -125,7 +125,11 @@ static int replay_fps_from_gamestyle(uint8_t gs)
     case 1:    return 50;   /* Amiga */
     case 2:    return 50;   /* Moon Soccer */
     case 0xF4: return DosGameplay_TargetFps();   /* 244 = use current game style */
-    default:   return (gs >= 3) ? 60 : 50;       /* Amiga 60 FPS (beta styles) */
+    case 3: case 4: return 60;                   /* Amiga 60 FPS (beta styles) */
+    /* SWOS 2020's .HIL files carry 30 or 31 here: every one recorded in its PC (70)
+     * style has 30, every one in its Amiga (50) style 31 -- the RPLs' 0 and 1 in the
+     * low bit. Its styles stop at 4, so anything above is that: 60 was wrong for both. */
+    default:   return (gs & 1) ? 50 : 70;
     }
 }
 
@@ -167,57 +171,32 @@ static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst
     }
     _replayRecordingIsWide = isWide;
     /* _replayPlaybackFps is set by the caller from the file's gameStyle byte
-     * (offset 5) — see DosReplay_ConvertHilInPlace / DosReplay_LoadRpl — because
+     * (offset 5) — see DosReplay_LoadHil / DosReplay_LoadRpl — because
      * this converter no longer has the header (src already points past it). */
     return di;
 }
 
-/* In-place convert the DOS .HIL already loaded in _hilFileBuffer into our HIL
- * format. Reads the DOS header into locals first, then overwrites. Returns 0. */
-int DosReplay_ConvertHilInPlace(uint32_t fileSize)
+/* Teams and scalars of a DOS header into _hilFileBuffer's header (CopyTeamsAndHeader
+ * reads the teams there; the scalars are the symbols overlaid on it). `b` is the DOS
+ * file, untouched until the header has been read. */
+static void write_hil_header(const uint8_t *b, uint16_t numScenes)
 {
-    uint8_t *b = _hilFileBuffer;
+    uint16_t t1g     = (uint16_t)(b[DOS_T1GOALS_OFF] | (b[DOS_T1GOALS_OFF+1] << 8));
+    uint16_t t2g     = (uint16_t)(b[DOS_T2GOALS_OFF] | (b[DOS_T2GOALS_OFF+1] << 8));
+    uint16_t pitch   = (uint16_t)(b[DOS_PITCH_OFF]   | (b[DOS_PITCH_OFF+1]   << 8));
+    uint16_t maxSubs = (uint16_t)(b[DOS_MAXSUBS_OFF] | (b[DOS_MAXSUBS_OFF+1] << 8));
 
-    /* Authored playback rate from the gameStyle byte at file offset 5. */
-    _replayPlaybackFps = replay_fps_from_gamestyle(b[5]);
-    fprintf(stderr, "[replay] DOS .HIL gameStyle=%u -> %d fps\n",
-            (unsigned)b[5], _replayPlaybackFps);
-
-    /* 1. read DOS header fields (before we overwrite anything) */
-    uint16_t numScenes = (uint16_t)(b[DOS_NUMSCENES_OFF] | (b[DOS_NUMSCENES_OFF+1] << 8));
-    uint16_t t1g       = (uint16_t)(b[DOS_T1GOALS_OFF]   | (b[DOS_T1GOALS_OFF+1]   << 8));
-    uint16_t t2g       = (uint16_t)(b[DOS_T2GOALS_OFF]   | (b[DOS_T2GOALS_OFF+1]   << 8));
-    uint16_t pitch     = (uint16_t)(b[DOS_PITCH_OFF]     | (b[DOS_PITCH_OFF+1]     << 8));
-    uint16_t maxSubs   = (uint16_t)(b[DOS_MAXSUBS_OFF]   | (b[DOS_MAXSUBS_OFF+1]   << 8));
-
-    static uint8_t team1[DOS_TEAM_SIZE], team2[DOS_TEAM_SIZE];
-    memcpy(team1, b + DOS_TEAM1_OFF, DOS_TEAM_SIZE);
-    memcpy(team2, b + DOS_TEAM2_OFF, DOS_TEAM_SIZE);
-
-    uint8_t gameName[40];
-    memcpy(gameName, b + DOS_LEAGUE_NAME_OFF, 40);
-
-    /* 2. convert the frame stream (DOS scenes at DOS_HDR_SIZE -> ours at
-     *    OUR_SCENE_OFF). Forward 1:1, write cursor stays behind read cursor. */
-    if (fileSize > DOS_HDR_SIZE)
-        convert_frames(b + DOS_HDR_SIZE, fileSize - DOS_HDR_SIZE, b + OUR_SCENE_OFF);
-
-    /* 3. write our header */
-    BE_WRITE_U32(b,     K_HIL_SIG);
-    BE_WRITE_U32(b + 4, K_HIL_MAXSZ);
-    convert_team(team1, b + OUR_TEAM1_OFF);
-    convert_team(team2, b + OUR_TEAM2_OFF);
-    memcpy(_hilGameName,  gameName, 40);
+    BE_WRITE_U32(_hilFileBuffer,     K_HIL_SIG);
+    BE_WRITE_U32(_hilFileBuffer + 4, K_HIL_MAXSZ);
+    convert_team(b + DOS_TEAM1_OFF, _hilFileBuffer + OUR_TEAM1_OFF);
+    convert_team(b + DOS_TEAM2_OFF, _hilFileBuffer + OUR_TEAM2_OFF);
+    memcpy(_hilGameName, b + DOS_LEAGUE_NAME_OFF, 40);
     memset(_hilGameRound, 0, 40);
-
-    /* 4. scalars host-native (overlaid on the buffer via their symbols) */
-    if (numScenes == 0) numScenes = 1;
     _hilNumGoals       = numScenes;
     _hilTeam1Goals     = t1g;
     _hilTeam2Goals     = t2g;
     _hilPitchNumber    = pitch;
     _hilMaxSubstitutes = maxSubs;
-    return 0;
 }
 
 /* ---- RPL: a whole-match replay in the same DOS format, one ~1 MB scene ----
@@ -257,46 +236,75 @@ int DosReplay_LoadRpl(uint8_t *filename)
     fprintf(stderr, "[replay] DOS .RPL gameStyle=%u -> %d fps\n",
             (unsigned)b[5], _replayPlaybackFps);
 
-    /* 1. read the DOS header into locals before we overwrite it */
-    uint16_t t1g     = (uint16_t)(b[DOS_T1GOALS_OFF] | (b[DOS_T1GOALS_OFF+1] << 8));
-    uint16_t t2g     = (uint16_t)(b[DOS_T2GOALS_OFF] | (b[DOS_T2GOALS_OFF+1] << 8));
-    uint16_t pitch   = (uint16_t)(b[DOS_PITCH_OFF]   | (b[DOS_PITCH_OFF+1]   << 8));
-    uint16_t maxSubs = (uint16_t)(b[DOS_MAXSUBS_OFF] | (b[DOS_MAXSUBS_OFF+1] << 8));
-    static uint8_t team1[DOS_TEAM_SIZE], team2[DOS_TEAM_SIZE];
-    memcpy(team1, b + DOS_TEAM1_OFF, DOS_TEAM_SIZE);
-    memcpy(team2, b + DOS_TEAM2_OFF, DOS_TEAM_SIZE);
-    uint8_t gameName[40];
-    memcpy(gameName, b + DOS_LEAGUE_NAME_OFF, 40);
+    /* 1. the teams and scalars into _hilFileBuffer, before the header is overwritten */
+    write_hil_header(b, 1);            /* one whole-match scene */
 
     /* 2. convert the frame stream in place: DOS @DOS_HDR_SIZE -> our @0. Forward
      *    1:1, write cursor stays behind the read cursor. */
     _rplStreamBytes = convert_frames(b + DOS_HDR_SIZE, size - DOS_HDR_SIZE, b);
 
-    /* 3. teams + scalars into the _hilFileBuffer header (CopyTeamsAndHeader reads
-     *    the teams there; the scalars are the overlaid symbols). */
-    BE_WRITE_U32(_hilFileBuffer,     K_HIL_SIG);
-    BE_WRITE_U32(_hilFileBuffer + 4, K_HIL_MAXSZ);
-    convert_team(team1, _hilFileBuffer + OUR_TEAM1_OFF);
-    convert_team(team2, _hilFileBuffer + OUR_TEAM2_OFF);
-    memcpy(_hilGameName,  gameName, 40);
-    memset(_hilGameRound, 0, 40);
-    _hilNumGoals       = 1;            /* one whole-match scene */
-    _hilTeam1Goals     = t1g;
-    _hilTeam2Goals     = t2g;
-    _hilPitchNumber    = pitch;
-    _hilMaxSubstitutes = maxSubs;
-
-    /* 4. hand the buffer to the replay engine */
+    /* 3. hand the buffer to the replay engine */
     _rplBufferPtr     = b;
     _numScenesInHilFile = 1;
     return 0;
 }
 
-/* Clear the RPL state so a subsequent .HIL load uses the normal scene buffer. */
+/* ---- HIL: the goal scenes of a DOS or SWOS 2020 .HIL ----
+ * A DOS .HIL is a 3626-byte header and numScenes scenes of one size: 19000 bytes, our
+ * slot, in the PC game's files, but 61000 in SWOS 2020's (a widescreen frame holds
+ * more). The file is read whole into s_rplBuffer -- never through LoadFileEx, which
+ * stages a file in the frontbuffer and panics (0xE000) on one bigger than the screen:
+ * a SWOS 2020 .HIL of two scenes is 125 KB, of ten 613 KB. Scenes our 19000-byte slots
+ * hold are copied into them, exactly as the in-place conversion did, so a PC .HIL
+ * still saves again; any other size plays from s_rplBuffer at its own stride
+ * (game_loop.c takes each scene from _dosHilScenesPtr). */
+uint8_t  *_dosHilScenesPtr  = (uint8_t *)0;  /* non-NULL while such a .HIL is loaded */
+uint32_t  _dosHilSceneBytes = 0;             /* its scene size */
+
+void DosReplay_ClearRpl(void);
+
+/* 0 loaded, 1 a DOS .HIL that cannot be played, -1 not a DOS .HIL (or no such file):
+ * the caller reads it as our own .HIL. */
+int DosReplay_LoadHil(uint8_t *filename)
+{
+    uint32_t size = 0;
+    DosReplay_ClearRpl();
+    CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, filename, s_rplBuffer, &size);
+    if (size == 0 || size > RPL_BUFFER_SIZE || !DosReplay_IsDosHil(s_rplBuffer, size))
+        return -1;
+
+    uint8_t *b = s_rplBuffer;
+    uint16_t numScenes = (uint16_t)(b[DOS_NUMSCENES_OFF] | (b[DOS_NUMSCENES_OFF+1] << 8));
+    uint32_t stream = size - DOS_HDR_SIZE;
+    uint32_t stride = numScenes ? stream / numScenes : 0;
+    if (numScenes == 0 || stride == 0 || (stride & 3) || stride * numScenes != stream) {
+        fprintf(stderr, "[replay] DOS .HIL %s: %u scenes do not divide its %u bytes\n",
+                (const char *)filename, (unsigned)numScenes, (unsigned)stream);
+        return 1;
+    }
+
+    _replayPlaybackFps = replay_fps_from_gamestyle(b[5]);
+    fprintf(stderr, "[replay] DOS .HIL gameStyle=%u -> %d fps, %u scenes of %u bytes\n",
+            (unsigned)b[5], _replayPlaybackFps, (unsigned)numScenes, (unsigned)stride);
+
+    write_hil_header(b, numScenes);
+    convert_frames(b + DOS_HDR_SIZE, stream, b);
+    if (stride == OUR_SCENE_BYTES && OUR_SCENE_OFF + stream <= K_HIL_MAXSZ) {
+        memcpy(_hilFileBuffer + OUR_SCENE_OFF, b, stream);
+    } else {
+        _dosHilScenesPtr  = b;
+        _dosHilSceneBytes = stride;
+    }
+    return 0;
+}
+
+/* Clear the RPL and DOS .HIL state so a subsequent .HIL load uses the normal scene buffer. */
 void DosReplay_ClearRpl(void)
 {
     _rplBufferPtr = (uint8_t *)0;
     _rplStreamBytes = 0;
+    _dosHilScenesPtr = (uint8_t *)0;
+    _dosHilSceneBytes = 0;
 }
 
 #endif /* SWOS_SDL_BUILD */

@@ -1497,6 +1497,14 @@ advance_to_next_highlight:
             baseAddr = _rplBufferPtr;
             endAddr  = _rplBufferPtr + _rplStreamBytes;
         }
+        /* A SWOS 2020 .HIL's scenes are 61000 bytes, not 19000: dos_replay_load.c
+         * keeps them in its own buffer at the file's stride. */
+        extern uint8_t *_dosHilScenesPtr;
+        extern uint32_t _dosHilSceneBytes;
+        if (_dosHilScenesPtr) {
+            baseAddr = _dosHilScenesPtr + (uint32_t)_hilSceneNumber * _dosHilSceneBytes;
+            endAddr  = baseAddr + _dosHilSceneBytes;
+        }
 #endif
         _goalBasePtr = baseAddr;
         _currentHilPtr = baseAddr - 4;

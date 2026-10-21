@@ -59,6 +59,7 @@ extern uint8_t _aCannotFormatGa[];
 extern uint8_t _aDiskError[];
 extern uint8_t _aCompetitionFil[];
 extern uint8_t _aFileSavedByDif[];
+extern uint8_t _aNotAHighlights[];     /* "NOT A HIGHLIGHTS FILE" */
 
 /* String constants (in SWOS2.s data section) */
 extern uint8_t _aContinue[];          /* "CONTINUE" */
@@ -664,24 +665,30 @@ int16_t LoadHilFile(uint8_t *filename)
         return 0;
     }
 
-    uint32_t hilSize = 0;
-    result = LoadFileEx(filename, _hilFileBuffer, &hilSize);
-    if (result == 0) {
 #ifdef SWOS_SDL_BUILD
-        /* DOS / SWOS-2020 .HIL: little-endian, 3626-byte header, different
-         * sprite numbering. Convert it into our Amiga HIL layout in place so
-         * the normal replay path plays it. */
-        extern int DosReplay_IsDosHil(const uint8_t *buf, uint32_t size);
-        extern int DosReplay_ConvertHilInPlace(uint32_t fileSize);
+    {
+        /* DOS / SWOS-2020 .HIL: little-endian, 3626-byte header, different sprite
+         * numbering, and up to 613 KB -- more than LoadFileEx can stage. Read and
+         * converted into our layout by dos_replay_load.c, so the normal replay path
+         * plays it. */
+        extern int DosReplay_LoadHil(uint8_t *filename);
         extern int _replayRecordingIsWide;
         extern int _replayPlaybackFps;
         _replayRecordingIsWide = 0;   /* native Amiga HIL is 336-wide; DosReplay sets it for DOS/2020 */
-        _replayPlaybackFps = 50;      /* native Amiga = 50 Hz; ConvertHilInPlace bumps to 70 for DOS/2020 */
-        if (DosReplay_IsDosHil(_hilFileBuffer, hilSize)) {
-            DosReplay_ConvertHilInPlace(hilSize);
+        _replayPlaybackFps = 50;      /* native Amiga = 50 Hz; DosReplay_LoadHil sets the file's own */
+        int dr = DosReplay_LoadHil(filename);
+        if (dr == 0)
             return 0;
+        if (dr > 0) {
+            _hilNumGoals = 0;
+            ShowErrorMenu(_aNotAHighlights);
+            return 1;
         }
+    }
 #endif
+    uint32_t hilSize = 0;
+    result = LoadFileEx(filename, _hilFileBuffer, &hilSize);
+    if (result == 0) {
         /* Legacy on-disk format stores the 5 header u16s in BE (Amiga
          * m68k). The original loader left them BE in memory and
          * highlights_menu.c followed up with an in-place BE_TO_HOST

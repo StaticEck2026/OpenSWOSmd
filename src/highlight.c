@@ -491,6 +491,18 @@ void CopyTeamsAndHeader(void)
 {
     _numScenesInHilFile = _hilNumGoals;
     _pitchNumberAndType = _hilPitchNumber;
+#ifdef SWOS_SDL_BUILD
+    {
+        /* SWOS_PITCH_TYPE=0..6 / SWOS_PITCH_NUMBER=1..6 pin a highlight's pitch too,
+         * as they do a match's (ChoosePitchType, dos_load_pitch): one recording
+         * filmed on every pitch. Only the picture; the scenes are what they were. */
+        const char *t = getenv("SWOS_PITCH_TYPE"), *n = getenv("SWOS_PITCH_NUMBER");
+        if (t && t[0] >= '0' && t[0] <= '6' && !t[1])
+            _pitchNumberAndType = (uint16_t)((_pitchNumberAndType & 0xFF00) | (uint16_t)(t[0] - '0'));
+        if (n && n[0] >= '1' && n[0] <= '6' && !n[1])
+            _pitchNumberAndType = (uint16_t)((_pitchNumberAndType & 0x00FF) | (uint16_t)((n[0] - '1') << 8));
+    }
+#endif
 
     /* Copy team data from hil file buffer (offset 8) */
     uint8_t *src = &_hilFileBuffer[8];

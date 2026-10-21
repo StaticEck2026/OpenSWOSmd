@@ -52,7 +52,7 @@ them seated for ever, and where the game has fans and the map none, nothing move
 `SWOS_PITCH_MAP_CHECK=1` compares, at every kick-off, each baked cell with the engine's
 own recoloured tile, each animated fan's standing tile with the engine's, and all seven
 conditions' palette entries with the engine's table. `SWOS_PITCH_NUMBER=1..6` pins the
-pitch drawn, so one recording walks all six:
+pitch drawn (a highlight's too, as does `SWOS_PITCH_TYPE`), so one recording walks all six:
 
 ```bash
 cd bin

@@ -53,6 +53,14 @@ loader that uses this table. A `_DosOverlaySprites` function no longer exists.)
 **For `.RPL`/`.HIL` replays specifically** the frame stream only references sprite
 indices ≥ 341, which are all ≥ 227 — so the remap is uniformly `dosIdx - 114`.
 
+**Scene size.** A DOS `.HIL` is a 3626-byte header and `numScenes` scenes of one size:
+19000 bytes in the PC game's files, **61000** in SWOS 2020's (125 KB for two scenes, 613 KB
+for ten). `DosReplay_LoadHil` reads the file whole into the RPL buffer -- never through
+`LoadFileEx`, whose frontbuffer stage panics (0xE000) on anything wider than the screen --
+copies 19000-byte scenes into our slots as before, and plays any other size from that
+buffer at its own stride (`_dosHilScenesPtr`, game_loop.c). The speed byte at offset 5 is
+30/31 in SWOS 2020's `.HIL`s: the low bit is the style, as the RPLs' 0/1 (PC 70, Amiga 50).
+
 > Note: some Amiga indices are shared by more than one `SPR_` name (alias/reuse):
 > `0xb7` (183) = SPR_SCROLL_ARROW_UP, SPR_RESULT_BIG_0
 > `0xd6` (214) = SPR_8_MINS, SPR_LITTLE_PLAYER_GENERIC
