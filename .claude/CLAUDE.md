@@ -248,6 +248,10 @@ project's tested "what the game needs at runtime" set). `save/` is deliberately
 excluded — saves go to a per-user dir (`swos_io.c`), and `bin/save` here is 24 MB
 of test careers.
 
+**Windows 10 or later** (`MinVersion=10.0` in `swos.iss`): Cygwin 3.5+ dropped 7 and 8, and
+OpenSWOS Setup's Slint is Rust, whose programs need 10 -- on 7 the setup died at start with
+0xc0000005 (tester report, 2026-10-21).
+
 The Windows runtime is **four** DLLs, and only two of them are visible to
 `cygcheck bin/SWOS.exe`:
 

@@ -3,7 +3,7 @@
 # OpenSWOS
 
 ***Sensible World of Soccer*, rebuilt in C from the original Amiga game.** Same game,
-same feel, now on **Windows, macOS, Linux, the Raspberry Pi** and the **Amiga 1200**,
+same feel, now on **Windows (10 or later), macOS, Linux, the Raspberry Pi** and the **Amiga 1200**,
 with **online multiplayer**.
 
 <p align="center"><b><a href="https://baker76.itch.io/openswos">Download OpenSWOS on itch.io</a></b></p>

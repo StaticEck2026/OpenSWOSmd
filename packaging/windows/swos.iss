@@ -57,6 +57,10 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName} {#AppVersion}
+; Windows 10 or later: the game's Cygwin (3.5+) dropped 7 and 8, and the setup window's
+; Slint is Rust, whose programs need 10. On 7 the setup crashed at start (0xc0000005);
+; this makes the installer say so instead.
+MinVersion=10.0
 OutputDir={#OutputDir}
 OutputBaseFilename=SWOS-Setup
 SetupIconFile={#RootDir}\SWOS.ico

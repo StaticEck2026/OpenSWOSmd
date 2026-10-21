@@ -48,7 +48,7 @@ anywhere else. Pick the file for your computer:
 
 | Your computer | Download |
 |---|---|
-| **Windows** | `SWOS-Setup.exe` — the installer |
+| **Windows** (10 or later) | `SWOS-Setup.exe` — the installer |
 | **Mac** (Apple silicon or Intel) | `SWOS-macOS-app.zip` |
 | **Linux** (PC or Raspberry Pi) | `SWOS-portable.zip`, and `OpenSWOS-Setup.zip` for the setup window |
 | **Amiga** (A1200/A4000 or an emulator) | `SWOS-Amiga.zip`, and `OpenSWOS-Setup.zip` to run on a PC or Mac |
