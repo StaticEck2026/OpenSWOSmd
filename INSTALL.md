@@ -1,5 +1,8 @@
 # Installing OpenSWOS
 
+<!-- The same guide is on the web at https://openswos.net/install/ (packaging/web/site/install):
+     change both together. -->
+
 This guide takes you from nothing to playing, one step at a time. It takes about five
 minutes.
 
