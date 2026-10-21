@@ -115,8 +115,10 @@ AGA                            benbaker76
 Multiplayer (GGPO-X)           thd79
 Server Help                    Redhair
 Test Lead                      Playaveli
-Beta Testers                   crom1, ElMichaJ, EMPI, gatifun, petarku,
-                               Predicador, Redhair, segra, starwindz, thd79
+Beta Testers                   Brummie, crom1, ElMichaJ, Elsheimy, EMPI,
+                               gatifun, Mladen, Mózg, petarku, Predicador,
+                               Rebel, Redhair, starwindz, thd79, umtytm,
+                               Yashalkok
 Donators                       benbaker76, Playaveli, starwindz, Petarku,
                                gatifun, burellapaolo, az0man0,
                                Cartoplotus68, JoSon, aliko

@@ -6829,7 +6829,8 @@ Menu_ContinueAbort _continueAbortMenu = {
 #ifndef SWOS_SDL_BUILD   /* the Amiga's; shown on AGA only (menus.c) */
 /* The Amiga AGA CREDITS screen. The SDL builds run SWOS 2020's credits.mnu from JSON
  * (online_menus.c); the Amiga has no JSON menus, so this is the same screen as a native
- * one. Coordinates are bytes: 140 = -116, 200 = -56. */
+ * one. Coordinates are bytes: 140 = -116, 208 = -48. The exit sits at 208 (text y 244)
+ * so the last credits line (three lines of testers since 2026-10-21) clears it. */
 extern void CreditsAgaInit(void);
 extern void CreditsAgaDraw(void);
 char _aCreditsAgaHeader[] = "OPENSWOS - CREDITS";
@@ -6844,7 +6845,7 @@ Menu_CreditsAga _creditsAgaMenu = {
         MENU_CMD_END
     },
     {
-        { 82, -56, -116, 15 },
+        { 82, -48, -116, 15 },
         { MENU_CMD_NAV, -1, -1, -1, -1 },
         { MENU_CMD_COLORS, 0x4 },
         { MENU_CMD_TEXT_PTR, 0x0, _aCreditsAgaExit },
