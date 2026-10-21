@@ -102,6 +102,8 @@ bin/SWOS.aarch64
 bin/SWOS.armhf
 bin/SWOS.macos
 bin/SWOS.log
+# The game's log, wherever it was run from (it writes beside itself).
+/SWOS.log*
 
 # Recorded-game test corpus (docs/TESTS.md). 66 MB of binary imported from
 # swos-port/tests/data. UNTRACKED until the replay rig has proven it decodes and
