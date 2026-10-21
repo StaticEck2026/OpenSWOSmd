@@ -202,11 +202,14 @@ scripts/upload_itch.sh
 
 Releases go on **itch.io**, <https://baker76.itch.io/openswos>, pushed with
 **butler** (itch.io's uploader, `~/.local/bin/butler`; logged in once with
-`butler login`, which keeps its key in butler's own config). Each archive has a
-channel of its own (`windows-installer`, `windows-linux-portable`, `mac-app`,
-`mac-binary`, `amiga`, `setup-windows-mac-linux`, `binaries-windows-linux-mac-amiga`)
+`butler login`, which keeps its key in butler's own config). Each player download has a
+channel of its own (`windows-installer`, `windows-linux-portable`, `mac-app`, `amiga`,
+`setup-windows-mac-linux`; the two developer ones, `mac-binary` and
+`binaries-windows-linux-mac-amiga`, only with `ITCH_DEV_DOWNLOADS=1`)
 and is versioned by the build, so a drop replaces the previous one's file rather
-than adding a copy. The script refuses a drop that is not one commit: the
+than adding a copy. **Never delete the uploads on the dashboard between releases**: a push
+updates each in place, keeping its display name and settings; a deleted one comes back as a
+new upload with neither. The script refuses a drop that is not one commit: the
 commit `build_dist.sh` writes to `dist/.build-status`, the Mac's part, and this
 tree (only `changelog.html` may have moved on since the drop).
 

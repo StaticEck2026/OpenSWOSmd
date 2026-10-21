@@ -5,6 +5,7 @@
 #   scripts/upload_itch.sh              # push every archive to its channel
 #   scripts/upload_itch.sh --dry-run    # check the drop and print what would go where
 #   scripts/upload_itch.sh --status     # what the page holds now (butler status)
+#   ITCH_DEV_DOWNLOADS=1 scripts/upload_itch.sh   # ... and the two developer downloads too
 #
 # Run after the drop (docs/TRIAGE.md §5): build_dist.sh, build_macos.sh, build_setup_zip.sh.
 # Each archive goes to a channel of its own with butler, versioned by the build the
@@ -36,11 +37,18 @@ CHANNELS=(
     "SWOS-Setup.exe:windows-installer"
     "SWOS-portable.zip:windows-linux-portable"
     "SWOS-macOS-app.zip:mac-app"
-    "SWOS-macOS.zip:mac-binary"
     "SWOS-Amiga.zip:amiga"
     "OpenSWOS-Setup.zip:setup-windows-mac-linux"
-    "SWOS.zip:binaries-windows-linux-mac-amiga"
 )
+# The developer downloads -- the game programs alone, and the Mac program without its app
+# (it needs SDL2 installed) -- are no use to a player, so the page does not offer them
+# (taken off 2026-10-21). ITCH_DEV_DOWNLOADS=1 pushes them again, to the same channels.
+if [ "${ITCH_DEV_DOWNLOADS:-0}" = 1 ]; then
+    CHANNELS+=(
+        "SWOS-macOS.zip:mac-binary"
+        "SWOS.zip:binaries-windows-linux-mac-amiga"
+    )
+fi
 
 DRY=0
 case "${1:-}" in
