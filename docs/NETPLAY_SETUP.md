@@ -693,6 +693,17 @@ bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP
 That replays the match from its recorded inputs and names the first frame that parts from
 what was recorded (docs/REPLAY_FORMAT_V2.md, docs/NETPLAY.md §7 "The recorder").
 
+### Keeping the recordings in bounds
+
+Every match the matchmaker arranges is recorded by default (release builds too), at about
+1 MB a match, and nothing deletes them but a fetch. `scripts/prune_recordings.sh` deletes the
+ones unchanged for 30 days (`--days N`, `--dry-run`), with their cards, and rewrites the
+list `/playback/` shows; each run is a line in `/srv/swos-matchmaker/prune.log`.
+`sudo scripts/prune_recordings.sh --install` sets up a daily systemd timer
+(`swos-prune-recordings.timer`, 04:30, as the checkout's owner); `--remove` takes it away.
+A recording is checked for a desync while it is being recorded, so deleting old ones loses
+nothing but the replay.
+
 ### The recordings player: /playback/
 
 `https://<server>/playback/` plays any recording in a browser under a scrub bar, so a
