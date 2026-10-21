@@ -33,7 +33,9 @@ normal build is unchanged.
 ## 2. Attract mode
 
 **The game's own pictures come from the player's copy** (2026-10-20): the attract logo is
-the PC game's `LOADER1.256` (index 0 transparent, so the reel shows through) and the
+the PC game's `LOADER1.256` (its black see-through, so the reel shows through, except the
+shading inside "Sensible", which `grafs_arcade/LOADER1_MASK.bmp` marks to draw: OpenSWOS's own
+320x200 mask, index 1 = draw this black) and the
 selector/table background its `BALLNOTE.256`, both read from `grafs_dos/` in the assets
 folder, where OpenSWOS Setup copies them (`arc_load_256`). Without the PC game the logo is
 skipped and the background is black. They used to be committed as `grafs_arcade/LOGO.bmp`

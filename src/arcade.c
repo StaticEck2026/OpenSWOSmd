@@ -131,9 +131,10 @@ static uint32_t s_overlayFrame;           /* blink phase for the attract overlay
 
 #define ARC_LOGO_MAXW  1024
 #define ARC_LOGO_SCALE 1     /* the PC game's LOADER1 is already full-size (320x200) */
-#define ARC_LOGO_TRANSPARENT 0   /* LOADER1 uses index 0 as the transparent background */
+#define ARC_LOGO_TRANSPARENT 0   /* LOADER1's black; drawn only where LOADER1_MASK says */
 static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOADER1 pixels (indexed) */
 static uint32_t s_logoPal[256];                             /* LOADER1 256-colour palette (ARGB) */
+static uint8_t  s_logoSolid[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* 1 = drawn, 0 = the reel shows through */
 static int      s_logoW, s_logoH;                           /* LOADER1 dimensions */
 static int      s_logoLoaded;
 static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* INSERT COIN / prompts, menu-palette idx */
@@ -327,15 +328,38 @@ static int arc_load_256(const char *rel, uint8_t *out8, int out_cap,
     return rc;
 }
 
+/* Which logo pixels to draw. LOADER1 uses black (index 0) for the background, for the holes
+ * in the letters of WORLD and SOCCER, and for the shading inside "Sensible", so "skip index
+ * 0" let the reel show through the shading too. grafs_arcade/LOADER1_MASK.bmp (OpenSWOS's
+ * own, 320x200, the same layout as LOADER1) marks the black to draw with index 1: draw every
+ * non-black pixel plus those. Without the mask, all the black is see-through. */
+static void arc_logo_mask(void)
+{
+    extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
+                                       uint32_t *outPal, int *outW, int *outH);
+    static uint8_t mask[ARC_LOGO_MAXW * SCREEN_HEIGHT];
+    uint32_t mpal[256];
+    int mw = 0, mh = 0;
+    size_t n = (size_t)s_logoW * (size_t)s_logoH;
+    int have = Platform_LoadIndexedBMP("grafs_arcade/LOADER1_MASK.bmp", mask, (int)sizeof mask,
+                                       mpal, &mw, &mh) == 0 && mw == s_logoW && mh == s_logoH;
+    if (!have)
+        fprintf(stderr, "[arcade] LOADER1_MASK.bmp missing or not %dx%d: the logo's black all shows through\n",
+                s_logoW, s_logoH);
+    for (size_t i = 0; i < n; i++)
+        s_logoSolid[i] = s_logoBuf[i] != ARC_LOGO_TRANSPARENT || (have && mask[i] == 1);
+}
+
 /* Load the arcade logo once -- the PC game's LOADER1 -- indexed pixels into s_logoBuf + its
  * own 256-colour palette into s_logoPal. Composited (scaled up, centred) over the attract
- * reels by Arcade_CompositeOverlay — index 0 is transparent. */
+ * reels by Arcade_CompositeOverlay -- its black see-through except where the mask keeps it. */
 static void arc_load_logo(void)
 {
     if (s_logoLoaded) return;
     if (arc_load_256("grafs_dos/LOADER1.256", s_logoBuf, (int)sizeof s_logoBuf,
                      s_logoPal, &s_logoW, &s_logoH) == 0) {
         s_logoLoaded = 1;
+        arc_logo_mask();
         fprintf(stderr, "[arcade] LOADER1.256 %dx%d loaded\n", s_logoW, s_logoH);
     }
 }
@@ -487,6 +511,7 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
         int ly = y - ly0;
         const uint8_t *lgrow = (s_logoLoaded && la > 0 && ly >= 0 && ly < lh)
             ? s_logoBuf + (size_t)(ly / lscale) * (size_t)s_logoW : NULL;
+        const uint8_t *lgsol = lgrow ? s_logoSolid + (lgrow - s_logoBuf) : NULL;
 
         for (int x = 0; x < w; x++) {
             uint32_t px = out[x];                         /* the reel pixel underneath */
@@ -494,9 +519,8 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
             if (lgrow) {                                  /* 1. logo (faded) */
                 int lx = x - lx0;
                 if (lx >= 0 && lx < lw) {
-                    uint8_t idx = lgrow[lx / lscale];
-                    if (idx != ARC_LOGO_TRANSPARENT)
-                        px = arc_blend(px, s_logoPal[idx], la);
+                    if (lgsol[lx / lscale])
+                        px = arc_blend(px, s_logoPal[lgrow[lx / lscale]], la);
                 }
             }
             if (ta > 0) {                                 /* 2. table text (faded, coloured) */
