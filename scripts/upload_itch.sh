@@ -75,7 +75,8 @@ git rev-parse -q --verify "$DROP^{commit}" >/dev/null || fail "$DROP is not a co
 # this script and the
 # fetch scripts (tools for us, in no archive).
 NOT_SHIPPED=(':!packaging/web/changelog.html' ':!packaging/server' ':!packaging/web/site' ':!docs' ':!.claude' ':!scripts/upload_itch.sh'
-             ':!scripts/fetch_reports.py' ':!scripts/fetch_recordings.py' ':!README.md' ':!INSTALL.md')
+             ':!scripts/fetch_reports.py' ':!scripts/fetch_recordings.py' ':!README.md' ':!INSTALL.md'
+             ':!scripts/prune_recordings.sh')
 git diff --quiet "$DROP" HEAD -- . "${NOT_SHIPPED[@]}" ||
     fail "the tree has changed since the drop ($DROP) -- rebuild it"
 [ -z "$(git status --porcelain --untracked-files=no -- . "${NOT_SHIPPED[@]}")" ] ||

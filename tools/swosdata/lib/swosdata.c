@@ -192,7 +192,13 @@ static int32_t write_packed(SdJob *job, const char *rel, const SgBuf *b, char *e
 /* The ball on the title screen and on the menus' logo, redrawn to say AGA: the
  * project's own drawings in setup/, pasted over the converted picture, in its
  * 256 colours. MENUS2 becomes 8 planes deep with it, and the game stores the
- * logo cut from it (sprite 0xE0) 8 deep on the AGA Amiga (spriteNumPlanes). */
+ * logo cut from it (sprite 0xE0) 8 deep on the AGA Amiga (spriteNumPlanes).
+ *
+ * For the AGA AMIGA only: the PC builds read grafs_aga too, and must show the
+ * game's own 96-97 ball. So grafs_aga/ gets the plain picture and the AGA one goes
+ * to amiga/grafs_aga/ (AGA_ONLY_DIR), which no PC build reads and
+ * SwosData_FillAmigaDrawer copies over the drawer's grafs_aga/ last. */
+#define AGA_ONLY_DIR "amiga"
 static const struct {
     const char *name, *file;
     int32_t     x, y;
@@ -201,6 +207,7 @@ static const struct {
     { "MENUS2",  "setup/MENUS2_AGA.bmp",   72, 24 },
 };
 
+/* 1 when it drew the AGA ball into img, 0 when name has none, -1 on an error. */
 static int32_t apply_aga_patch(SdJob *job, const char *name, SgImage *img, char *err)
 {
     for (uint32_t i = 0; i < sizeof kAgaPatches / sizeof kAgaPatches[0]; i++) {
@@ -220,7 +227,7 @@ static int32_t apply_aga_patch(SdJob *job, const char *name, SgImage *img, char 
         for (int32_t row = 0; row < patch.h && rc == 0; row++)
             memcpy(img->px + (y + row) * img->w + x, patch.px + row * patch.w, (size_t)patch.w);
         SgImage_Free(&patch);
-        return rc;
+        return rc == 0 ? 1 : rc;
     }
     return 0;
 }
@@ -233,6 +240,21 @@ static int32_t write_raw(SdJob *job, const char *rel, const SgImage *img, char *
     int32_t rc = write_packed(job, rel, &raw, err);
     Sg_BufFree(&raw);
     return rc;
+}
+
+/* grafs_aga/<name>.RAW as the game drew it, and -- when name has an AGA ball --
+ * AGA_ONLY_DIR/grafs_aga/<name>.RAW with it, for the Amiga drawer (kAgaPatches).
+ * img gets the ball drawn in. */
+static int32_t write_aga_picture(SdJob *job, const char *name, SgImage *img, char *err)
+{
+    char rel[96];
+    snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", name);
+    int32_t rc = write_raw(job, rel, img, err);
+    if (rc == 0 && (rc = apply_aga_patch(job, name, img, err)) == 1) {
+        snprintf(rel, sizeof rel, AGA_ONLY_DIR "/grafs_aga/%s.RAW", name);
+        rc = write_raw(job, rel, img, err);
+    }
+    return rc < 0 ? -1 : 0;
 }
 
 /* A PC picture, enlarged to the Amiga screen (SWTITLE -> MENUBG, STAD -> MENUBG2). */
@@ -262,12 +284,8 @@ static int32_t make_banks(SdJob *job, int32_t *done, int32_t total, char *err)
     glyphs_path(job, glyphs, sizeof glyphs);
     int32_t rc = Sg_FontExtend(&banks[SG_BANK_CHARSET], glyphs, err);
     for (int32_t b = 0; b < SG_BANK_COUNT; b++) {
-        char rel[64];
-        if (rc == 0 && (rc = apply_aga_patch(job, Sg_BankNames[b], &banks[b], err)) == 0) {
-            snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", Sg_BankNames[b]);
-            rc = write_raw(job, rel, &banks[b], err);
+        if (rc == 0 && (rc = write_aga_picture(job, Sg_BankNames[b], &banks[b], err)) == 0)
             tick(job, done, total);
-        }
         SgImage_Free(&banks[b]);
     }
     return rc;
@@ -331,9 +349,7 @@ static int32_t step_aga_amiga(SdJob *job, int32_t *done, int32_t total, char *er
         Sg_BufFree(&raw);
         if (rc != 0)
             return -1;
-        snprintf(rel, sizeof rel, "grafs_aga/%s.RAW", kAmigaPictures[i]);
-        if ((rc = apply_aga_patch(job, kAmigaPictures[i], &img, err)) == 0)
-            rc = write_raw(job, rel, &img, err);
+        rc = write_aga_picture(job, kAmigaPictures[i], &img, err);
         SgImage_Free(&img);
         if (rc != 0)
             return -1;
@@ -697,6 +713,15 @@ int32_t SwosData_FillAmigaDrawer(const char *assetsDir, const char *drawerDir,
             snprintf(line, sizeof line, "Amiga drawer: %s/ (%d files)", kTrees[i], n);
             log(user, line);
         }
+    }
+    /* Then the AGA Amiga's own pictures over the shared ones: the ball that says AGA
+     * (kAgaPatches; the PC builds keep the game's 96-97 ball). */
+    {
+        char amigaOnly[1100];
+        Sg_PathJoin(amigaOnly, sizeof amigaOnly, assetsDir, AGA_ONLY_DIR);
+        if (Sg_FindNoCase(amigaOnly, "grafs_aga", probe, sizeof probe) == 0 &&
+            copy_tree(amigaOnly, drawerDir, "grafs_aga", err) < 0)
+            return -1;
     }
     /* The program writes saves there but will not create the folder. */
     Sg_PathJoin(probe, sizeof probe, drawerDir, "save");
