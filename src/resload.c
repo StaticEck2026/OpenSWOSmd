@@ -858,6 +858,173 @@ static inline void os_GfxWaitTOF(void *gfxBase)
 
 
 /* ================================================================
+ * WHDLoad
+ *
+ * Started by OpenSWOS's own Slave (asm/whdload/OpenSWOS.slave.s) there is no
+ * Kickstart: no exec, dos or graphics. The Slave relocates this program into the
+ * memory WHDLoad gives it and fills in whd_hook -- found by its two magic words --
+ * with WHDLoad's resload base and the memory left over. Then the file calls below go
+ * to resload instead of dos.library, memory comes from that leftover, the vectors
+ * are at 0 (WHDLoad passes the interrupts on to them), and quitting is resload_Abort.
+ * Started from Workbench or the Shell, whd_hook.resload stays 0 and nothing changes.
+ * ================================================================ */
+typedef struct {
+    uint32_t magic[2];      /* "OSWS" "WHDL": what the Slave looks for */
+    uint32_t resload;       /* WHDLoad's resload base, 0 when not under WHDLoad */
+    uint32_t heapStart;     /* ExpMem past the program, for AllocMemAny */
+    uint32_t heapEnd;
+} WhdHook;
+
+/* In the data hunk (initialised), aligned so the Slave's scan finds it. */
+__attribute__((used, aligned(4)))
+volatile WhdHook whd_hook = { { 0x4F535753u, 0x5748444Cu }, 0, 0, 0 };
+
+static inline int whd(void) { return whd_hook.resload != 0; }
+
+/* resload functions by their offset from the base (WHDLoad's autodoc, as in
+ * asm/whdload/whdload_api.i): GetFileSize $24, LoadFile $08, SaveFile $0C,
+ * DeleteFile $58, ListFiles $14, Abort $04. D0-D1/A0-A1 are scratch, the rest kept. */
+
+static inline uint32_t whd_GetFileSize(const uint8_t *name)
+{
+    register void *_a2 __asm("a2") = (void *)whd_hook.resload;
+    register const uint8_t *_a0 __asm("a0") = name;
+    register uint32_t _d0 __asm("d0");
+    __asm volatile ("jsr 0x24(%%a2)"
+        : "=r"(_d0), "+r"(_a0) : "r"(_a2) : "d1", "a1", "cc", "memory");
+    return _d0;
+}
+
+static inline uint32_t whd_LoadFile(const uint8_t *name, uint8_t *dest)
+{
+    register void *_a2 __asm("a2") = (void *)whd_hook.resload;
+    register const uint8_t *_a0 __asm("a0") = name;
+    register uint8_t *_a1 __asm("a1") = dest;
+    register uint32_t _d0 __asm("d0");
+    __asm volatile ("jsr 0x08(%%a2)"
+        : "=r"(_d0), "+r"(_a0), "+r"(_a1) : "r"(_a2) : "d1", "cc", "memory");
+    return _d0;
+}
+
+static inline uint32_t whd_SaveFile(uint32_t n, const uint8_t *name, const uint8_t *src)
+{
+    register void *_a2 __asm("a2") = (void *)whd_hook.resload;
+    register uint32_t _d0 __asm("d0") = n;
+    register const uint8_t *_a0 __asm("a0") = name;
+    register const uint8_t *_a1 __asm("a1") = src;
+    __asm volatile ("jsr 0x0C(%%a2)"
+        : "+r"(_d0), "+r"(_a0), "+r"(_a1) : "r"(_a2) : "d1", "cc", "memory");
+    return _d0;
+}
+
+static inline uint32_t whd_DeleteFile(const uint8_t *name)
+{
+    register void *_a2 __asm("a2") = (void *)whd_hook.resload;
+    register const uint8_t *_a0 __asm("a0") = name;
+    register uint32_t _d0 __asm("d0");
+    __asm volatile ("jsr 0x58(%%a2)"
+        : "=r"(_d0), "+r"(_a0) : "r"(_a2) : "d1", "a1", "cc", "memory");
+    return _d0;
+}
+
+/* The buffer must be inside the Slave or ExpMem (WHDLoad 16.8+): listdir_buf is in
+ * this program's BSS, which is in ExpMem. */
+static inline uint32_t whd_ListFiles(uint32_t bufSize, const uint8_t *dir, uint8_t *buf)
+{
+    register void *_a2 __asm("a2") = (void *)whd_hook.resload;
+    register uint32_t _d0 __asm("d0") = bufSize;
+    register const uint8_t *_a0 __asm("a0") = dir;
+    register uint8_t *_a1 __asm("a1") = buf;
+    __asm volatile ("jsr 0x14(%%a2)"
+        : "+r"(_d0), "+r"(_a0), "+r"(_a1) : "r"(_a2) : "d1", "cc", "memory");
+    return _d0;
+}
+
+/* Back to the OS: never returns. resload_Abort takes its arguments on the stack and
+ * must be reached by JMP. */
+__attribute__((noreturn)) static void whd_Abort(void)
+{
+    __asm volatile (
+        "move.l  %0,%%a0         \n"
+        "clr.l   -(%%sp)         \n"    /* secondary */
+        "clr.l   -(%%sp)         \n"    /* primary   */
+        "move.l  #-1,-(%%sp)     \n"    /* TDREASON_OK */
+        "jmp     0x04(%%a0)      \n"
+        : : "r"(whd_hook.resload) : "a0", "memory");
+    __builtin_unreachable();
+}
+
+/* AllocMemAny's memory under WHDLoad: the ExpMem the Slave left past the program, a
+ * first-fit list of free blocks kept in address order and merged on free. Blocks are
+ * 8-byte multiples, as exec's; the caller gives the size back on free, as to FreeMem. */
+typedef struct WhdFree {
+    struct WhdFree *next;
+    uint32_t size;
+} WhdFree;
+
+static WhdFree *s_whdFree;
+static uint8_t s_whdHeapReady;
+
+static void whd_heap_init(void)
+{
+    uint32_t start = (whd_hook.heapStart + 7u) & ~7u;
+    uint32_t end = whd_hook.heapEnd & ~7u;
+    s_whdHeapReady = 1;
+    s_whdFree = (WhdFree *)0;
+    if (end > start + sizeof(WhdFree)) {
+        s_whdFree = (WhdFree *)start;
+        s_whdFree->next = (WhdFree *)0;
+        s_whdFree->size = end - start;
+    }
+}
+
+static void *whd_alloc(uint32_t sz)
+{
+    if (!s_whdHeapReady) whd_heap_init();
+    sz = (sz + 7u) & ~7u;
+    if (sz < sizeof(WhdFree)) sz = sizeof(WhdFree);
+    WhdFree **prev = &s_whdFree;
+    for (WhdFree *b = s_whdFree; b; prev = &b->next, b = b->next) {
+        if (b->size < sz) continue;
+        if (b->size - sz >= sizeof(WhdFree)) {
+            WhdFree *rest = (WhdFree *)((uint8_t *)b + sz);
+            rest->next = b->next;
+            rest->size = b->size - sz;
+            *prev = rest;
+        } else {
+            *prev = b->next;    /* the few bytes over stay with the block */
+        }
+        return b;
+    }
+    return (void *)0;
+}
+
+static void whd_free(void *addr, uint32_t sz)
+{
+    if (!addr) return;
+    sz = (sz + 7u) & ~7u;
+    if (sz < sizeof(WhdFree)) sz = sizeof(WhdFree);
+    WhdFree *blk = (WhdFree *)addr;
+    WhdFree **prev = &s_whdFree;
+    WhdFree *before = (WhdFree *)0;
+    while (*prev && *prev < blk) {
+        before = *prev;
+        prev = &(*prev)->next;
+    }
+    blk->next = *prev;
+    blk->size = sz;
+    *prev = blk;
+    if (blk->next && (uint8_t *)blk + blk->size == (uint8_t *)blk->next) {
+        blk->size += blk->next->size;
+        blk->next = blk->next->next;
+    }
+    if (before && (uint8_t *)before + before->size == (uint8_t *)blk) {
+        before->size += blk->size;
+        before->next = blk->next;
+    }
+}
+
+/* ================================================================
  * Internal helpers
  * ================================================================ */
 
@@ -879,6 +1046,14 @@ static uint8_t *make_data_path(uint8_t *name)
 
     if (*name == 0) return name;
 
+    /* Under WHDLoad names are relative to the Slave's data folder and may not hold a
+     * colon: whatever is before one goes. */
+    if (whd()) {
+        for (p = name; *p; p++)
+            if (*p == ':') name = p + 1;
+        return name;
+    }
+
     /* Scan for colon */
     for (p = name; *p; p++) {
         if (*p == ':') return name; /* absolute/device path */
@@ -899,6 +1074,7 @@ static uint8_t *make_data_path(uint8_t *name)
 /* Swap interrupt vector 2 to OS (restore saved) */
 static void swap_int2_to_os(void)
 {
+    if (whd()) return;      /* WHDLoad switches to the OS for a file itself */
     volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + LEVEL_2_VEC);
     *vec = S_SavedInt2;
 }
@@ -906,6 +1082,7 @@ static void swap_int2_to_os(void)
 /* Swap interrupt vector 2 back to game handler */
 static void swap_int2_to_game(void)
 {
+    if (whd()) return;
     volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + LEVEL_2_VEC);
     *vec = (uint32_t)Int2KeyboardHandler;
 }
@@ -957,6 +1134,21 @@ static void enable_vblank(void)
 __attribute__((used, externally_visible))
 void SafeStart(void)
 {
+    if (whd()) {
+        /* No OS: the vectors are at 0 in BaseMem, where WHDLoad passes the
+         * interrupts on to; nothing to open, no Workbench message. */
+        S_GfxBase = 0;
+        S_FromWB = 0;
+        _S_VBR = 0;
+        volatile uint32_t *vec = (volatile uint32_t *)0;
+        S_SavedInt1 = vec[LEVEL_1_VEC / 4];
+        S_SavedInt2 = vec[LEVEL_2_VEC / 4];
+        S_SavedInt3 = vec[LEVEL_3_VEC / 4];
+        S_SavedInt4 = vec[LEVEL_4_VEC / 4];
+        S_SavedInt5 = vec[LEVEL_5_VEC / 4];
+        return;
+    }
+
     /* Open graphics.library (optional) */
     S_GfxBase = (uint32_t)os_OldOpenLibrary("graphics.library", 0);
 
@@ -1034,7 +1226,7 @@ void DetachOSDisplay(void)
 __attribute__((used, externally_visible))
 void LoadDosLibrary(void)
 {
-    if (S_DosBase != 0) return; /* already loaded */
+    if (S_DosBase != 0 || whd()) return; /* already loaded, or no OS */
     S_DosBase = (uint32_t)os_OldOpenLibrary("dos.library", 39);
 }
 
@@ -1056,6 +1248,7 @@ void CloseDosLibrary(void)
 __attribute__((used, externally_visible))
 uint8_t *AllocMemAny(uint32_t sz)
 {
+    if (whd()) return (uint8_t *)whd_alloc(sz);
     return (uint8_t *)os_AllocMem(sz, MEMF_PUBLIC);
 }
 
@@ -1068,6 +1261,10 @@ uint8_t *AllocMemAny(uint32_t sz)
 __attribute__((used, externally_visible))
 void FreeMemAny(void *addr, uint32_t sz)
 {
+    if (whd()) {
+        whd_free(addr, sz);
+        return;
+    }
     os_FreeMem(addr, sz);
 }
 
@@ -1079,6 +1276,8 @@ void FreeMemAny(void *addr, uint32_t sz)
 __attribute__((used, externally_visible))
 void ExitToDos(void)
 {
+    if (whd()) whd_Abort();     /* WHDLoad puts the machine back itself */
+
     /* Restore interrupt vectors */
     volatile uint32_t *vbr = (volatile uint32_t *)_S_VBR;
     vbr[LEVEL_1_VEC / 4] = S_SavedInt1;
@@ -1132,6 +1331,7 @@ void ExitToDos(void)
 static uint32_t resload_getfilesize(uint8_t *name)
 {
     name = make_data_path(name);
+    if (whd()) return whd_GetFileSize(name);
     void *dosBase = (void *)S_DosBase;
 
     uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
@@ -1150,6 +1350,12 @@ static uint32_t resload_getfilesize(uint8_t *name)
 static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outError)
 {
     name = make_data_path(name);
+    if (whd()) {
+        uint32_t n = whd_LoadFile(name, dest);
+        if (n == 0) _custom->color[0] = 0x0F00u; /* red flash */
+        if (outError) *outError = n == 0;
+        return n;
+    }
     void *dosBase = (void *)S_DosBase;
     uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
     if (handle == 0) {
@@ -1186,28 +1392,37 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
     }
 
     /* Allocate temporary FastMem buffer */
-    uint8_t *tempBuf = (uint8_t *)os_AllocMem(fileSize, MEMF_FAST);
+    uint8_t *tempBuf = whd() ? (uint8_t *)whd_alloc(fileSize)
+                             : (uint8_t *)os_AllocMem(fileSize, MEMF_FAST);
     if (!tempBuf) {
         if (outError) *outError = 1;
         return 0;
     }
 
-    /* Open and read file into temp buffer */
-    void *dosBase = (void *)S_DosBase;
-    uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
-    if (handle == 0) {
-        os_FreeMem(tempBuf, fileSize);
-        if (outError) *outError = 1;
-        return 0;
-    }
+    if (whd()) {
+        if (whd_LoadFile(name, tempBuf) != fileSize) {
+            whd_free(tempBuf, fileSize);
+            if (outError) *outError = 1;
+            return 0;
+        }
+    } else {
+        /* Open and read file into temp buffer */
+        void *dosBase = (void *)S_DosBase;
+        uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
+        if (handle == 0) {
+            os_FreeMem(tempBuf, fileSize);
+            if (outError) *outError = 1;
+            return 0;
+        }
 
-    int32_t bytesRead = os_DosRead(dosBase, handle, tempBuf, fileSize);
-    os_DosClose(dosBase, handle);
+        int32_t bytesRead = os_DosRead(dosBase, handle, tempBuf, fileSize);
+        os_DosClose(dosBase, handle);
 
-    if ((uint32_t)bytesRead != fileSize) {
-        os_FreeMem(tempBuf, fileSize);
-        if (outError) *outError = 1;
-        return 0;
+        if ((uint32_t)bytesRead != fileSize) {
+            os_FreeMem(tempBuf, fileSize);
+            if (outError) *outError = 1;
+            return 0;
+        }
     }
 
     /* Check for RNC magic and decompress. The RNC signature is the 4 bytes
@@ -1233,7 +1448,8 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
         decompSize = fileSize;
     }
 
-    os_FreeMem(tempBuf, fileSize);
+    if (whd()) whd_free(tempBuf, fileSize);
+    else os_FreeMem(tempBuf, fileSize);
     if (outError) *outError = 0;
     return decompSize;
 }
@@ -1242,6 +1458,11 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
 static uint32_t resload_deletefile(uint8_t *name, uint32_t *outError)
 {
     name = make_data_path(name);
+    if (whd()) {
+        uint32_t ok = whd_DeleteFile(name);
+        if (outError) *outError = ok == 0;
+        return ok;
+    }
     void *dosBase = (void *)S_DosBase;
 
     uint32_t success = os_DosDeleteFile(dosBase, name);
@@ -1257,6 +1478,11 @@ static uint32_t resload_deletefile(uint8_t *name, uint32_t *outError)
 static uint32_t resload_savefile(uint32_t fileSize, uint8_t *name, uint8_t *src, uint32_t *outError)
 {
     name = make_data_path(name);
+    if (whd()) {
+        uint32_t ok = whd_SaveFile(fileSize, name, src) != 0;
+        if (outError) *outError = !ok;
+        return ok;
+    }
     void *dosBase = (void *)S_DosBase;
 
     uint32_t handle = os_DosOpen(dosBase, name, MODE_NEWFILE);
@@ -1281,6 +1507,15 @@ static uint32_t resload_savefile(uint32_t fileSize, uint8_t *name, uint8_t *src,
 static uint32_t resload_listfiles(uint32_t buffersize, uint8_t *dirname, uint8_t *buffer, uint32_t *outError)
 {
     dirname = make_data_path(dirname);
+    if (whd()) {
+        if ((int32_t)buffersize <= 0) {
+            if (outError) *outError = 1;
+            return 0;
+        }
+        uint32_t n = whd_ListFiles(buffersize, dirname, buffer);
+        if (outError) *outError = 0;
+        return n;
+    }
     void *dosBase = (void *)S_DosBase;
     uint32_t count = 0;
     uint32_t dirLock = 0;

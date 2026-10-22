@@ -171,7 +171,21 @@ ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)
 VASMFLAGS = -m68020 -Felf -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(SDKDIR) $(DATA_FLAGS)
 
-all: $(OUT)
+# OpenSWOS's own WHDLoad Slave (asm/whdload/): it asks WHDLoad for the memory THIS
+# SWOS2 needs, read from its hunk header, so it is rebuilt with it.
+SLAVE = $(dir $(OUT))OpenSWOS.slave
+ifdef WINDOWS
+	PYTHON ?= python
+else
+	PYTHON ?= python3
+endif
+
+all: $(OUT) $(SLAVE)
+
+$(SLAVE): asm/whdload/OpenSWOS.slave.s asm/whdload/whdload_api.i scripts/amiga/whdload_sizes.py $(OUT)
+	$(info Assembling $(notdir $@))
+	@$(PYTHON) scripts/amiga/whdload_sizes.py $(OUT) obj/whdload_sizes.i
+	@$(VASM) -m68020 -Fhunkexe -kick1hunks -nosym -quiet -Iasm/whdload -Iobj -o $@ $<
 
 $(OUT): $(OUT).elf
 	$(info Elf2Hunk $(program))
@@ -204,8 +218,9 @@ ifdef WINDOWS
 	-@if exist "$(subst /,\,$(OUT))" del /q "$(subst /,\,$(OUT))" 2>nul
 	-@if exist "$(subst /,\,$(OUT)).elf" del /q "$(subst /,\,$(OUT)).elf" 2>nul
 	-@if exist "$(subst /,\,$(OUT)).map" del /q "$(subst /,\,$(OUT)).map" 2>nul
+	-@if exist "$(subst /,\,$(SLAVE))" del /q "$(subst /,\,$(SLAVE))" 2>nul
 else
-	@$(RM) obj/* out/* $(OUT) $(OUT).elf $(OUT).map
+	@$(RM) obj/* out/* $(OUT) $(OUT).elf $(OUT).map $(SLAVE)
 endif
 
 dump-swos-c-asm:

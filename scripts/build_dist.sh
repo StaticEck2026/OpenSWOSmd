@@ -272,6 +272,8 @@ LINUX_LIBDIR="${LINUX_LIBDIR:-/usr/lib}"
 #
 #   SWOS.info                  the drawer's icon
 #   SWOS/SWOS2                 the binary
+#   SWOS/OpenSWOS.slave        OpenSWOS's own WHDLoad Slave, built with SWOS2 (the setup
+#                              makes the WHDLoad package from the drawer)
 #   SWOS/SWOS + SWOS.info      what Workbench starts: double-click the icon
 #   SWOS/data grafs grafs_aga sound save
 #   SWOS/c SWOS/s              to boot an emulator straight from the drawer
@@ -729,10 +731,11 @@ if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; the
     AMIGA_TMP="$(mktemp -d)"
     if cp -R "$AMIGA_PKG_DIR/." "$AMIGA_TMP/" &&
        cp bin/SWOS2 "$AMIGA_TMP/SWOS/" &&
+       cp bin/OpenSWOS.slave "$AMIGA_TMP/SWOS/" &&
        AMIGA_DIRS="$(scripts/stage_runtime.sh "$AMIGA_TMP/SWOS" $AMIGA_DATA_DIRS $AMIGA_BOOT_DIRS)" &&
        mkdir -p "$AMIGA_TMP/SWOS/save" &&
        ( cd "$AMIGA_TMP" && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" . -x '*/.DS_Store' ); then
-        echo "-- drawer:  SWOS/ + SWOS.info; inside it SWOS2, the Workbench script and icon, $AMIGA_DIRS, empty save/"
+        echo "-- drawer:  SWOS/ + SWOS.info; inside it SWOS2, OpenSWOS.slave, the Workbench script and icon, $AMIGA_DIRS, empty save/"
         echo "-- (no game data: the player adds it with the data setup)"
         echo "-- OK: $AMIGA_ZIP_PATH"
     else

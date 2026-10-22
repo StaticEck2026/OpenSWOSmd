@@ -78,6 +78,7 @@ out/*
 bin/SWOS2
 bin/SWOS2.elf
 bin/SWOS2.map
+bin/OpenSWOS.slave
 
 # FS-UAE directory-filesystem metadata sidecars + emulator state.
 *.uaem

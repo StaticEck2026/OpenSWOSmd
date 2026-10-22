@@ -1025,28 +1025,40 @@ static int32_t pkg_tree(Pkg *p, const char *src, const char *rel, const char *pr
     return count;
 }
 
+/* The folder name WHDLoad users already have it under, so a new package unpacks over
+ * an old one. */
 #define WHD_TOP   "OpenSWOSAGA-NE"
-#define WHD_SLAVE "Ks31-000-C2-F08"
 
 int32_t SwosData_MakeWhdload(const char *assetsDir, const char *drawerDir, const char *resDir,
                              const char *outPath, void (*log)(void *user, const char *line),
                              void *user, char *err)
 {
     static const char *const kTrees[] = { "data", "grafs", "grafs_aga", "sound" };
+    /* The icons (scripts/amiga/make_whdload_icons.py): the package's drawer, and the
+     * Slave's, whose default tool is WHDLoad. */
     static const char *const kTemplate[][2] = {
-        { WHD_TOP ".info",            "setup/whdload/" WHD_TOP ".info" },
-        { WHD_TOP "/data.info",       "setup/whdload/data.info" },
-        { WHD_TOP "/" WHD_SLAVE ".slave", "setup/whdload/" WHD_SLAVE ".slave" },
-        { WHD_TOP "/" WHD_SLAVE ".info",  "setup/whdload/" WHD_SLAVE ".info" },
-        { WHD_TOP "/data/s/startup-sequence", "setup/whdload/startup-sequence" },
+        { WHD_TOP ".info",               "setup/whdload/" WHD_TOP ".info" },
+        { WHD_TOP "/OpenSWOS.info",      "setup/whdload/OpenSWOS.info" },
     };
-    static const char *const kProgram[] = { "SWOS2", "SWOS", "SWOS.info", "ReadMe", "ReadMe.info" };
+    /* From the drawer: the Slave beside its icon, the ReadMe; the program in data/,
+     * the Slave's ws_CurrentDir, with the trees it opens. */
+    static const char *const kProgram[][2] = {
+        { "OpenSWOS.slave", WHD_TOP "/OpenSWOS.slave" },
+        { "SWOS2",          WHD_TOP "/data/SWOS2" },
+        { "ReadMe",         WHD_TOP "/ReadMe" },
+        { "ReadMe.info",    WHD_TOP "/ReadMe.info" },
+    };
     char probe[1100], line[300];
     Pkg pkg = { NULL, 0, 0 };
     int32_t rc = -1;
 
     if (Sg_FindNoCase(drawerDir, "SWOS2", probe, sizeof probe) != 0) {
         snprintf(err, 256, "%.200s is not a SWOS drawer (no SWOS2 in it)", drawerDir);
+        return -1;
+    }
+    if (Sg_FindNoCase(drawerDir, "OpenSWOS.slave", probe, sizeof probe) != 0) {
+        snprintf(err, 256, "%.180s has no OpenSWOS.slave: it is from an older SWOS-Amiga.zip",
+                 drawerDir);
         return -1;
     }
     if (Sg_FindNoCase(assetsDir, "grafs/MENUS.RAW", probe, sizeof probe) != 0 ||
@@ -1066,11 +1078,8 @@ int32_t SwosData_MakeWhdload(const char *assetsDir, const char *drawerDir, const
         pkg_add(&pkg, kTemplate[i][0], probe);
     }
     for (uint32_t i = 0; i < sizeof kProgram / sizeof kProgram[0]; i++)
-        if (Sg_FindNoCase(drawerDir, kProgram[i], probe, sizeof probe) == 0) {
-            char to[300];
-            snprintf(to, sizeof to, WHD_TOP "/data/%s", kProgram[i]);
-            pkg_add(&pkg, to, probe);
-        }
+        if (Sg_FindNoCase(drawerDir, kProgram[i][0], probe, sizeof probe) == 0)
+            pkg_add(&pkg, kProgram[i][1], probe);
     /* The drawer's own files in those folders first (OpenSWOS's: the credits photos,
      * the AGA screens it ships), then the game data over them -- as SwosData_FillAmigaDrawer
      * leaves a drawer. */

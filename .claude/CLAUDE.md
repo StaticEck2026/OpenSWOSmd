@@ -340,6 +340,24 @@ the top, where a dropped-in `s/` would replace the drive's own startup-sequence.
 different: it mounts `bin/` as **DH1:** and `cd`s in, so the same relative paths resolve without
 booting from it.)
 
+**WHDLoad: our own Slave, no Kickstart** (`asm/whdload/OpenSWOS.slave.s`, built by
+`Makefile.amiga` beside SWOS2 as `bin/OpenSWOS.slave`, shipped inside SWOS-Amiga.zip's drawer).
+It does what dos.LoadSeg does from Workbench -- `resload_Relocate` SWOS2 into ExpMem, its chip
+hunk into BaseMem at $1000 (8-aligned) -- turns the caches on for ExpMem (WHDLoad's default leaves
+them off on a 68020 without an MMU), fills in `whd_hook` ("OSWSWHDL", in SWOS2's data: resload
+base + the ExpMem left over) and jumps in. `src/resload.c` checks `whd_hook.resload`: set, its
+five file calls go to resload (names relative, no `PROGDIR:`), AllocMemAny comes from a heap over
+that ExpMem, vectors are at 0, quitting is `resload_Abort`; zero (Workbench/Shell), nothing
+changes. Its BaseMem/ExpMem come from SWOS2's hunk header at build time
+(`scripts/amiga/whdload_sizes.py`), so a slave only goes with the SWOS2 it was built with.
+`asm/whdload/whdload_api.i` is our own: WHDLoad's include files are All Rights Reserved, so only
+the interface numbers are written there, never copied. The setup's WHDLoad package
+(`SwosData_MakeWhdload`) is `OpenSWOSAGA-NE/` with the Slave, its icon and `data/` (SWOS2 + the
+trees); the icons are ours (`scripts/amiga/make_whdload_icons.py` -> `bin/setup/whdload/`).
+Test it in the harness with `TRIGGER=":WHDLoad"` and a boot volume whose startup-sequence runs
+`WHDLoad SLAVE=OpenSWOS.slave` -- the harness starts PAUSED at the trigger: send `print 1`,
+then `continue`.
+
 The **Windows installer** is the fourth artifact, built last because it is the
 only one that needs a tool on the Windows side. `scripts/build_installer.sh`
 stages the runtime tree into `dist/windows` and runs Inno Setup's `ISCC.exe`
