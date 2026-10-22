@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <vector>
 
 #ifdef _WIN32
@@ -14,6 +15,7 @@
 #endif
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #else
 #include <cerrno>
 #include <climits>
@@ -209,6 +211,109 @@ void AttachParentConsole() {
     freopen_s(&f, "CONOUT$", "w", stderr);
   }
 #endif
+}
+
+namespace fs = std::filesystem;
+
+static fs::path U8Path(const std::string& s) {
+  return fs::path(std::u8string(s.begin(), s.end()));
+}
+
+static std::string PathU8(const fs::path& p) {
+  const std::u8string u = p.u8string();
+  return std::string(u.begin(), u.end());
+}
+
+std::string DownloadsDir() {
+#ifdef _WIN32
+  PWSTR w = nullptr;
+  std::string known;
+  if (SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &w) == S_OK && w) known = Narrow(w);
+  if (w) CoTaskMemFree(w);
+  if (!known.empty()) return known;
+  const char* home = std::getenv("USERPROFILE");
+#else
+  const char* home = std::getenv("HOME");
+#if !defined(__APPLE__)
+  // XDG's own name for it, which a translated desktop changes ("Téléchargements").
+  if (home) {
+    if (FILE* f = std::fopen((std::string(home) + "/.config/user-dirs.dirs").c_str(), "r")) {
+      char line[1024];
+      std::string dir;
+      while (std::fgets(line, sizeof line, f)) {
+        if (std::strncmp(line, "XDG_DOWNLOAD_DIR=\"", 18) != 0) continue;
+        std::string v(line + 18);
+        const size_t q = v.find('"');
+        if (q != std::string::npos) v.resize(q);
+        if (v.rfind("$HOME", 0) == 0) v = std::string(home) + v.substr(5);
+        dir = v;
+      }
+      std::fclose(f);
+      if (!dir.empty() && IsDir(dir)) return dir;
+    }
+  }
+#endif
+#endif
+  if (!home) return {};
+  const std::string dir = std::string(home) + "/Downloads";
+  return IsDir(dir) ? dir : std::string();
+}
+
+std::vector<DirEntry> ListDir(const std::string& dir) {
+  std::vector<DirEntry> out;
+  std::error_code ec;
+  fs::directory_iterator it(U8Path(dir), fs::directory_options::skip_permission_denied, ec);
+  if (ec) return out;
+  for (; it != fs::directory_iterator(); it.increment(ec)) {
+    if (ec) break;
+    const fs::path& p = it->path();
+    const std::string name = PathU8(p.filename());
+    if (name.empty() || name[0] == '.') continue;
+    std::error_code e2;
+    DirEntry d;
+    d.path = PathU8(p);
+    d.dir = it->is_directory(e2);
+    d.size = d.dir ? 0 : uint64_t(it->file_size(e2));
+    const auto t = it->last_write_time(e2);
+    d.mtime = e2 ? 0 : int64_t(t.time_since_epoch().count());
+    out.push_back(d);
+  }
+  return out;
+}
+
+std::vector<std::string> GogInstallDirs() {
+  std::vector<std::string> out;
+#ifdef _WIN32
+  // GOG Galaxy and GOG's offline installers both register every game here.
+  HKEY games;
+  if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\GOG.com\\Games", 0, KEY_READ,
+                    &games) == ERROR_SUCCESS) {
+    wchar_t sub[256];
+    for (DWORD i = 0;; i++) {
+      DWORD n = 256;
+      if (RegEnumKeyExW(games, i, sub, &n, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+      wchar_t name[512] = {0}, path[1024] = {0};
+      DWORD nb = sizeof name, pb = sizeof path;
+      if (RegGetValueW(games, sub, L"gameName", RRF_RT_REG_SZ, nullptr, name, &nb) != ERROR_SUCCESS ||
+          RegGetValueW(games, sub, L"path", RRF_RT_REG_SZ, nullptr, path, &pb) != ERROR_SUCCESS)
+        continue;
+      if (std::wstring(name).find(L"Sensible") != std::wstring::npos) out.push_back(Narrow(path));
+    }
+    RegCloseKey(games);
+  }
+  const char* roots[] = {"C:\\GOG Games", "C:\\Program Files (x86)\\GOG Galaxy\\Games",
+                         "C:\\Program Files (x86)\\GOG.com", "C:\\Program Files\\GOG Galaxy\\Games"};
+#else
+  const char* home = std::getenv("HOME");
+  const std::string gog = home ? std::string(home) + "/GOG Games" : std::string();
+  const char* roots[] = {gog.c_str()};
+#endif
+  for (const char* root : roots) {
+    if (!root[0]) continue;
+    for (const DirEntry& d : ListDir(root))
+      if (d.dir && d.path.find("Sensible") != std::string::npos) out.push_back(d.path);
+  }
+  return out;
 }
 
 }  // namespace sd

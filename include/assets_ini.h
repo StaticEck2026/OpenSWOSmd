@@ -35,6 +35,8 @@
 /* The [sources] keys. */
 #define ASSETS_SRC_AMIGA_DISK1 "amiga_disk1"
 #define ASSETS_SRC_AMIGA_DISK2 "amiga_disk2"
+#define ASSETS_SRC_AMIGA_HDF   "amiga_hdf"      /* a hard disk image with the game on it */
+#define ASSETS_SRC_AMIGA_LHA   "amiga_lha"      /* a WHDLoad install packed as .lha */
 #define ASSETS_SRC_PC          "pc"
 #define ASSETS_SRC_JAGUAR      "jaguar"
 #define ASSETS_SRC_SWOS2020    "swos2020"

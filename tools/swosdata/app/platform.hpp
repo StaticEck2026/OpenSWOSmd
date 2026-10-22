@@ -4,7 +4,9 @@
 // Every string is UTF-8.
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 namespace sd {
 
@@ -31,5 +33,21 @@ bool ApplyNativeWindowIcon();
 // Windows: a GUI-subsystem program has no console; attach the parent's so
 // --help prints somewhere. No-op elsewhere.
 void AttachParentConsole();
+
+// The player's Downloads folder ("" when there is none).
+std::string DownloadsDir();
+
+// What is in a folder, not inside its folders. Hidden entries are left out.
+struct DirEntry {
+  std::string path;
+  bool dir;
+  uint64_t size;
+  int64_t mtime;
+};
+std::vector<DirEntry> ListDir(const std::string& dir);
+
+// Folders the PC game may have been installed to by GOG: Windows' GOG registry
+// entries whose name has "Sensible" in it, and the GOG Games folders.
+std::vector<std::string> GogInstallDirs();
 
 }  // namespace sd

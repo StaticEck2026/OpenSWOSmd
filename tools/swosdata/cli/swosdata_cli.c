@@ -63,6 +63,7 @@ static int32_t usage(void)
             "                [--out DIR [--res DIR]]   (no --out: report what was found;\n"
             "                                           no sources: the last install's, from --out's ASSETS.ini)\n"
             "       swosdata --compare OUT REF\n"
+            "       swosdata --whdload OUT.lha --drawer SWOSDRAWER --assets ASSETSDIR [--res DIR]\n"
             "       swosdata --installed ASSETSDIR\n"
             "       swosdata --list-parts ASSETSDIR   (part, data version, file: check_data_versions.py)\n");
     return 2;
@@ -207,6 +208,27 @@ int main(int argc, char **argv)
         SwosData_ListFiles(argv[2], list_part_file, NULL);
         return 0;
     }
+    /* --whdload OUT.lha --drawer DIR --assets DIR [--res DIR]: the WHDLoad package from
+     * an assets folder made already and a SWOS drawer (SwosData_MakeWhdload). */
+    if (argc >= 2 && strcmp(argv[1], "--whdload") == 0) {
+        const char *out = argc > 2 ? argv[2] : NULL, *drawer = NULL, *assets = NULL;
+        char res[1024] = "";
+        for (int i = 3; i + 1 < argc; i += 2) {
+            if (strcmp(argv[i], "--drawer") == 0) drawer = argv[i + 1];
+            else if (strcmp(argv[i], "--assets") == 0) assets = argv[i + 1];
+            else if (strcmp(argv[i], "--res") == 0) snprintf(res, sizeof res, "%s", argv[i + 1]);
+            else return usage();
+        }
+        if (!out || !drawer || !assets)
+            return usage();
+        if (!res[0])
+            find_res_dir(argv[0], res, sizeof res);
+        if (SwosData_MakeWhdload(assets, drawer, res, out, on_log, NULL, err) != 0) {
+            fprintf(stderr, "failed: %s\n", err);
+            return 1;
+        }
+        return 0;
+    }
     if (argc == 4 && strcmp(argv[1], "--compare") == 0) {
 #ifdef _WIN32
         fprintf(stderr, "--compare is not built on Windows\n");
@@ -253,11 +275,22 @@ int main(int argc, char **argv)
     if (s_scanned)
         printf("Searched %d folders\n", (int)s_scanned);
     /* Nothing named on the command line: what the last install used (ASSETS.ini in --out). */
-    if (job.outDir[0] && !job.src.adf1[0] && !job.src.adf2[0] && !job.src.dosDir[0] &&
+    if (job.outDir[0] && !job.src.adf1[0] && !job.src.adf2[0] && !job.src.hdf[0] && !job.src.lha[0] &&
+        !job.src.dosDir[0] &&
         !job.src.jagRom[0] && !job.src.s2020Dir[0] && SwosData_LoadSources(job.outDir, &job.src) > 0)
         printf("Sources: from %s/%s, the last install's\n", job.outDir, "ASSETS.ini");
     printf("Amiga disk 1: %s\n", job.src.adf1[0] ? job.src.adf1 : "(not found)");
     printf("Amiga disk 2: %s\n", job.src.adf2[0] ? job.src.adf2 : "(not found)");
+    printf("Amiga HDF:    %s\n", job.src.hdf[0] ? job.src.hdf : "(not found)");
+    printf("Amiga .lha:   %s\n", job.src.lha[0] ? job.src.lha : "(not found)");
+    if (SdSources_HaveAmiga(&job.src)) {
+        const char *season = SdSources_AmigaSeason(&job.src);
+        if (SdSources_AmigaProblem()[0])
+            printf("Amiga note:   %s\n", SdSources_AmigaProblem());
+        printf("Amiga season: %s%s%s\n", season ? season : "(cannot read the team data)",
+               job.src.hdf[0] && !(job.src.adf1[0] && job.src.adf2[0]) && job.src.hdfDir[0] ? ", game in " : "",
+               job.src.hdf[0] && !(job.src.adf1[0] && job.src.adf2[0]) ? job.src.hdfDir : "");
+    }
     printf("PC game:      %s\n", job.src.dosDir[0] ? job.src.dosDir : "(not found)");
     printf("Jaguar:       %s\n", job.src.jagRom[0] ? job.src.jagRom : "(not found)");
     printf("SWOS 2020:    %s\n", job.src.s2020Dir[0] ? job.src.s2020Dir : "(not found)");

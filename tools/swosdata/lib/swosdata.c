@@ -13,7 +13,10 @@
 #include "jag_tier.h"
 #include "../../../include/assets_ini.h"   /* the parts, their data versions, ASSETS.ini */
 #include "rnc_pack.h"
+#include "lha.h"
+#include "sg_dir.h"
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -373,7 +376,15 @@ static int32_t count_teams(void)
 
 static int32_t step_teams(SdJob *job, int32_t *done, int32_t total, char *err)
 {
-    int32_t fromAmiga = SdSources_HaveAmiga(&job->src);
+    /* The teams of 96/97, the season OpenSWOS plays online: an Amiga copy of another
+     * season (24/25 and the like) gives them only when there is no PC game to give
+     * 96/97's. Its data/ is then made again from the PC game, over the copy's. */
+    const char *season = SdSources_HaveAmiga(&job->src) ? SdSources_AmigaSeason(&job->src) : NULL;
+    int32_t fromAmiga = SdSources_HaveAmiga(&job->src) &&
+                        (!SdSources_HaveDos(&job->src) || (season && strcmp(season, "96/97") == 0));
+    if (SdSources_HaveAmiga(&job->src) && !fromAmiga)
+        logf_(job, "Teams: your Amiga copy is %s; the teams are 96/97's, from the PC game",
+              season ? season : "not the 96/97 release");
     for (int32_t i = 0; g_sdAmigaCopy[i]; i++) {
         const char *rel = g_sdAmigaCopy[i];
         if (strncmp(rel, "data/", 5) != 0)
@@ -539,15 +550,18 @@ int32_t     SwosData_PartVersion(SdStep step) { return step < SD_STEP_COUNT ? kP
 const char *SwosData_PartKey(SdStep step)     { return step < SD_STEP_COUNT ? kPartKey[step] : ""; }
 
 /* The [sources] keys, beside the SdSources field each one is. */
-enum { SRC_ADF1, SRC_ADF2, SRC_DOS, SRC_JAG, SRC_2020, SRC_COUNT };
+enum { SRC_ADF1, SRC_ADF2, SRC_HDF, SRC_LHA, SRC_DOS, SRC_JAG, SRC_2020, SRC_COUNT };
 static const char *const kSourceKey[SRC_COUNT] = {
-    ASSETS_SRC_AMIGA_DISK1, ASSETS_SRC_AMIGA_DISK2, ASSETS_SRC_PC, ASSETS_SRC_JAGUAR, ASSETS_SRC_SWOS2020
+    ASSETS_SRC_AMIGA_DISK1, ASSETS_SRC_AMIGA_DISK2, ASSETS_SRC_AMIGA_HDF, ASSETS_SRC_AMIGA_LHA,
+    ASSETS_SRC_PC, ASSETS_SRC_JAGUAR, ASSETS_SRC_SWOS2020
 };
 static char *source_field(SdSources *s, int32_t i)
 {
     switch (i) {
     case SRC_ADF1: return s->adf1;
     case SRC_ADF2: return s->adf2;
+    case SRC_HDF:  return s->hdf;
+    case SRC_LHA:  return s->lha;
     case SRC_DOS:  return s->dosDir;
     case SRC_JAG:  return s->jagRom;
     default:       return s->s2020Dir;
@@ -881,6 +895,230 @@ static int32_t copy_tree(const char *src, const char *dst, const char *rel, char
     closedir(d);
 #endif
     return count;
+}
+
+/* A ready drawer: the program (`programDir` holds SWOS.info and the SWOS drawer, as
+ * SWOS-Amiga.zip unpacks) copied into `destDir`, then filled as above. */
+int32_t SwosData_MakeAmigaDrawer(const char *assetsDir, const char *programDir, const char *destDir,
+                                 void (*log)(void *user, const char *line), void *user, char *err)
+{
+    char from[1100], to[1100], drawer[1100];
+    SgBuf b;
+    Sg_PathJoin(from, sizeof from, programDir, "SWOS/SWOS2");
+    if (!Sg_IsFile(from)) {
+        snprintf(err, 256, "%s has no SWOS drawer in it", programDir);
+        return -1;
+    }
+    int32_t n = copy_tree(programDir, destDir, "SWOS", err);
+    if (n < 0)
+        return -1;
+    /* The drawer's icon, and the sidecars an emulator keeps the Amiga's file flags in. */
+    static const char *const kBeside[] = { "SWOS.info", "SWOS.info.uaem", "SWOS.uaem" };
+    for (uint32_t i = 0; i < sizeof kBeside / sizeof kBeside[0]; i++) {
+        Sg_PathJoin(from, sizeof from, programDir, kBeside[i]);
+        Sg_PathJoin(to, sizeof to, destDir, kBeside[i]);
+        if (!Sg_IsFile(from))
+            continue;
+        if (Sg_ReadFile(from, &b, err) != 0)
+            return -1;
+        int32_t rc = Sg_WriteFile(to, b.data, b.size, err);
+        Sg_BufFree(&b);
+        if (rc != 0)
+            return -1;
+    }
+    if (log) {
+        char line[256];
+        snprintf(line, sizeof line, "Amiga drawer: the program (%d files)", n);
+        log(user, line);
+    }
+    Sg_PathJoin(drawer, sizeof drawer, destDir, "SWOS");
+    return SwosData_FillAmigaDrawer(assetsDir, drawer, log, user, err);
+}
+
+/* ---- the WHDLoad package --------------------------------------------------- */
+
+static int32_t strcasecmp_portable(const char *a, const char *b)
+{
+    for (;; a++, b++) {
+        int32_t x = tolower((unsigned char)*a), y = tolower((unsigned char)*b);
+        if (x != y || !x)
+            return x - y;
+    }
+}
+
+/* What goes into the archive: its path there, and the file it is read from. A later
+ * entry with the same path replaces the earlier (the AGA-only pictures). */
+typedef struct {
+    char rel[300];
+    char from[1100];
+} PkgFile;
+
+typedef struct {
+    PkgFile *f;
+    int32_t  n, cap;
+} Pkg;
+
+static void pkg_add(Pkg *p, const char *rel, const char *from)
+{
+    for (int32_t i = 0; i < p->n; i++) {
+        if (strcasecmp_portable(p->f[i].rel, rel) == 0) {
+            snprintf(p->f[i].from, sizeof p->f[i].from, "%s", from);
+            return;
+        }
+    }
+    if (p->n == p->cap) {
+        p->cap = p->cap ? p->cap * 2 : 256;
+        p->f = realloc(p->f, sizeof(PkgFile) * (size_t)p->cap);
+    }
+    snprintf(p->f[p->n].rel, sizeof p->f[p->n].rel, "%s", rel);
+    snprintf(p->f[p->n].from, sizeof p->f[p->n].from, "%s", from);
+    p->n++;
+}
+
+/* Every file under src/rel into the package as prefix + rel. Returns how many. */
+static int32_t pkg_tree(Pkg *p, const char *src, const char *rel, const char *prefix)
+{
+    char dir[1100];
+    int32_t count = 0;
+    Sg_PathJoin(dir, sizeof dir, src, rel);
+#ifdef _WIN32
+    char pattern[1100];
+    Sg_PathJoin(pattern, sizeof pattern, dir, "*");
+    WIN32_FIND_DATAA fd;
+    HANDLE h = FindFirstFileA(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE)
+        return 0;
+    do {
+        const char *name = fd.cFileName;
+        int32_t isDir = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+    DIR *d = opendir(dir);
+    if (!d)
+        return 0;
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL) {
+        const char *name = e->d_name;
+        char full[1100];
+        struct stat st;
+        Sg_PathJoin(full, sizeof full, dir, name);
+        int32_t isDir = stat(full, &st) == 0 && S_ISDIR(st.st_mode);
+#endif
+        if (name[0] == '.')
+            continue;
+        char sub[600], from[1100], to[700];
+        snprintf(sub, sizeof sub, "%s/%s", rel, name);
+        if (isDir) {
+            count += pkg_tree(p, src, sub, prefix);
+        } else {
+            Sg_PathJoin(from, sizeof from, src, sub);
+            snprintf(to, sizeof to, "%s%s", prefix, sub);
+            pkg_add(p, to, from);
+            count++;
+        }
+#ifdef _WIN32
+    } while (FindNextFileA(h, &fd));
+    FindClose(h);
+#else
+    }
+    closedir(d);
+#endif
+    return count;
+}
+
+#define WHD_TOP   "OpenSWOSAGA-NE"
+#define WHD_SLAVE "Ks31-000-C2-F08"
+
+int32_t SwosData_MakeWhdload(const char *assetsDir, const char *drawerDir, const char *resDir,
+                             const char *outPath, void (*log)(void *user, const char *line),
+                             void *user, char *err)
+{
+    static const char *const kTrees[] = { "data", "grafs", "grafs_aga", "sound" };
+    static const char *const kTemplate[][2] = {
+        { WHD_TOP ".info",            "setup/whdload/" WHD_TOP ".info" },
+        { WHD_TOP "/data.info",       "setup/whdload/data.info" },
+        { WHD_TOP "/" WHD_SLAVE ".slave", "setup/whdload/" WHD_SLAVE ".slave" },
+        { WHD_TOP "/" WHD_SLAVE ".info",  "setup/whdload/" WHD_SLAVE ".info" },
+        { WHD_TOP "/data/s/startup-sequence", "setup/whdload/startup-sequence" },
+    };
+    static const char *const kProgram[] = { "SWOS2", "SWOS", "SWOS.info", "ReadMe", "ReadMe.info" };
+    char probe[1100], line[300];
+    Pkg pkg = { NULL, 0, 0 };
+    int32_t rc = -1;
+
+    if (Sg_FindNoCase(drawerDir, "SWOS2", probe, sizeof probe) != 0) {
+        snprintf(err, 256, "%.200s is not a SWOS drawer (no SWOS2 in it)", drawerDir);
+        return -1;
+    }
+    if (Sg_FindNoCase(assetsDir, "grafs/MENUS.RAW", probe, sizeof probe) != 0 ||
+        Sg_FindNoCase(assetsDir, "grafs_aga/MENUS.RAW", probe, sizeof probe) != 0) {
+        snprintf(err, 256, "the game data is not complete: the Amiga version needs both the "
+                           "Amiga game and the PC game");
+        return -1;
+    }
+    for (uint32_t i = 0; i < sizeof kTemplate / sizeof kTemplate[0]; i++) {
+        Sg_PathJoin(probe, sizeof probe, resDir, kTemplate[i][1]);
+        FILE *f = fopen(probe, "rb");
+        if (!f) {
+            snprintf(err, 256, "the setup's own file %s is missing", kTemplate[i][1]);
+            goto done;
+        }
+        fclose(f);
+        pkg_add(&pkg, kTemplate[i][0], probe);
+    }
+    for (uint32_t i = 0; i < sizeof kProgram / sizeof kProgram[0]; i++)
+        if (Sg_FindNoCase(drawerDir, kProgram[i], probe, sizeof probe) == 0) {
+            char to[300];
+            snprintf(to, sizeof to, WHD_TOP "/data/%s", kProgram[i]);
+            pkg_add(&pkg, to, probe);
+        }
+    /* The drawer's own files in those folders first (OpenSWOS's: the credits photos,
+     * the AGA screens it ships), then the game data over them -- as SwosData_FillAmigaDrawer
+     * leaves a drawer. */
+    for (uint32_t i = 0; i < sizeof kTrees / sizeof kTrees[0]; i++)
+        pkg_tree(&pkg, drawerDir, kTrees[i], WHD_TOP "/data/");
+    for (uint32_t i = 0; i < sizeof kTrees / sizeof kTrees[0]; i++) {
+        int32_t n = pkg_tree(&pkg, assetsDir, kTrees[i], WHD_TOP "/data/");
+        if (log) {
+            snprintf(line, sizeof line, "WHDLoad package: data/%s/ (%d files)", kTrees[i], n);
+            log(user, line);
+        }
+    }
+    {   /* The AGA Amiga's own pictures over the shared ones, as in the drawer. */
+        char amigaOnly[1100];
+        Sg_PathJoin(amigaOnly, sizeof amigaOnly, assetsDir, AGA_ONLY_DIR);
+        pkg_tree(&pkg, amigaOnly, "grafs_aga", WHD_TOP "/data/");
+    }
+
+    {
+        LhaWriter *w = Lha_Create(outPath, err);
+        if (!w)
+            goto done;
+        for (int32_t i = 0; i < pkg.n; i++) {
+            SgBuf b;
+            if (Sg_ReadFile(pkg.f[i].from, &b, err) != 0 ||
+                Lha_AddFile(w, pkg.f[i].rel, b.data, b.size, 0, err) != 0) {
+                Sg_BufFree(&b);
+                Lha_Close(w, line);
+                goto done;
+            }
+            Sg_BufFree(&b);
+        }
+        /* The program writes saves there but will not create the folder. */
+        if (Lha_AddDir(w, WHD_TOP "/data/save/", 0, err) != 0) {
+            Lha_Close(w, line);
+            goto done;
+        }
+        if (Lha_Close(w, err) != 0)
+            goto done;
+    }
+    if (log) {
+        snprintf(line, sizeof line, "WHDLoad package: %d files in %.200s", (int)pkg.n + 1, outPath);
+        log(user, line);
+    }
+    rc = 0;
+done:
+    free(pkg.f);
+    return rc;
 }
 
 int32_t SwosData_FillAmigaDrawer(const char *assetsDir, const char *drawerDir,

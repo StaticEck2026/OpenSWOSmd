@@ -80,6 +80,8 @@ export component Link inherits Text {
 
 export component Card inherits Rectangle {
     in property <string> title;
+    // Its own height, never a share of the window's spare: a Rectangle stretches by default.
+    vertical-stretch: 0;
     background: Theme.panel;
     border-radius: 6px;
     border-width: 1px;

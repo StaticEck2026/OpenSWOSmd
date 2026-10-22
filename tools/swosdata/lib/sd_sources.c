@@ -6,6 +6,9 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include "sd_sources.h"
+#include "sd_manifest.h"
+#include "miniz.h"
+#include "sg_dir.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,9 +114,332 @@ static int32_t is_jag_rom(const char *path)
     return found;
 }
 
+/* ---- the Amiga game on a hard disk image ---------------------------------- */
+
+typedef struct {
+    Adf  *adf;
+    char *dir;
+    uint32_t cap;
+    int32_t found;
+} HdfFind;
+
+static int32_t ends_with_path_nocase(const char *path, const char *tail, size_t *prefixLen)
+{
+    size_t lp = strlen(path), lt = strlen(tail);
+    if (lt > lp || !ends_with_nocase(path, tail))
+        return 0;
+    if (lp > lt && path[lp - lt - 1] != '/')
+        return 0;
+    *prefixLen = lp - lt;
+    return 1;
+}
+
+/* The game's folder: the one with data/TEAM.000 and grafs/CJCTEAM1.RAW beside it. */
+static int32_t hdf_find_cb(const char *path, uint32_t size, void *user)
+{
+    HdfFind *h = user;
+    size_t pre;
+    (void)size;
+    if (!ends_with_path_nocase(path, "data/TEAM.000", &pre) || pre + 32 >= h->cap)
+        return 0;
+    char probe[300];
+    snprintf(probe, sizeof probe, "%.*sgrafs/CJCTEAM1.RAW", (int)pre, path);
+    if (Adf_FileSize(h->adf, probe) < 0)
+        return 0;
+    snprintf(h->dir, h->cap, "%.*s", (int)pre, path);
+    h->found = 1;
+    return 1;
+}
+
+/* Which volume of the image at `path` has the game, and in which folder. 0 when found. */
+static int32_t hdf_find_game(const char *path, int32_t *vol, char *dir, uint32_t cap)
+{
+    int32_t n = Adf_CountVolumes(path);
+    for (int32_t i = 0; i < n; i++) {
+        char err[256];
+        Adf *a = Adf_OpenVolume(path, i, err);
+        if (!a)
+            continue;
+        HdfFind h = { a, dir, cap, 0 };
+        if (Adf_FileSize(a, "data/TEAM.000") >= 0 && Adf_FileSize(a, "grafs/CJCTEAM1.RAW") >= 0) {
+            dir[0] = '\0';
+            h.found = 1;
+        } else {
+            Adf_Walk(a, hdf_find_cb, &h);
+        }
+        Adf_Close(a);
+        if (h.found) {
+            *vol = i;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+/* FNV-1a 64 of the Amiga team data (sd_manifest.c, g_sdAmigaSeasons), read with `rd`.
+ * 0 when a file is missing. */
+static uint64_t fnv_bytes(uint64_t h, const uint8_t *p, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        h ^= p[i];
+        h *= 0x100000001b3ull;
+    }
+    return h;
+}
+
+static char s_amigaProblem[256];
+
+const char *SdSources_AmigaProblem(void) { return s_amigaProblem; }
+
+static uint64_t team_fingerprint(SdSources *s)
+{
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (int32_t i = 0; g_sdAmigaCopy[i]; i++) {
+        const char *rel = g_sdAmigaCopy[i];
+        if (strncmp(rel, "data/", 5) != 0)
+            continue;
+        SgBuf b;
+        char err[256], lower[256];
+        if (SdSources_ReadAmiga(s, rel, &b, err) != 0) {
+            snprintf(s_amigaProblem, sizeof s_amigaProblem, "%s", err);
+            return 0;
+        }
+        size_t n = strlen(rel);
+        for (size_t k = 0; k <= n && k < sizeof lower; k++)
+            lower[k] = (char)tolower((unsigned char)rel[k]);
+        uint8_t size[4] = { (uint8_t)(b.size >> 24), (uint8_t)(b.size >> 16),
+                            (uint8_t)(b.size >> 8), (uint8_t)b.size };
+        h = fnv_bytes(h, (const uint8_t *)lower, n + 1);
+        h = fnv_bytes(h, size, 4);
+        h = fnv_bytes(h, b.data, b.size);
+        Sg_BufFree(&b);
+    }
+    return h;
+}
+
+/* Whether the open Amiga source has `rel`, from its directory alone. */
+static int32_t amiga_has(SdSources *s, const char *rel)
+{
+    char path[512];
+    if ((s->disk1 && Adf_FileSize(s->disk1, rel) >= 0) || (s->disk2 && Adf_FileSize(s->disk2, rel) >= 0))
+        return 1;
+    snprintf(path, sizeof path, "%s%s", s->hdfDir, rel);
+    if (s->hdfDisk && Adf_FileSize(s->hdfDisk, path) >= 0)
+        return 1;
+    snprintf(path, sizeof path, "%s%s", s->lhaDir, rel);
+    return s->lhaArc && Lha_Find(s->lhaArc, path) >= 0;
+}
+
+const char *SdSources_AmigaSeason(SdSources *s)
+{
+    char err[256];
+    int32_t wasOpen = s->disk1 || s->disk2 || s->hdfDisk || s->lhaArc;
+    s_amigaProblem[0] = '\0';
+    if (!SdSources_HaveAmiga(s))
+        return NULL;
+    if (SdSources_Open(s, err) != 0) {
+        snprintf(s_amigaProblem, sizeof s_amigaProblem, "%s", err);
+        return NULL;
+    }
+    /* Every file the setup takes from it, or it is some other release: the 1994
+     * original's disks (no grafs/DISK22.RAW) look much like 96/97's. */
+    const char *missing = NULL;
+    for (int32_t i = 0; g_sdAmigaCopy[i] && !missing; i++)
+        if (!amiga_has(s, g_sdAmigaCopy[i]))
+            missing = g_sdAmigaCopy[i];
+    uint64_t f = missing ? 0 : team_fingerprint(s);
+    if (!wasOpen)
+        SdSources_Close(s);
+    if (missing)
+        snprintf(s_amigaProblem, sizeof s_amigaProblem,
+                 "%s is not in it, so it is not the 96/97 release or an update of it", missing);
+    if (!f)
+        return NULL;
+    for (int32_t i = 0; g_sdAmigaSeasons[i].season; i++)
+        if (g_sdAmigaSeasons[i].fingerprint == f)
+            return g_sdAmigaSeasons[i].season;
+    /* Its fingerprint, for adding it to g_sdAmigaSeasons. */
+    snprintf(s_amigaProblem, sizeof s_amigaProblem, "team data fingerprint %016llx",
+             (unsigned long long)f);
+    return "an unknown season";
+}
+
+/* The game's folder in a WHDLoad .lha: the one with data/TEAM.000 and grafs/CJCTEAM1.RAW
+ * beside it ("SWOS2425/data/"). 0 when found. */
+static int32_t lha_find_game(const char *path, char *dir, uint32_t cap)
+{
+    char err[256];
+    LhaArchive *a = Lha_Open(path, err);
+    int32_t rc = -1;
+    if (!a)
+        return -1;
+    for (int32_t i = 0; i < Lha_Count(a) && rc != 0; i++) {
+        size_t pre;
+        const char *p = Lha_Path(a, i);
+        if (!ends_with_path_nocase(p, "data/TEAM.000", &pre) || pre + 32 >= cap)
+            continue;
+        char probe[300];
+        snprintf(probe, sizeof probe, "%.*sgrafs/CJCTEAM1.RAW", (int)pre, p);
+        if (Lha_Find(a, probe) >= 0) {
+            snprintf(dir, cap, "%.*s", (int)pre, p);
+            rc = 0;
+        }
+    }
+    Lha_Free(a);
+    return rc;
+}
+
+/* How good an Amiga source is: 3 the 96/97 release, 2 another season we know, 1 a season
+ * read whole but not one we know, 0 one whose team data cannot be read (a damaged disk). */
+static int32_t quality(SdSources *t)
+{
+    const char *season = SdSources_AmigaSeason(t);
+    if (!season)
+        return 0;
+    if (strcmp(season, "96/97") == 0)
+        return 3;
+    return strcmp(season, "an unknown season") == 0 ? 1 : 2;
+}
+
+/* One Amiga source only, and the best one found: a second replaces the first only when it
+ * is better (ASWOS keeps a season an image; a Downloads folder may hold a damaged ADF zip
+ * beside a good hard disk image). `kind` 'h' a hard disk image, 'l' a .lha; for a pair of
+ * floppies, the caller fills t. 1 = take the new one (the others are cleared). */
+static int32_t amiga_better(SdSources *s, SdSources *t)
+{
+    char problem[256];
+    if (!SdSources_HaveAmiga(s)) {
+        /* Nothing usable yet: a lone floppy waiting for its other half gives way. */
+        s->adf1[0] = s->adf2[0] = '\0';
+        return 1;
+    }
+    int32_t had = quality(s);
+    snprintf(problem, sizeof problem, "%s", s_amigaProblem);
+    int32_t now = quality(t);
+    if (now <= had) {
+        snprintf(s_amigaProblem, sizeof s_amigaProblem, "%s", problem);
+        return 0;
+    }
+    s->adf1[0] = s->adf2[0] = s->hdf[0] = s->lha[0] = '\0';
+    return 1;
+}
+
+static int32_t amiga_take(SdSources *s, char kind, const char *path)
+{
+    SdSources t;
+    if ((kind == 'h' && strcmp(s->hdf, path) == 0) || (kind == 'l' && strcmp(s->lha, path) == 0))
+        return 0;
+    memset(&t, 0, sizeof t);
+    snprintf(kind == 'h' ? t.hdf : t.lha, 1024, "%s", path);
+    return amiga_better(s, &t);
+}
+
+/* A .zip (a download of disk images): the .adf, .hdf and .lha files in it are unpacked to
+ * a folder of our own under the system's temporary folder and added like any other. */
+static const char *temp_root(void)
+{
+    const char *t = getenv("TMPDIR");
+#ifdef _WIN32
+    if (!t || !*t) t = getenv("TEMP");
+    if (!t || !*t) t = getenv("TMP");
+#endif
+    return t && *t ? t : "/tmp";
+}
+
+static int32_t add_zip(SdSources *s, const char *path)
+{
+    mz_zip_archive z;
+    memset(&z, 0, sizeof z);
+    if (!mz_zip_reader_init_file(&z, path, 0))
+        return -1;
+    const char *base = path + strlen(path);
+    while (base > path && base[-1] != '/' && base[-1] != '\\')
+        base--;
+    char dir[1100];
+    snprintf(dir, sizeof dir, "%s/openswos-setup/%s", temp_root(), base);
+    int32_t added = 0;
+    for (mz_uint i = 0; i < mz_zip_reader_get_num_files(&z); i++) {
+        mz_zip_archive_file_stat st;
+        if (!mz_zip_reader_file_stat(&z, i, &st) || st.m_is_directory)
+            continue;
+        const char *name = st.m_filename, *leaf = name + strlen(name);
+        while (leaf > name && leaf[-1] != '/' && leaf[-1] != '\\')
+            leaf--;
+        if (!(ends_with_nocase(leaf, ".adf") || ends_with_nocase(leaf, ".hdf") ||
+              ends_with_nocase(leaf, ".lha")) || st.m_uncomp_size > 512u * 1024 * 1024)
+            continue;
+        char out[1400];
+        Sg_MakeDirs(dir);
+        snprintf(out, sizeof out, "%s/%s", dir, leaf);
+        if (mz_zip_reader_extract_to_file(&z, i, out, 0) && SdSources_AddFile(s, out) == 0)
+            added++;
+    }
+    mz_zip_reader_end(&z);
+    return added ? 0 : -1;
+}
+
+int32_t SdSources_UnpackAmigaProgram(const char *zip, char *dir, uint32_t cap)
+{
+    mz_zip_archive z;
+    memset(&z, 0, sizeof z);
+    if (!mz_zip_reader_init_file(&z, zip, 0))
+        return -1;
+    const char *base = zip + strlen(zip);
+    while (base > zip && base[-1] != '/' && base[-1] != '\\')
+        base--;
+    snprintf(dir, cap, "%s/openswos-setup/%s", temp_root(), base);
+    int32_t ok = 1;
+    for (mz_uint i = 0; i < mz_zip_reader_get_num_files(&z) && ok; i++) {
+        mz_zip_archive_file_stat st;
+        if (!mz_zip_reader_file_stat(&z, i, &st))
+            continue;
+        const char *name = st.m_filename;
+        /* Its own folders only: no entry may climb out of the one it is unpacked to. */
+        if (name[0] == '/' || name[0] == '\\' || strchr(name, ':') || strstr(name, ".."))
+            continue;
+        char out[1400];
+        snprintf(out, sizeof out, "%s/%s", dir, name);
+        if (st.m_is_directory) {
+            Sg_MakeDirs(out);
+            continue;
+        }
+        char parent[1400];
+        snprintf(parent, sizeof parent, "%s", out);
+        char *slash = strrchr(parent, '/');
+        if (slash) {
+            *slash = '\0';
+            Sg_MakeDirs(parent);
+        }
+        ok = mz_zip_reader_extract_to_file(&z, i, out, 0);
+    }
+    mz_zip_reader_end(&z);
+    char probe[1400];
+    snprintf(probe, sizeof probe, "%s/SWOS/SWOS2", dir);
+    return ok && Sg_IsFile(probe) ? 0 : -1;
+}
+
 int32_t SdSources_AddFile(SdSources *s, const char *path)
 {
     char err[256];
+    if (ends_with_nocase(path, ".hdf")) {
+        int32_t vol;
+        char dir[256];
+        if (hdf_find_game(path, &vol, dir, sizeof dir) != 0)
+            return -1;
+        if (amiga_take(s, 'h', path))
+            snprintf(s->hdf, sizeof s->hdf, "%s", path);
+        return 0;
+    }
+    if (ends_with_nocase(path, ".lha") || ends_with_nocase(path, ".lzh")) {
+        char dir[256];
+        if (lha_find_game(path, dir, sizeof dir) != 0)
+            return -1;
+        if (amiga_take(s, 'l', path))
+            snprintf(s->lha, sizeof s->lha, "%s", path);
+        return 0;
+    }
+    if (ends_with_nocase(path, ".zip"))
+        return add_zip(s, path);
     if (ends_with_nocase(path, ".adf")) {
         Adf *a = Adf_Open(path, err);
         if (!a)
@@ -123,15 +449,35 @@ int32_t SdSources_AddFile(SdSources *s, const char *path)
         const char *vol = Adf_VolumeName(a);
         uint32_t n;
         /* Disk 1 holds the game, disk 2 the rest of the data. Volume names
-         * first; a renamed disk still has its files. */
+         * first; a renamed disk still has its files (a cracked release calls its
+         * disk 2 "HOODLUM DISK 2": the teams and the menu pictures, no program). */
         uint8_t *probe = Adf_ReadFile(a, "SWOS2", &n, err);
         int32_t looks1 = probe != NULL || strcmp(vol, "SWOS") == 0;
         free(probe);
-        if (looks1 && !s->adf1[0]) {
-            snprintf(s->adf1, sizeof s->adf1, "%s", path);
-            rc = 0;
-        } else if (!looks1 && (strcmp(vol, "SWOS2") == 0) && !s->adf2[0]) {
-            snprintf(s->adf2, sizeof s->adf2, "%s", path);
+        int32_t looks2 = !looks1 && (strcmp(vol, "SWOS2") == 0 ||
+                                     (Adf_FileSize(a, "data/TEAM.000") >= 0 &&
+                                      Adf_FileSize(a, "grafs/CJCTEAM1.RAW") >= 0));
+        char *slot = looks1 ? s->adf1 : looks2 ? s->adf2 : NULL;
+        if (slot && !slot[0]) {
+            const char *other = looks1 ? s->adf2 : s->adf1;
+            /* This disk completes a pair while a hard disk image or a .lha is the
+             * Amiga source: the pair only if it is the better one. */
+            if (other[0] && (s->hdf[0] || s->lha[0])) {
+                SdSources t;
+                memset(&t, 0, sizeof t);
+                snprintf(looks1 ? t.adf1 : t.adf2, 1024, "%s", path);
+                snprintf(looks1 ? t.adf2 : t.adf1, 1024, "%s", other);
+                if (!amiga_better(s, &t)) {
+                    /* Not the better: neither of the pair stays, so no lone disk of it
+                     * is ever read beside the source that won. */
+                    (looks1 ? s->adf2 : s->adf1)[0] = '\0';
+                    Adf_Close(a);
+                    return 0;
+                }
+                /* amiga_better cleared the old source, the other disk with it: back. */
+                snprintf(looks1 ? s->adf2 : s->adf1, 1024, "%s", looks1 ? t.adf2 : t.adf1);
+            }
+            snprintf(slot, 1024, "%s", path);
             rc = 0;
         }
         (void)p;
@@ -183,8 +529,8 @@ int32_t SdSources_AddFile(SdSources *s, const char *path)
 
 static int32_t count_found(const SdSources *s)
 {
-    return (s->adf1[0] != 0) + (s->adf2[0] != 0) + (s->dosDir[0] != 0) + (s->jagRom[0] != 0) +
-           (s->s2020Dir[0] != 0);
+    return (s->adf1[0] != 0) + (s->adf2[0] != 0) + (s->hdf[0] != 0) + (s->lha[0] != 0) +
+           (s->dosDir[0] != 0) + (s->jagRom[0] != 0) + (s->s2020Dir[0] != 0);
 }
 
 /* ---- the folder search ---------------------------------------------------- */
@@ -198,9 +544,12 @@ typedef struct {
     int32_t        stopped;
 } ScanCtx;
 
+/* Everything there is to find. An Amiga hard disk image does not end the search while
+ * it is not the 96/97 release: there may be one that is, further on. */
 static int32_t all_found(const SdSources *s)
 {
-    return s->adf1[0] && s->adf2[0] && s->dosDir[0] && s->jagRom[0] && s->s2020Dir[0];
+    return SdSources_HaveAmiga(s) && (s->adf1[0] && s->adf2[0]) && s->dosDir[0] && s->jagRom[0] &&
+           s->s2020Dir[0];
 }
 
 static int32_t contains_nocase(const char *s, const char *word)
@@ -228,7 +577,12 @@ static int32_t skip_folder(const char *name)
  * a folder of a thousand other Amiga games costs a thousand root blocks. */
 static void scan_file(SdSources *s, const char *path, const char *name)
 {
-    if (ends_with_nocase(name, ".adf")) {
+    if (ends_with_nocase(name, ".hdf") || ends_with_nocase(name, ".lha") || ends_with_nocase(name, ".zip")) {
+        /* Only an image named for the game: a folder of other Amiga hard disks is not
+         * opened one by one. */
+        if (!contains_nocase(name, "swos") && !contains_nocase(name, "sensible"))
+            return;
+    } else if (ends_with_nocase(name, ".adf")) {
         char vol[32];
         if (s->adf1[0] && s->adf2[0])
             return;
@@ -374,17 +728,41 @@ int32_t SdSources_Scan(SdSources *s, const char *dir)
     return SdSources_ScanEx(s, dir, NULL, NULL);
 }
 
-int32_t SdSources_HaveAmiga(const SdSources *s) { return s->adf1[0] && s->adf2[0]; }
+int32_t SdSources_HaveAmiga(const SdSources *s)
+{
+    return (s->adf1[0] && s->adf2[0]) || s->hdf[0] || s->lha[0];
+}
 int32_t SdSources_HaveDos(const SdSources *s) { return s->dosDir[0] != 0; }
 int32_t SdSources_HaveJaguar(const SdSources *s) { return s->jagRom[0] != 0; }
 int32_t SdSources_HaveSwos2020(const SdSources *s) { return s->s2020Dir[0] != 0; }
 
 int32_t SdSources_Open(SdSources *s, char *err)
 {
-    if (s->adf1[0] && !s->disk1 && !(s->disk1 = Adf_Open(s->adf1, err)))
-        return -1;
-    if (s->adf2[0] && !s->disk2 && !(s->disk2 = Adf_Open(s->adf2, err)))
-        return -1;
+    /* The floppies only as a pair: a lone disk is never read beside another source. */
+    if (s->adf1[0] && s->adf2[0]) {
+        if (!s->disk1 && !(s->disk1 = Adf_Open(s->adf1, err)))
+            return -1;
+        if (!s->disk2 && !(s->disk2 = Adf_Open(s->adf2, err)))
+            return -1;
+    }
+    /* The hard disk image: only when there is no pair of floppies to read instead. */
+    if (s->hdf[0] && !(s->adf1[0] && s->adf2[0]) && !s->hdfDisk) {
+        if (hdf_find_game(s->hdf, &s->hdfVolume, s->hdfDir, sizeof s->hdfDir) != 0) {
+            snprintf(err, 256, "%.200s: the game is not on it", s->hdf);
+            return -1;
+        }
+        if (!(s->hdfDisk = Adf_OpenVolume(s->hdf, s->hdfVolume, err)))
+            return -1;
+    }
+    /* A WHDLoad .lha: only when there is neither of those. */
+    if (s->lha[0] && !(s->adf1[0] && s->adf2[0]) && !s->hdf[0] && !s->lhaArc) {
+        if (lha_find_game(s->lha, s->lhaDir, sizeof s->lhaDir) != 0) {
+            snprintf(err, 256, "%.200s: the game is not in it", s->lha);
+            return -1;
+        }
+        if (!(s->lhaArc = Lha_Open(s->lha, err)))
+            return -1;
+    }
     return 0;
 }
 
@@ -392,18 +770,51 @@ void SdSources_Close(SdSources *s)
 {
     Adf_Close(s->disk1);
     Adf_Close(s->disk2);
-    s->disk1 = s->disk2 = NULL;
+    Adf_Close(s->hdfDisk);
+    Lha_Free(s->lhaArc);
+    s->disk1 = s->disk2 = s->hdfDisk = NULL;
+    s->lhaArc = NULL;
 }
 
 int32_t SdSources_ReadAmiga(SdSources *s, const char *rel, SgBuf *out, char *err)
 {
     Adf *disks[2] = { s->disk1, s->disk2 };
+    char why[256] = "";
     for (int32_t i = 0; i < 2; i++) {
         if (!disks[i])
             continue;
         uint32_t n;
         char e2[256];
         uint8_t *d = Adf_ReadFile(disks[i], rel, &n, e2);
+        if (d) {
+            out->data = d;
+            out->size = n;
+            return 0;
+        }
+        if (strstr(e2, "damaged"))
+            snprintf(why, sizeof why, "%.200s (disk %d)", e2, (int)i + 1);
+    }
+    if (why[0]) {
+        snprintf(err, 256, "%s", why);
+        return -1;
+    }
+    if (s->hdfDisk) {
+        uint32_t n;
+        char path[512];
+        snprintf(path, sizeof path, "%s%s", s->hdfDir, rel);
+        uint8_t *d = Adf_ReadFile(s->hdfDisk, path, &n, err);
+        if (d) {
+            out->data = d;
+            out->size = n;
+            return 0;
+        }
+    }
+    if (s->lhaArc) {
+        char path[512];
+        snprintf(path, sizeof path, "%s%s", s->lhaDir, rel);
+        int32_t i = Lha_Find(s->lhaArc, path);
+        uint32_t n;
+        uint8_t *d = i >= 0 ? Lha_Read(s->lhaArc, i, &n, err) : NULL;
         if (d) {
             out->data = d;
             out->size = n;

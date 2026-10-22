@@ -57,10 +57,18 @@ if(NOT EXISTS "${SWOSGFX_DIR}/lib/sg_util.h")
 endif()
 file(GLOB SD_LIB_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lib/*.c")
 file(GLOB SG_LIB_SOURCES CONFIGURE_DEPENDS "${SWOSGFX_DIR}/lib/*.c")
-add_library(swosdata_lib STATIC ${SD_LIB_SOURCES} ${SG_LIB_SOURCES})
+# miniz (third_party/miniz, the game's too): the setup reads .zip downloads of the
+# Amiga disks with it, so here its archive functions are on (the game's build has
+# its own configuration, src/miniz_impl.c).
+set(MINIZ_C "${OPENSWOS_ROOT}/third_party/miniz/miniz.c")
+add_library(swosdata_lib STATIC ${SD_LIB_SOURCES} ${SG_LIB_SOURCES} ${MINIZ_C})
 target_include_directories(swosdata_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/lib"
-  "${SWOSGFX_DIR}/lib")
+  "${SWOSGFX_DIR}/lib"
+  "${OPENSWOS_ROOT}/third_party/miniz")
+if(NOT MSVC)
+  set_source_files_properties(${MINIZ_C} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
 set_target_properties(swosdata_lib PROPERTIES OUTPUT_NAME swosdata)
 if(MSVC)
   target_compile_definitions(swosdata_lib PUBLIC _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_WARNINGS)
@@ -154,6 +162,10 @@ if(SD_WITH_APP)
 
     find_package(Threads REQUIRED)
     target_link_libraries(openswos-setup PRIVATE Threads::Threads)
+    if(WIN32)
+      # The Downloads folder (SHGetKnownFolderPath) and GOG's registry entries.
+      target_link_libraries(openswos-setup PRIVATE shell32 ole32 advapi32)
+    endif()
 
     if(SD_HAVE_DIALOGS)
       target_compile_definitions(openswos-setup PRIVATE SD_WITH_DIALOGS=1)

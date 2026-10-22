@@ -8,6 +8,23 @@
  */
 #include "sd_manifest.h"
 
+/* The fingerprints of the Amiga team data (SdSources_AmigaSeason): FNV-1a 64 over every
+ * "data/" file of g_sdAmigaCopy, in that order, each as its lower-case path, a NUL, its
+ * size (4 bytes, big-endian) and its bytes. A fingerprint names the files, it is not
+ * them. Taken 2026-10-22 from the copies below; a later revision of a season has a
+ * fingerprint of its own. (sensiblesoccer.de's 24/25 ADF zip is not listed: its disk 2
+ * has a damaged data/TEAM.067 -- a bad RNC checksum, its last block cross-linked to
+ * another file -- so its team data cannot be read whole.) */
+const SdAmigaSeason g_sdAmigaSeasons[] = {
+    { 0x281c0bd62dc5f2f8ull, "96/97", "the original release (floppies; ASWOS's swos.hdf)" },
+    { 0xf4e5bb6ae5199d6cull, "16/17", "ASWOS swos_1617.hdf" },
+    { 0xc112ee5693ed0a7full, "20/21", "ASWOS swos2020.hdf" },
+    { 0xca5b428237a88eedull, "21/22", "ASWOS swos2021.hdf" },
+    { 0xa2ea7d7d15badce5ull, "24/25", "sensiblesoccer.de swos2425.hdf" },
+    { 0x5ad0bed287b19ef6ull, "24/25", "sensiblesoccer.de SensibleWorldOfSoccer2425_v2.3.lha (WHDLoad)" },
+    { 0, NULL, NULL }
+};
+
 /* Copied from the Amiga disks as they are (RNC-packed; the game unpacks). */
 const char *const g_sdAmigaCopy[] = {
     "data/EUROCUP.TMD",

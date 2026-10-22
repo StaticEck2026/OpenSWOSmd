@@ -93,4 +93,21 @@ int32_t SwosData_FillAmigaDrawer(const char *assetsDir, const char *drawerDir,
                                  void (*log)(void *user, const char *line), void *user,
                                  char *err);
 
+/* A ready drawer in `destDir`: SWOS.info and SWOS/ copied from `programDir` (where
+ * SWOS-Amiga.zip was unpacked; the setup carries one in amiga/), then filled as
+ * SwosData_FillAmigaDrawer does. 0 on success. */
+int32_t SwosData_MakeAmigaDrawer(const char *assetsDir, const char *programDir, const char *destDir,
+                                 void (*log)(void *user, const char *line), void *user, char *err);
+
+/* The WHDLoad package, OpenSWOSAGA-WHDL.lha at `outPath`: the WHDLoad wrapper in
+ * resDir/setup/whdload (Wepl and JOTD's kickemu slave, which boots the player's
+ * Kickstart 3.1 with the package's data/ folder as the disk, its icons, and a
+ * startup-sequence that runs SWOS2), the program from the SWOS drawer `drawerDir`
+ * (unpacked SWOS-Amiga.zip, or the setup's own copy) and the Amiga game data from the
+ * assets folder, as SwosData_FillAmigaDrawer puts it in a drawer. No AmigaOS files:
+ * the game needs none. 0 on success. */
+int32_t SwosData_MakeWhdload(const char *assetsDir, const char *drawerDir, const char *resDir,
+                             const char *outPath, void (*log)(void *user, const char *line),
+                             void *user, char *err);
+
 #endif

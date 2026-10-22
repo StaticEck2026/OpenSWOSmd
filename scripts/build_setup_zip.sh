@@ -11,7 +11,11 @@
 #   OpenSWOS-Setup/
 #     ReadMe.txt              packaging/setup/ReadMe.txt
 #     setup/  data/           the setup's own files (bin/setup, credits_icons.bmp),
-#                             found ABOVE each program by both of them
+#                             found ABOVE each program by both of them; setup/whdload
+#                             is the WHDLoad package's wrapper (SwosData_MakeWhdload)
+#     amiga/SWOS/             the Amiga program, SWOS-Amiga.zip's drawer: the setup
+#                             makes a ready drawer or WHDLoad package from it, so an
+#                             Amiga player needs this one download
 #     Windows/                openswos-setup.exe, swosdata.exe (static, no DLLs)
 #     Linux/                  openswos-setup + libslint_cpp.so ($ORIGIN), swosdata
 #     macOS/                  OpenSWOS Setup.app, swosdata (both universal)
@@ -71,7 +75,16 @@ readelf -d "$STAGE/Linux/openswos-setup" | grep -q 'path: \[\$ORIGIN\]' ||
     fail "the Linux openswos-setup does not look for its Slint beside itself (\$ORIGIN)"
 
 echo "== the setup's own files"
-git ls-files -z bin/setup | xargs -0 -I{} cp {} "$STAGE/setup/" || fail "copying bin/setup failed"
+# Tracked files only, keeping their folders (setup/whdload/...).
+scripts/stage_runtime.sh "$STAGE" setup >/dev/null || fail "copying bin/setup failed"
+
+echo "== the Amiga program (dist/SWOS-Amiga.zip)"
+AMIGA_ZIP=dist/SWOS-Amiga.zip
+[ -f "$AMIGA_ZIP" ] || fail "no $AMIGA_ZIP -- run scripts/build_dist.sh first"
+grep -q "commit=$(git rev-parse --short=8 HEAD)" dist/.build-status 2>/dev/null ||
+    fail "$AMIGA_ZIP is not from this commit -- rerun scripts/build_dist.sh"
+mkdir -p "$STAGE/amiga" && python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \
+    "$AMIGA_ZIP" "$STAGE/amiga" || fail "unpacking $AMIGA_ZIP failed"
 cp bin/data/credits_icons.bmp "$STAGE/data/" &&
     cp packaging/setup/ReadMe.txt "$STAGE/ReadMe.txt" || fail "copying the ReadMe failed"
 

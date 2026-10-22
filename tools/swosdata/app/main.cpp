@@ -1,24 +1,34 @@
 // OpenSWOS Setup: the window over the swosdata library.
 //
-// The player names their own copy of SWOS -- the Amiga disks, the PC game
-// folder, the Jaguar cartridge, a SWOS 2020 install for its pitches -- and
-// SwosData_Run writes the game's data into
-// the assets folder the game reads. The run happens on a worker thread; its log
-// and progress reach the window through slint::invoke_from_event_loop.
+// Two tabs, one per version of the game. The player gets their own copy of SWOS
+// -- the PC game, the Amiga version (floppies, a hard disk image or a WHDLoad
+// .lha), the Jaguar cartridge, a SWOS 2020 install for its pitches -- from the
+// links on each, and it is found: the Downloads folder is watched, GOG's install
+// folder looked up, or a folder searched. The PC tab's Install runs SwosData_Run
+// into the assets folder the game reads; the Amiga tab's button does that too,
+// then makes a ready SWOS drawer or the WHDLoad package from the Amiga program
+// the setup carries (amiga/, an unpacked SWOS-Amiga.zip). Runs happen on a
+// worker thread; their log and progress reach the window through
+// slint::invoke_from_event_loop.
 //
-//   openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--drawer DIR]
-//   testing:       [--auto] [--snapshot PREFIX] [--quit] [--play]
+//   openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--amiga]
+//                  [--program DIR] [--drawer-to DIR | --whdload-to FILE]
+//   testing:       [--auto] [--snapshot PREFIX] [--snapshot-at MS] [--quit] [--play]
+//                  [--no-watch] [--details]
 //
-// --auto starts the install once the window is up (and then fills --drawer, if
-// one was given); --snapshot writes PREFIX-start.ppm and, with --auto,
-// PREFIX-done.ppm; --quit closes the window when it has finished (exit status 0
-// on success); --play presses Play OpenSWOS when the install is done.
+// --auto presses the open tab's button once the window is up; --snapshot writes
+// PREFIX-start.ppm and, with --auto, PREFIX-done.ppm; --quit closes the window
+// when it has finished (exit status 0 on success); --play presses Play OpenSWOS
+// when the install is done. --no-watch leaves the Downloads folder alone.
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <cctype>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -101,6 +111,28 @@ std::string PickFile(const char* filterName, const char* filterSpec) {
 #else
   (void)filterName;
   (void)filterSpec;
+#endif
+  return picked;
+}
+
+std::string PickSaveFile(const char* filterName, const char* filterSpec, const std::string& dir,
+                         const std::string& name) {
+  std::string picked;
+#ifdef SD_WITH_DIALOGS
+  NfdSession s;
+  if (!s.ok) return picked;
+  const nfdu8filteritem_t filter[1] = {{filterName, filterSpec}};
+  nfdu8char_t* p = nullptr;
+  if (NFD_SaveDialogU8(&p, filter, 1, dir.empty() ? nullptr : dir.c_str(), name.c_str()) == NFD_OKAY &&
+      p) {
+    picked = p;
+    NFD_FreePathU8(p);
+  }
+#else
+  (void)filterName;
+  (void)filterSpec;
+  (void)dir;
+  (void)name;
 #endif
   return picked;
 }
@@ -211,7 +243,13 @@ void PipeProgress(void* user, int32_t done, int32_t total) {
 struct App {
   slint::ComponentHandle<MainWindow>* ui = nullptr;
   SdSources src{};
-  std::string outDir, defaultOutDir, resDir, exeDir, game, drawer;
+  std::string outDir, defaultOutDir, resDir, exeDir, game;
+  // The Amiga tab: the program (a folder with SWOS.info and the SWOS drawer), and
+  // where the drawer or the WHDLoad package goes.
+  std::string amigaProgram, drawerTo, whdloadTo;
+  std::string programFrom;   // what it was found as, shown: the zip, or the folder
+  bool ownProgram = false;
+  bool amigaRun = false;   // the worker's progress is the Amiga tab's
   std::shared_ptr<slint::VectorModel<slint::SharedString>> log =
       std::make_shared<slint::VectorModel<slint::SharedString>>();
   Pipe pipe;
@@ -232,35 +270,145 @@ struct App {
 
   // ------------------------------------------------------------ the rows ---
 
-  // The five sources, each a path the player can type, paste, browse for or
-  // have found by "Choose a folder". A path that is not the thing its row asks
-  // for stays in the box (so it can be corrected), marked, and is not used.
-  enum Row { ROW_PC, ROW_DISK1, ROW_DISK2, ROW_JAG, ROW_2020, ROW_COUNT };
+  // The four sources, each a path the player can type, paste, browse for or have
+  // found. The Amiga row is one whatever form the Amiga version came in: both
+  // floppies, a hard disk image, a WHDLoad .lha, or a .zip of any of them. A path
+  // that is not the thing its row asks for stays in the box (so it can be
+  // corrected), marked, and is not used.
+  enum Row { ROW_PC, ROW_AMIGA, ROW_JAG, ROW_2020, ROW_COUNT };
   std::string unusable[ROW_COUNT];
   std::shared_ptr<slint::VectorModel<SourceRow>> rows;
+  std::string amigaKey, amigaSeason, amigaProblem;   // the season, for this Amiga source
 
   char* RowPath(int r) {
     switch (r) {
       case ROW_PC: return src.dosDir;
-      case ROW_DISK1: return src.adf1;
-      case ROW_DISK2: return src.adf2;
       case ROW_JAG: return src.jagRom;
       default: return src.s2020Dir;
     }
   }
 
+  // The Amiga source as one path: the image or archive, or disk 1 of the pair.
+  std::string AmigaPath() const {
+    if (src.hdf[0]) return src.hdf;
+    if (src.lha[0]) return src.lha;
+    if (src.adf1[0]) return src.adf1;
+    return src.adf2;
+  }
+  void ClearAmiga() { src.adf1[0] = src.adf2[0] = src.hdf[0] = src.lha[0] = '\0'; }
+
+  // The sources a plan or a run uses: an Amiga copy that cannot be used (damaged, or
+  // another release) stays in its row, marked, and is left out of both.
+  SdSources Usable() {
+    UpdateSeason();
+    SdSources u = src;
+    if (SdSources_HaveAmiga(&u) && amigaSeason.empty()) u.adf1[0] = u.adf2[0] = u.hdf[0] = u.lha[0] = '\0';
+    return u;
+  }
+
+  // Which season the Amiga source is: read when it changes (it reads the team files).
+  void UpdateSeason() {
+    const std::string key = std::string(src.adf1) + "|" + src.adf2 + "|" + src.hdf + "|" + src.lha;
+    if (key == amigaKey) return;
+    amigaKey = key;
+    amigaSeason.clear();
+    amigaProblem.clear();
+    if (!SdSources_HaveAmiga(&src)) return;
+    const char* season = SdSources_AmigaSeason(&src);
+    if (season) amigaSeason = season;
+    else amigaProblem = SdSources_AmigaProblem();
+  }
+
+  static std::shared_ptr<slint::VectorModel<LinkItem>> Links(
+      std::initializer_list<std::pair<const char*, const char*>> l) {
+    auto m = std::make_shared<slint::VectorModel<LinkItem>>();
+    for (const auto& [text, url] : l) m->push_back({Str(text), Str(url)});
+    return m;
+  }
+
   SourceRow MakeRow(int r) {
-    static const char* const kLabels[ROW_COUNT] = {
-        "PC game folder", "Amiga disk 1", "Amiga disk 2", "Jaguar cartridge (optional)", "SWOS 2020 (optional)"};
-    static const char* const kHints[ROW_COUNT] = {
-        "the folder with SPRITE.DAT and DATA in it", "disk 1 image (.adf)", "disk 2 image (.adf)",
-        "Sensible Soccer International Edition (.jag)", "the SWOS 2020 install folder"};
     SourceRow row;
-    row.label = kLabels[r];
-    row.placeholder = kHints[r];
-    const char* path = RowPath(r);
-    row.value = Str(!unusable[r].empty() ? unusable[r] : path[0] ? Shown(path) : std::string());
-    row.state = !unusable[r].empty() ? 2 : path[0] ? 1 : 0;
+    std::string path;
+    switch (r) {
+      case ROW_PC:
+        row.label = "PC game";
+        row.placeholder = "the game's folder (the one with SPRITE.DAT in it)";
+        row.need_pc = "needed";
+        row.need_amiga = "needed";
+        row.about_pc = "Sensible World of Soccer 96/97 for PC. Buy it on GOG and install it: its folder is "
+                       "found by itself. Or name any copy of the game's folder.";
+        row.about_amiga = "The AGA version takes its pitches, backdrops and pictures from the PC game. Buy it "
+                          "on GOG and install it: its folder is found by itself.";
+        row.links = Links({{"GOG", "https://www.gog.com/en/game/sensible_world_of_soccer_9697"},
+                           {"PC CD (archive.org)",
+                            "https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996"}});
+        path = src.dosDir;
+        if (!src.dosDir[0] && gogInstaller) {
+          row.detail = "GOG's installer is in your Downloads: run it, and the game it installs is found here by itself.";
+          row.detail_warn = true;
+        }
+        break;
+      case ROW_AMIGA: {
+        row.label = "Amiga version";
+        row.placeholder = "the floppies (.adf), a hard disk image (.hdf), a WHDLoad .lha, or a .zip of them";
+        row.need_pc = "optional";
+        row.need_amiga = "needed";
+        row.about_pc = "Adds the Amiga's music, sound effects and loading screens -- or plays without the PC "
+                       "game. Download one of the files on the right; ASWOS's swos.hdf works too.";
+        row.about_amiga = "The game's own files. Download one of the files on the right (either will do), or "
+                          "use both floppies, ASWOS's swos.hdf or a WHDLoad install.";
+        row.links = Links({{"swos2425.hdf", "https://www.mediafire.com/file/4fu4wbhjiaco2ts/swos2425.hdf/file"},
+                           {"WHDLoad .lha",
+                            "https://www.mediafire.com/file/8l9nr2rjg0zteb5/SensibleWorldOfSoccer2425_v2.3.lha/file"},
+                           {"about it", "https://www.sensiblesoccer.de/index.php?&view=newsdetails&id=206"}});
+        path = AmigaPath();
+        UpdateSeason();
+        if (src.adf1[0] && !src.adf2[0]) {
+          row.detail = "Disk 1 only: add disk 2 too.";
+          row.detail_warn = true;
+        } else if (src.adf2[0] && !src.adf1[0]) {
+          row.detail = "Disk 2 only: add disk 1 too.";
+          row.detail_warn = true;
+        } else if (!amigaProblem.empty()) {
+          row.detail = Str("This copy cannot be used: " + amigaProblem + ". Try another download.");
+          row.detail_warn = true;
+        } else if (amigaSeason == "96/97") {
+          row.detail = "The 96/97 release.";
+        } else if (amigaSeason == "an unknown season") {
+          row.detail = "A season this setup does not know: it may install, or it may not.";
+          row.detail_warn = true;
+        } else if (!amigaSeason.empty()) {
+          row.detail = Str("The " + amigaSeason + " season" + (src.adf1[0] ? " (both disks)" : "") +
+                           ". OpenSWOS plays 96/97's teams: they come from the PC game when it is here.");
+        } else if (src.adf1[0] && src.adf2[0]) {
+          row.detail = "Both disks.";
+        }
+        break;
+      }
+      case ROW_JAG:
+        row.label = "Atari Jaguar cartridge";
+        row.placeholder = "Sensible Soccer International Edition (.jag, .j64, .rom or .bin)";
+        row.need_pc = "optional";
+        row.about_pc = "The Jaguar's redrawn players, an option in the game's graphics settings.";
+        row.links = Links({{"Atarimania",
+                            "https://www.atarimania.com/games/atari-jaguar-games-sensible-soccer-international-edition-30123"}});
+        path = src.jagRom;
+        break;
+      default:
+        row.label = "SWOS 2020";
+        row.placeholder = "the SWOS 2020 install folder";
+        row.need_pc = "optional";
+        row.need_amiga = "optional";
+        row.about_pc = "SWOS 2020's pitches, the set its launcher picked.";
+        row.about_amiga = "SWOS 2020's pitches, the set its launcher picked.";
+        row.links = Links({{"sensiblesoccer.de", "https://www.sensiblesoccer.de/"}});
+        path = src.s2020Dir;
+        break;
+    }
+    row.value = Str(!unusable[r].empty() ? unusable[r] : !path.empty() ? Shown(path) : std::string());
+    const bool bad = r == ROW_AMIGA && !path.empty() &&
+                     (!amigaProblem.empty() || !SdSources_HaveAmiga(&src));
+    row.state = !unusable[r].empty() ? 2 : path.empty() ? 0 : bad ? 2 : 1;
     return row;
   }
 
@@ -271,6 +419,10 @@ struct App {
       rows = std::make_shared<slint::VectorModel<SourceRow>>();
       for (int r = 0; r < ROW_COUNT; r++) rows->push_back(MakeRow(r));
       w().set_sources(rows);
+      auto pc = std::make_shared<slint::VectorModel<int>>(std::vector<int>{ROW_PC, ROW_AMIGA, ROW_JAG, ROW_2020});
+      auto am = std::make_shared<slint::VectorModel<int>>(std::vector<int>{ROW_AMIGA, ROW_PC, ROW_2020});
+      w().set_rows_pc(pc);
+      w().set_rows_amiga(am);
       return;
     }
     for (int r = 0; r < ROW_COUNT; r++) rows->set_row_data(r, MakeRow(r));
@@ -294,13 +446,38 @@ struct App {
     return p;
   }
 
+  // The Amiga version the player named: it replaces what was there, except that one
+  // floppy joins the other to make the pair. Returns what to tell the player.
+  std::string TakeAmiga(const SdSources& found) {
+    auto take = [](char* to, const char* from) { std::snprintf(to, 1024, "%s", from); };
+    const bool one = (found.adf1[0] != 0) != (found.adf2[0] != 0) && !found.hdf[0] && !found.lha[0];
+    if (one && !src.hdf[0] && !src.lha[0]) {
+      // A disk: kept beside the other one of a pair in the making.
+      if (found.adf1[0]) take(src.adf1, found.adf1);
+      else take(src.adf2, found.adf2);
+      if (!src.adf1[0]) return "That is disk 2: add disk 1 too.";
+      if (!src.adf2[0]) return "That is disk 1: add disk 2 too.";
+      return "";
+    }
+    ClearAmiga();
+    take(src.adf1, found.adf1);
+    take(src.adf2, found.adf2);
+    take(src.hdf, found.hdf);
+    take(src.lha, found.lha);
+    src.hdfVolume = found.hdfVolume;
+    std::snprintf(src.hdfDir, sizeof src.hdfDir, "%s", found.hdfDir);
+    std::snprintf(src.lhaDir, sizeof src.lhaDir, "%s", found.lhaDir);
+    if (one) return found.adf1[0] ? "That is disk 1: add disk 2 too." : "That is disk 2: add disk 1 too.";
+    return "";
+  }
+
   // Put `text` in row r. Returns what to tell the player ("" for nothing).
   std::string SetRow(int r, const std::string& text) {
     const std::string path = CleanPath(text);
-    char* dst = RowPath(r);
     unusable[r].clear();
     if (path.empty()) {
-      dst[0] = '\0';
+      if (r == ROW_AMIGA) ClearAmiga();
+      else RowPath(r)[0] = '\0';
       return "";
     }
     SdSources found{};
@@ -308,41 +485,33 @@ struct App {
     auto take = [](char* to, const char* from) { std::snprintf(to, 1024, "%s", from); };
     switch (r) {
       case ROW_PC:
-        if (found.dosDir[0]) { take(dst, found.dosDir); return ""; }
-        dst[0] = '\0';
+        if (found.dosDir[0]) { take(src.dosDir, found.dosDir); return ""; }
+        src.dosDir[0] = '\0';
         unusable[r] = path;
         return found.s2020Dir[0] ? "That is SWOS 2020, not the PC game: it goes in the SWOS 2020 row."
                                  : "Not the PC game's folder: it is the one with SPRITE.DAT and DATA in it.";
-      case ROW_DISK1:
-      case ROW_DISK2: {
-        const int other = r == ROW_DISK1 ? ROW_DISK2 : ROW_DISK1;
-        const char* mine = r == ROW_DISK1 ? found.adf1 : found.adf2;
-        const char* theirs = r == ROW_DISK1 ? found.adf2 : found.adf1;
-        if (mine[0]) { take(dst, mine); return ""; }
-        dst[0] = '\0';
-        if (theirs[0]) {  // the other disk: put it where it belongs
-          take(RowPath(other), theirs);
-          unusable[other].clear();
-          return std::string("That is disk ") + (other == ROW_DISK1 ? "1" : "2") + ", so it went in that row.";
-        }
+      case ROW_AMIGA:
+        if (found.adf1[0] || found.adf2[0] || found.hdf[0] || found.lha[0]) return TakeAmiga(found);
         unusable[r] = path;
-        return "Not a Sensible World of Soccer disk image (.adf). The two disks are named SWOS and SWOS2.";
-      }
+        return "Not the Amiga version of Sensible World of Soccer: its floppies (.adf), a hard disk image "
+               "(.hdf) or a WHDLoad .lha with the game on it.";
       case ROW_JAG:
-        if (found.jagRom[0]) { take(dst, found.jagRom); return ""; }
-        dst[0] = '\0';
+        if (found.jagRom[0]) { take(src.jagRom, found.jagRom); return ""; }
+        src.jagRom[0] = '\0';
         unusable[r] = path;
         return "Not the Sensible Soccer Jaguar cartridge (a 2 MB .jag, .j64, .rom or .bin).";
       default:
-        if (found.s2020Dir[0]) { take(dst, found.s2020Dir); return ""; }
-        dst[0] = '\0';
+        if (found.s2020Dir[0]) { take(src.s2020Dir, found.s2020Dir); return ""; }
+        src.s2020Dir[0] = '\0';
         unusable[r] = path;
         return "Not a SWOS 2020 install: it is the folder with gameLauncher.exe and the swos folder in it.";
     }
   }
 
-  // While typing: only the mark and the plan follow, nothing is said yet.
+  // While typing: only the mark and the plan follow, nothing is said yet. (The Amiga
+  // row waits for Enter: a half-typed path is not worth opening an image for.)
   void RowEdited(int r, const std::string& text) {
+    if (r == ROW_AMIGA) return;
     SetRow(r, text);
     SourceRow row = MakeRow(r);
     row.value = Str(text);
@@ -352,6 +521,7 @@ struct App {
 
   // Enter, or the box loses focus: the cleaned path, and what is wrong with it.
   void RowCommitted(int r, const std::string& text) {
+    if (r == ROW_AMIGA && CleanPath(text) == Shown(AmigaPath())) return;   // unchanged
     const std::string msg = SetRow(r, text);
     Notice(msg, !msg.empty() && msg.rfind("That is disk", 0) != 0);
     RefreshRows();
@@ -360,12 +530,11 @@ struct App {
 
   void BrowseRow(int r) {
     std::string picked;
-    const char* current = RowPath(r);
+    const char* current = r == ROW_AMIGA ? "" : RowPath(r);
     switch (r) {
       case ROW_PC:
       case ROW_2020: picked = PickFolder(current[0] ? current : std::string()); break;
-      case ROW_DISK1:
-      case ROW_DISK2: picked = PickFile("Amiga disk image", "adf"); break;
+      case ROW_AMIGA: picked = PickFile("Amiga version", "adf,hdf,lha,zip"); break;
       default: picked = PickFile("Jaguar cartridge", "jag,j64,rom,bin"); break;
     }
     if (picked.empty()) return;
@@ -420,7 +589,7 @@ struct App {
     w().set_outdated(outdated);
     if (outdated) {
       SdJob job{};
-      job.src = src;
+      job.src = Usable();
       SdStepInfo info[SD_STEP_COUNT];
       SwosData_Plan(&job, info);
       bool sources = false;
@@ -450,7 +619,7 @@ struct App {
                                " — to use this folder instead, start the game with SWOS_ASSETS set to it."));
 
     SdJob job{};
-    job.src = src;
+    job.src = Usable();
     SdStepInfo info[SD_STEP_COUNT];
     SwosData_Plan(&job, info);
     auto left = std::make_shared<slint::VectorModel<PlanStep>>();
@@ -464,7 +633,34 @@ struct App {
     w().set_plan_left(left);
     w().set_plan_right(right);
     w().set_can_install(any && !outDir.empty());
-    w().set_drawer(Str(Shown(drawer)));
+    RefreshAmiga(info);
+  }
+
+  // The Amiga tab's button: there is a program to make it from, somewhere to put it,
+  // and the Amiga version and the PC game -- as sources now, or installed already.
+  void RefreshAmiga(const SdStepInfo info[SD_STEP_COUNT]) {
+    const bool kindDrawer = w().get_amiga_kind() == 0;
+    const std::string& dest = kindDrawer ? drawerTo : whdloadTo;
+    w().set_amiga_dest(Str(Shown(dest)));
+    w().set_amiga_program(Str(Shown(!programFrom.empty() ? programFrom : amigaProgram)));
+    w().set_amiga_own_program(ownProgram);
+    const bool sources = info[SD_STEP_AMIGA_FILES].ready && info[SD_STEP_AGA_PC].ready;
+    const bool installedAlready = Has(SD_STEP_AMIGA_FILES) && Has(SD_STEP_AGA_PC);
+    w().set_can_make_amiga(!amigaProgram.empty() && !dest.empty() && !outDir.empty() &&
+                           (sources || installedAlready));
+    if (!busy && !w().get_amiga_done() && !w().get_amiga_error()) {
+      std::string text;
+      if (amigaProgram.empty())
+        text = "Choose the Amiga program first: SWOS-Amiga.zip, from the same place as this setup.";
+      else if (!sources && !installedAlready)
+        text = !SdSources_HaveAmiga(&src) && !SdSources_HaveDos(&src)
+                   ? "Get the Amiga version and the PC game above."
+               : !SdSources_HaveAmiga(&src) ? "Get the Amiga version above too."
+                                            : "Get the PC game above too.";
+      else
+        text = kindDrawer ? "Ready to make the drawer." : "Ready to make the package.";
+      w().set_amiga_status(Str(text));
+    }
   }
 
   void Log(const std::string& line) { log->push_back(Str(line)); }
@@ -481,7 +677,12 @@ struct App {
       pipe.flushQueued = false;
     }
     for (const std::string& l : lines) Log(l);
-    if (total > 0) w().set_progress(float(done) / float(total));
+    if (total > 0) {
+      // The Amiga tab's run is the install and then the drawer or package: the
+      // install fills most of its bar.
+      if (amigaRun) w().set_amiga_progress(0.9f * float(done) / float(total));
+      else w().set_progress(float(done) / float(total));
+    }
   }
 
   // ----------------------------------------------------------- sources ---
@@ -492,8 +693,8 @@ struct App {
   std::atomic<bool> stopScan{false};
 
   static int32_t CountFound(const SdSources& s) {
-    return (s.adf1[0] != 0) + (s.adf2[0] != 0) + (s.dosDir[0] != 0) + (s.jagRom[0] != 0) +
-           (s.s2020Dir[0] != 0);
+    return (s.adf1[0] != 0) + (s.adf2[0] != 0) + (s.hdf[0] != 0) + (s.lha[0] != 0) + (s.dosDir[0] != 0) +
+           (s.jagRom[0] != 0) + (s.s2020Dir[0] != 0);
   }
 
   struct ScanProgress {
@@ -536,7 +737,7 @@ struct App {
     w().set_scan_status("");
     src = found;
     for (int r = 0; r < ROW_COUNT; r++)
-      if (RowPath(r)[0]) unusable[r].clear();
+      if (r == ROW_AMIGA ? SdSources_HaveAmiga(&src) != 0 : RowPath(r)[0] != 0) unusable[r].clear();
     const int32_t added = CountFound(found) - CountFound(before);
     std::string text;
     bool error = false;
@@ -548,7 +749,7 @@ struct App {
     }
     if (stopped) text += " (Stopped before the end.)";
     if (!SdSources_HaveDos(&src) && !SdSources_HaveAmiga(&src))
-      text += " The game needs the PC version's folder or both Amiga disks.";
+      text += " The game needs the PC game or the Amiga version.";
     else if (src.adf1[0] != 0 && src.adf2[0] == 0)
       text += " Disk 2 of the Amiga version is still missing.";
     else if (src.adf2[0] != 0 && src.adf1[0] == 0)
@@ -587,8 +788,9 @@ struct App {
 
     auto job = std::make_shared<SdJob>();
     std::memset(job.get(), 0, sizeof *job);
-    job->src = src;
-    job->src.disk1 = job->src.disk2 = nullptr;
+    job->src = Usable();
+    job->src.disk1 = job->src.disk2 = job->src.hdfDisk = nullptr;
+    job->src.lhaArc = nullptr;
     std::snprintf(job->outDir, sizeof job->outDir, "%s", outDir.c_str());
     std::snprintf(job->resDir, sizeof job->resDir, "%s", resDir.c_str());
     job->log = PipeLog;
@@ -622,10 +824,6 @@ struct App {
       Log("failed: " + err);
       exitCode = 1;
     }
-    if (autoRun && rc == 0 && !drawer.empty()) {
-      FillDrawer();  // AutoFinished runs when it has
-      return;
-    }
     AutoFinished();
   }
 
@@ -650,29 +848,321 @@ struct App {
     }
   }
 
-  // ------------------------------------------------------- amiga drawer ---
+  // ------------------------------------------------------------- amiga ---
 
-  void FillDrawer() {
-    if (busy || drawer.empty()) return;
+  // Where the program is: the setup's own copy (amiga/ beside setup/, from
+  // SWOS-Amiga.zip), else SWOS-Amiga.zip itself -- named, or found beside this
+  // program, in a dist/ above it (a developer's tree) or in Downloads. A folder may be
+  // the one that holds SWOS.info and the SWOS drawer, or the drawer itself; a file in
+  // the drawer stands for the drawer.
+  static std::string Lower(std::string t) {
+    for (char& c : t) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return t;
+  }
+  static bool EndsWith(const std::string& t, const char* end) {
+    const size_t n = std::strlen(end);
+    return t.size() >= n && Lower(t.substr(t.size() - n)) == end;
+  }
+
+  static std::string ProgramRoot(const std::string& path) {
+    if (path.empty()) return {};
+    if (sd::IsFile(path)) {
+      if (EndsWith(path, ".zip")) {
+        char dir[1100];
+        return SdSources_UnpackAmigaProgram(path.c_str(), dir, sizeof dir) == 0 ? std::string(dir) : std::string();
+      }
+      return ProgramRoot(sd::ParentDir(path));
+    }
+    if (sd::IsFile(Join(path, "SWOS/SWOS2"))) return path;
+    if (sd::IsFile(Join(path, "SWOS2"))) return sd::ParentDir(path);
+    return {};
+  }
+
+  static bool ProgramZip(const std::string& path) {
+    const std::string name = Lower(path.substr(path.find_last_of("/\\") + 1));
+    return name.rfind("swos-amiga", 0) == 0 && EndsWith(name, ".zip");
+  }
+
+  // SWOS-Amiga.zip where a player or a developer has it: the newest in Downloads.
+  std::string FindProgramZip() const {
+    for (std::string d = exeDir; !d.empty();) {
+      for (const char* rel : {"SWOS-Amiga.zip", "dist/SWOS-Amiga.zip"})
+        if (sd::IsFile(Join(d, rel))) return Join(d, rel);
+      const std::string up = sd::ParentDir(d);
+      if (up == d) break;
+      d = up;
+    }
+    std::string best;
+    int64_t newest = 0;
+    const std::string dl = sd::DownloadsDir();
+    if (!dl.empty())
+      for (const sd::DirEntry& e : sd::ListDir(dl))
+        if (!e.dir && ProgramZip(e.path) && (best.empty() || e.mtime > newest)) {
+          best = e.path;
+          newest = e.mtime;
+        }
+    return best;
+  }
+
+  bool TakeProgram(const std::string& from) {
+    const std::string root = ProgramRoot(from);
+    if (root.empty()) return false;
+    amigaProgram = root;
+    programFrom = from;
+    return true;
+  }
+
+  void FindProgram(const std::string& given) {
+    ownProgram = !given.empty();
+    if (ownProgram) {
+      TakeProgram(given);
+      return;
+    }
+    if (!resDir.empty() && TakeProgram(Join(resDir, "amiga"))) {
+      programFrom.clear();   // the setup's own: nothing to say
+      return;
+    }
+    ownProgram = true;
+    const std::string zip = FindProgramZip();
+    if (!zip.empty()) TakeProgram(zip);
+  }
+
+  void ChooseProgram() {
+    const std::string picked = PickFile("SWOS-Amiga.zip, or SWOS.info in its drawer", "zip,info");
+    if (picked.empty()) return;
+    if (!TakeProgram(picked)) {
+      w().set_amiga_error(true);
+      w().set_amiga_status(Str(Shown(picked) + " is not the Amiga program: choose SWOS-Amiga.zip."));
+      return;
+    }
+    ownProgram = true;
+    w().set_amiga_error(false);
+    RefreshPlan();
+  }
+
+  void ChangeAmigaDest() {
+    if (w().get_amiga_kind() == 0) {
+      const std::string dir = PickFolder(drawerTo);
+      if (!dir.empty()) drawerTo = dir;
+    } else {
+      const std::string file =
+          PickSaveFile("LhA archive", "lha", sd::ParentDir(whdloadTo), "OpenSWOSAGA-WHDL.lha");
+      if (!file.empty()) whdloadTo = file;
+    }
+    AmigaKindChanged();
+  }
+
+  void AmigaKindChanged() {
+    w().set_amiga_done(false);
+    w().set_amiga_error(false);
+    w().set_amiga_progress(0.0f);
+    RefreshPlan();
+  }
+
+  // The install (what the sources allow), then the drawer or the package, on the worker.
+  void MakeAmiga() {
+    if (busy || !w().get_can_make_amiga()) return;
     if (worker.joinable()) worker.join();
+    const bool kindDrawer = w().get_amiga_kind() == 0;
     SetBusy(true);
-    w().set_drawer_status(Str("Copying..."));
-    w().set_drawer_error(false);
-    const std::string assets = outDir, dir = drawer;
-    worker = std::thread([this, assets, dir] {
+    amigaRun = true;
+    w().set_amiga_done(false);
+    w().set_amiga_error(false);
+    w().set_amiga_progress(0.0f);
+    w().set_amiga_status(Str("Installing the game's data to " + Shown(outDir) + " ..."));
+    log->clear();
+
+    auto job = std::make_shared<SdJob>();
+    std::memset(job.get(), 0, sizeof *job);
+    job->src = Usable();
+    job->src.disk1 = job->src.disk2 = job->src.hdfDisk = nullptr;
+    job->src.lhaArc = nullptr;
+    std::snprintf(job->outDir, sizeof job->outDir, "%s", outDir.c_str());
+    std::snprintf(job->resDir, sizeof job->resDir, "%s", resDir.c_str());
+    job->log = PipeLog;
+    job->progress = PipeProgress;
+    job->user = &pipe;
+    SdStepInfo info[SD_STEP_COUNT];
+    SwosData_Plan(job.get(), info);
+    bool any = false;
+    for (int i = 0; i < SD_STEP_COUNT; i++) any = any || info[i].ready;
+
+    const std::string program = amigaProgram, dest = kindDrawer ? drawerTo : whdloadTo,
+                      assets = outDir, res = resDir;
+    worker = std::thread([this, job, any, kindDrawer, program, dest, assets, res] {
       char err[256] = {0};
-      const int32_t rc = SwosData_FillAmigaDrawer(assets.c_str(), dir.c_str(), PipeLog, &pipe, err);
+      int32_t rc = any ? SwosData_Run(job.get(), err) : 0;
+      SdSources_Close(&job->src);
+      if (rc == 0) {
+        PipeLog(&pipe, kindDrawer ? "Making the drawer..." : "Making the WHDLoad package...");
+        rc = kindDrawer
+                 ? SwosData_MakeAmigaDrawer(assets.c_str(), program.c_str(), dest.c_str(), PipeLog, &pipe, err)
+                 : SwosData_MakeWhdload(assets.c_str(), Join(program, "SWOS").c_str(), res.c_str(), dest.c_str(),
+                                        PipeLog, &pipe, err);
+      }
       const std::string msg(err);
-      slint::invoke_from_event_loop([this, rc, msg] {
+      slint::invoke_from_event_loop([this, rc, msg, kindDrawer, dest] {
         Flush();
+        amigaRun = false;
         SetBusy(false);
-        w().set_drawer_error(rc != 0);
-        w().set_drawer_status(rc == 0 ? Str("Done: the drawer has the game's data. Copy it to the Amiga.")
-                                      : Str("Failed: " + msg));
-        if (rc != 0) exitCode = 1;
+        SwosData_Installed(outDir.c_str(), installed);
+        w().set_amiga_done(rc == 0);
+        w().set_amiga_error(rc != 0);
+        w().set_amiga_progress(rc == 0 ? 1.0f : 0.0f);
+        if (rc == 0)
+          w().set_amiga_status(Str(kindDrawer
+              ? "Done: the SWOS drawer is in " + Shown(dest) + ". Copy it, with SWOS.info, to your Amiga and double-click SWOS."
+              : "Done: " + Shown(dest) + ". Unpack it on your Amiga (lha x OpenSWOSAGA-WHDL.lha) and double-click OpenSWOSAGA-NE."));
+        else {
+          w().set_amiga_status(Str("Failed: " + msg));
+          Log("failed: " + msg);
+        }
+        exitCode = rc == 0 ? 0 : 1;
+        CheckInstalled();
+        RefreshPlan();
         AutoFinished();
       });
     });
+  }
+
+  void OpenAmigaDest() {
+    const std::string dest = w().get_amiga_kind() == 0 ? drawerTo : sd::ParentDir(whdloadTo);
+    if (!dest.empty()) sd::OpenUrl(dest);
+  }
+
+  // ---------------------------------------------------------- downloads ---
+
+  // The Downloads folder, looked at every two seconds: a file that has stopped
+  // growing and was not looked at before is tried as a source, so what the player
+  // downloads from the links shows up as found. Browsers name a download in
+  // progress something else (.crdownload, .part), which is never a source. GOG's
+  // install folder is looked up the same way until the PC game is found.
+  std::string downloads;
+  std::map<std::string, std::pair<uint64_t, int64_t>> seen, growing;
+  bool gogInstaller = false;   // GOG's installer for the PC game is in Downloads
+  slint::Timer watchTimer;
+
+  static bool Candidate(const sd::DirEntry& e) {
+    const std::string name = Lower(e.path.substr(e.path.find_last_of("/\\") + 1));
+    if (e.dir) return name.find("sensible") != std::string::npos || name.find("swos") != std::string::npos;
+    const size_t dot = name.rfind('.');
+    if (dot == std::string::npos) return false;
+    const std::string ext = name.substr(dot + 1);
+    // An archive or a hard disk image only when it is named for the game: a Downloads
+    // folder is full of other Amiga downloads, and a .zip is unpacked to be looked in.
+    const bool named = name.find("sensible") != std::string::npos || name.find("swos") != std::string::npos;
+    if (ext == "hdf" || ext == "lha" || ext == "zip") return named;
+    if (ext == "adf") return true;   // its volume name says what it is
+    // The cartridge is 2 MB: a CD image named .bin is not read through.
+    return (ext == "jag" || ext == "j64" || ext == "rom" || ext == "bin") && e.size <= 8u * 1024 * 1024;
+  }
+
+  // GOG's offline installer: it has to be run before there is a folder to find.
+  static bool GogInstaller(const std::string& path) {
+    const std::string name = Lower(path.substr(path.find_last_of("/\\") + 1));
+    return name.find("sensible_world_of_soccer") != std::string::npos &&
+           (name.size() > 4 && (name.compare(name.size() - 4, 4, ".exe") == 0 ||
+                                name.compare(name.size() - 4, 4, ".pkg") == 0 ||
+                                name.compare(name.size() - 3, 3, ".sh") == 0));
+  }
+
+  // One more source found by the watcher: the PC game, the Jaguar and SWOS 2020 only
+  // where none is set, the Amiga version when it is better than the one there.
+  std::string Offer(const std::string& path) {
+    const SdSources before = src;
+    SdSources found{};
+    if (SdSources_AddFile(&found, path.c_str()) != 0) return {};
+    auto take = [](char* to, const char* from) { std::snprintf(to, 1024, "%s", from); };
+    std::string what;
+    if (found.dosDir[0] && !src.dosDir[0]) { take(src.dosDir, found.dosDir); unusable[ROW_PC].clear(); what = "the PC game"; }
+    if (found.jagRom[0] && !src.jagRom[0]) { take(src.jagRom, found.jagRom); unusable[ROW_JAG].clear(); what = "the Jaguar cartridge"; }
+    if (found.s2020Dir[0] && !src.s2020Dir[0]) { take(src.s2020Dir, found.s2020Dir); unusable[ROW_2020].clear(); what = "SWOS 2020"; }
+    if (found.adf1[0] || found.adf2[0] || found.hdf[0] || found.lha[0]) {
+      // The library's own rule picks the better of the two Amiga versions.
+      SdSources_AddFile(&src, path.c_str());
+      if (std::strcmp(before.adf1, src.adf1) || std::strcmp(before.adf2, src.adf2) ||
+          std::strcmp(before.hdf, src.hdf) || std::strcmp(before.lha, src.lha)) {
+        UpdateSeason();
+        if (amigaSeason.empty() && SdSources_HaveAmiga(&src)) {
+          // Damaged, or not the release: said, and the one there before kept.
+          const std::string why = amigaProblem;
+          std::memcpy(src.adf1, before.adf1, sizeof src.adf1);
+          std::memcpy(src.adf2, before.adf2, sizeof src.adf2);
+          std::memcpy(src.hdf, before.hdf, sizeof src.hdf);
+          std::memcpy(src.lha, before.lha, sizeof src.lha);
+          std::memcpy(src.hdfDir, before.hdfDir, sizeof src.hdfDir);
+          std::memcpy(src.lhaDir, before.lhaDir, sizeof src.lhaDir);
+          src.hdfVolume = before.hdfVolume;
+          // A lone disk that this one made a pair with is of the same unusable release.
+          if (!SdSources_HaveAmiga(&src) && (found.adf1[0] || found.adf2[0])) ClearAmiga();
+          UpdateSeason();
+          return "a copy of the Amiga version that cannot be used (" + why + ")";
+        }
+        unusable[ROW_AMIGA].clear();
+        what = "the Amiga version";
+      }
+    }
+    return what;
+  }
+
+  void Watch(bool first) {
+    if (busy) return;
+    std::string found;
+    auto note = [&found](const std::string& what, const std::string& where) {
+      if (!what.empty()) found = "Found " + what + " in " + Shown(where) + ".";
+    };
+    if (!src.dosDir[0])
+      for (const std::string& dir : sd::GogInstallDirs()) {
+        const std::string key = "gog:" + dir;
+        if (seen.count(key)) continue;
+        seen[key] = {0, 0};
+        note(Offer(dir), dir);
+      }
+    if (!downloads.empty()) {
+      for (const sd::DirEntry& e : sd::ListDir(downloads)) {
+        if (GogInstaller(e.path)) {
+          if (!gogInstaller) {
+            gogInstaller = true;
+            RefreshRows();
+          }
+          continue;
+        }
+        if (ProgramZip(e.path) && amigaProgram.empty() && !e.dir) {
+          const std::pair<uint64_t, int64_t> stamp{e.size, e.mtime};
+          if (seen.count(e.path) && seen[e.path] == stamp) continue;
+          seen[e.path] = stamp;
+          if (TakeProgram(e.path)) found = "Found the Amiga program in " + Shown(e.path) + ".";
+          continue;
+        }
+        if (!Candidate(e)) continue;
+        const std::pair<uint64_t, int64_t> stamp{e.size, e.mtime};
+        auto s = seen.find(e.path);
+        if (s != seen.end() && s->second == stamp) continue;
+        // Still being written: wait for it to be the same twice running (not at start-up,
+        // where everything there has long stopped).
+        auto g = growing.find(e.path);
+        if (!first && (g == growing.end() || g->second != stamp)) {
+          growing[e.path] = stamp;
+          continue;
+        }
+        growing.erase(e.path);
+        seen[e.path] = stamp;
+        note(Offer(e.path), e.path);
+      }
+    }
+    if (!found.empty()) {
+      Notice(found, false);
+      Refresh();
+    }
+  }
+
+  void StartWatching() {
+    downloads = sd::DownloadsDir();
+    w().set_watching(Str(downloads.empty()
+        ? "What you download is not looked for (no Downloads folder): search the folder you saved it in."
+        : "Watching " + Shown(downloads) + ": what you download from the links above is found by itself."));
+    Watch(true);
+    watchTimer.start(slint::TimerMode::Repeated, std::chrono::seconds(2), [this] { Watch(false); });
   }
 
   // ------------------------------------------------------------ testing ---
@@ -708,14 +1198,21 @@ int Usage() {
   sd::AttachParentConsole();
   std::printf(
       "OpenSWOS Setup %s\n"
-      "usage: openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--drawer DIR]\n"
-      "  --res DIR    the game's own files (with setup/glyphs.txt); default: beside\n"
-      "               this program, else the nearest bin/ above it\n"
-      "  --scan DIR   look for the game's sources in DIR and every folder inside\n"
-      "               it (repeatable)\n"
-      "  --out DIR    the assets folder to write (default: the one the game reads)\n"
-      "  --drawer DIR an unpacked SWOS-Amiga.zip drawer to add the game data to\n"
-      "testing: --auto (install, then fill --drawer)  --snapshot PREFIX  --quit  --play\n",
+      "usage: openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--amiga]\n"
+      "                      [--program DIR] [--drawer-to DIR | --whdload-to FILE]\n"
+      "  --res DIR         the game's own files (with setup/glyphs.txt); default: beside\n"
+      "                    this program, else the nearest bin/ above it\n"
+      "  --scan DIR        look for the game's sources in DIR and every folder inside\n"
+      "                    it (repeatable)\n"
+      "  --out DIR         the assets folder to write (default: the one the game reads)\n"
+      "  --amiga           open on the Amiga tab\n"
+      "  --program DIR     the Amiga program: an unpacked SWOS-Amiga.zip (default: the\n"
+      "                    setup's own amiga/ folder)\n"
+      "  --drawer-to DIR   make the SWOS drawer in DIR (the Amiga tab)\n"
+      "  --whdload-to FILE make the WHDLoad package FILE (the Amiga tab)\n"
+      "testing: --auto (press the tab's button)  --snapshot PREFIX  --quit  --play\n"
+      "         --snapshot-at MS (when the -start snapshot is taken; 1200)\n"
+      "         --no-watch (leave the Downloads folder alone)  --details\n",
       SD_VERSION);
   std::fflush(stdout);
   return 2;
@@ -727,7 +1224,9 @@ int main(int argc, char** argv) {
   App app;
   app.exeDir = sd::ExeDir();
   std::vector<std::string> scans;
-  std::string resArg, outArg;
+  std::string resArg, outArg, programArg, drawerArg, whdloadArg;
+  bool amigaTab = false, watch = true, details = false;
+  int snapshotAt = 1200;
 
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
@@ -738,13 +1237,22 @@ int main(int argc, char** argv) {
       app.quitAfter = true;
     } else if (a == "--play") {
       app.autoPlay = true;
+    } else if (a == "--amiga") {
+      amigaTab = true;
+    } else if (a == "--no-watch") {
+      watch = false;
+    } else if (a == "--details") {
+      details = true;
     } else if (a == "--help" || a == "-h") {
       Usage();
       return 0;
-    } else if ((a == "--res" || a == "--scan" || a == "--out" || a == "--snapshot" ||
-                a == "--drawer") && v) {
+    } else if ((a == "--res" || a == "--scan" || a == "--out" || a == "--snapshot" || a == "--program" ||
+                a == "--drawer-to" || a == "--whdload-to" || a == "--snapshot-at") && v) {
       if (a == "--res") resArg = v;
-      else if (a == "--drawer") app.drawer = v;
+      else if (a == "--snapshot-at") snapshotAt = std::atoi(v);
+      else if (a == "--program") programArg = v;
+      else if (a == "--drawer-to") drawerArg = v;
+      else if (a == "--whdload-to") whdloadArg = v;
       else if (a == "--scan") scans.emplace_back(v);
       else if (a == "--out") outArg = v;
       else app.snapshot = v;
@@ -760,6 +1268,13 @@ int main(int argc, char** argv) {
   app.defaultOutDir = def;
   app.outDir = !outArg.empty() ? outArg : app.defaultOutDir;
 
+  // The Amiga outputs go to the Downloads folder unless told otherwise: the player
+  // copies them to the Amiga from there.
+  const std::string dl = sd::DownloadsDir();
+  const std::string base = !dl.empty() ? dl : app.exeDir;
+  app.drawerTo = !drawerArg.empty() ? drawerArg : Join(base, "OpenSWOS-Amiga");
+  app.whdloadTo = !whdloadArg.empty() ? whdloadArg : Join(base, "OpenSWOSAGA-WHDL.lha");
+
   // Wayland matches this against a .desktop file for the icon; X11 and
   // Windows/macOS use the Window's own icon.
   slint::set_xdg_app_id("openswos-setup");
@@ -768,9 +1283,13 @@ int main(int argc, char** argv) {
   app.ui = &ui;
   app.pipe.flush = [&app] { app.Flush(); };
   ui->set_log(app.log);
+  ui->set_tab(amigaTab ? 1 : 0);
+  ui->set_show_details(details);
+  if (!whdloadArg.empty()) ui->set_amiga_kind(1);
 #ifndef SD_WITH_DIALOGS
   ui->set_can_pick(false);
 #endif
+  app.FindProgram(programArg);
 
   for (const auto& s : scans) SdSources_Scan(&app.src, s.c_str());
   // What the last install was made from (ASSETS.ini), where --scan found nothing.
@@ -787,6 +1306,8 @@ int main(int argc, char** argv) {
   // What an earlier run left: Play is there at once if the game can be played.
   app.CheckInstalled();
   app.RefreshPlan();
+  if (watch) app.StartWatching();
+  else ui->set_watching("");
 
   ui->on_choose_folder([&app] {
     const std::string dir = PickFolder({});
@@ -808,14 +1329,11 @@ int main(int argc, char** argv) {
   ui->on_install([&app] { app.Install(); });
   ui->on_play([&app] { app.Play(); });
   ui->on_open_url([](const slint::SharedString& url) { sd::OpenUrl(std::string(url)); });
-  ui->on_browse_drawer([&app] {
-    const std::string dir = PickFolder(app.drawer);
-    if (dir.empty()) return;
-    app.drawer = dir;
-    app.w().set_drawer_status("");
-    app.Refresh();
-  });
-  ui->on_fill_drawer([&app] { app.FillDrawer(); });
+  ui->on_change_amiga_dest([&app] { app.ChangeAmigaDest(); });
+  ui->on_choose_amiga_program([&app] { app.ChooseProgram(); });
+  ui->on_make_amiga([&app] { app.MakeAmiga(); });
+  ui->on_amiga_kind_changed([&app] { app.AmigaKindChanged(); });
+  ui->on_open_amiga_dest([&app] { app.OpenAmigaDest(); });
 
   // Windows only: the title-bar icon from the resource, once the window exists.
   slint::Timer icon_timer;
@@ -826,10 +1344,13 @@ int main(int argc, char** argv) {
                    });
 
   if (!app.snapshot.empty())
-    slint::Timer::single_shot(std::chrono::milliseconds(1200),
+    slint::Timer::single_shot(std::chrono::milliseconds(snapshotAt),
                               [&app] { app.Snapshot(app.snapshot + "-start.ppm"); });
   if (app.autoRun)
-    slint::Timer::single_shot(std::chrono::milliseconds(1500), [&app] { app.Install(); });
+    slint::Timer::single_shot(std::chrono::milliseconds(1500), [&app] {
+      if (app.w().get_tab() == 1) app.MakeAmiga();
+      else app.Install();
+    });
 
   ui->run();
 
