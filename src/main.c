@@ -1245,6 +1245,14 @@ int main(int argc, char **argv)
             SDL_DisplayMode dm;
             dw = 16; dh = 9;   /* 16:9 fallback if the query fails */
             if (SDL_GetDesktopDisplayMode(opts.screen, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
+#if defined(SWOS_WASM_BUILD)
+            /* The browser on a phone: the page usually loads with the phone UPRIGHT, and
+             * the width is decided once, here -- so it came out narrower than the Amiga's,
+             * clamped to 336x272, and stayed 4:3 after the phone was turned to play.
+             * Played in landscape, so take the screen that way round whichever way it is
+             * held now; upright, the wider picture is letterboxed above the controls. */
+            if (dh > dw) { int t = dw; dw = dh; dh = t; }
+#endif
         }
         /* The DOS view is 200 lines, so its widescreen width is 200 * the display
          * shape -- about 356 on 16:9 -- not 272 * it. Same rule as the Amiga view,
