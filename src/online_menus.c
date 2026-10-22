@@ -661,6 +661,7 @@ static void hostGameMessageMenu_button2_OnSelect(void)   /* REFUSE */
  * the lobby (mpGameSetupMenu below) sets the match up and the match is played. */
 
 static char s_matchStatus[64];
+static char s_matchPeer[MM_NAME_MAX];   /* the opponent, for the status when the link falls back to the relay */
 static int32_t s_matchPlayer;      /* 1 = we created the game, 2 = we joined */
 static char    s_myName[MM_NAME_MAX];
 
@@ -713,6 +714,7 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
             list[0] = addrs[0];
             n = 1;
             P2PLink_SetRelay(st->relayToken, st->playerNumber);
+            P2PLink_SetRelayFallback(0, 0, NULL);
         } else {
 #ifdef SWOS_WASM_BUILD
             /* A browser reaches nothing but the server (its datagrams are WebSocket
@@ -734,8 +736,12 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
             /* Not relayed -- but the link still needs to know which player it is: with
              * several candidate addresses the two sides settle on player 1's path. */
             P2PLink_SetRelay(0, st->playerNumber);
+            /* And if the server made a session to fall back to (RELAYFB:), the link
+             * moves to it when the direct punch gets no round trip (p2p_link.c). */
+            P2PLink_SetRelayFallback(st->relayFallbackToken, st->playerNumber, st->serverAddr);
         }
         snprintf(peerName, sizeof peerName, "%s", st->peerName);
+        snprintf(s_matchPeer, sizeof s_matchPeer, "%s", st->peerName);
         P2PLink_SetServer(st->serverAddr);  /* the lobby asks it about the two teams (team_proto.h) */
 
         /* The lobby is done with; from here the two of us talk directly. */
@@ -793,6 +799,11 @@ static void mpWaitingMenu_OnDraw(void)
     }
     case P2P_HOSTING:
     case P2P_JOINING:
+        /* The direct punch failed and the link moved to the server (p2p_link.c,
+         * relay_fallback): say so, rather than the route count it gave up on. */
+        if (P2PLink_FellBackToRelay() && !strstr(s_matchStatus, "VIA THE SERVER"))
+            snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s VIA THE SERVER",
+                     s_matchPeer);
         snprintf(s_waitLine, sizeof s_waitLine, "%s", s_matchStatus);
         break;
     case P2P_FAILED: {

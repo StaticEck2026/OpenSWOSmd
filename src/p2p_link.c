@@ -88,6 +88,7 @@ enum {
     kPingWarmupMs    = 100,     /* until kDelaySamples round trips are in */
     kDelaySamples    = 4,       /* round trips averaged before the delay is proposed */
     kJoinTimeoutMs   = 15000,   /* no answer at all: wrong address, port or firewall */
+    kRelayFallbackMs = 5000,    /* no round trip direct by now: play through the server */
     kQuietTimeoutMs  = 6000,    /* connected, then nothing heard */
     kMaxReadsPerPoll = 32,      /* a frame's worth; the rest waits for the next poll */
     kJoinPortTries   = 10,      /* two peers on one machine need different local ports */
@@ -191,6 +192,13 @@ typedef struct {
     uint64_t           relayToken;      /* 0 = direct */
     int32_t            relayPlayer;
     int32_t            relayAcked;      /* the server has answered RELAY_OK */
+    /* The relay as a FALLBACK (P2PLink_SetRelayFallback): a session the server made in
+     * case the direct punch fails. Disarmed (token 0) once a round trip works direct;
+     * `fbUsed` once the link has moved to it. The session's, like the relay's. */
+    uint64_t           fbToken;
+    int32_t            fbPlayer;
+    struct sockaddr_in fbServer;
+    int32_t            fbUsed;
     /* 1 or 2 when punching to several candidates, 0 when unknown: which side settles
      * the path (see the CONNECTED case of handle_packet). */
     int32_t            punchPlayer;
@@ -931,6 +939,7 @@ static void relay_register(P2PLink *l)
     c.player = (uint8_t)l->relayPlayer;
     c.token  = l->relayToken;
     Relay_WriteControl(buf, &c);
+    /* candidates[0] is the server: a relayed match punches to nothing else. */
     if (Netem_LinkSend(l->sock, (const char *)buf, (int)sizeof buf, 0,
                        (const struct sockaddr *)&l->candidates[0], (int)sizeof l->candidates[0]))
         sendto(l->sock, (const char *)buf, sizeof buf, 0,
@@ -1158,6 +1167,12 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
                 l->pingMs = (l->pingMs * 3 + rtt) / 4;
             }
             l->pingSamples++;
+            if (l->fbToken && !l->fbUsed) {
+                l->fbToken = 0;     /* both ways, direct: the server's session is not needed */
+                if (link_log_on())
+                    fprintf(stderr, "[p2p] direct both ways (%d ms): the relay fallback is not needed\n",
+                            (int)rtt);
+            }
         } else if (type == PKT_DELAY && len >= kDelayLen) {
             int32_t theirs = buf[8];
             if (theirs > kDelayMax)
@@ -1185,6 +1200,46 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
     }
 }
 
+/* THE RELAY AS A FALLBACK. Direct play needs packets to get through BOTH ways, and two
+ * NATs do not always allow it: a VPN exit drops what it did not ask for, and a router
+ * that gives every destination its own port (UMTYTM's, 2026-10-22: 55863 inside,
+ * 40244 out) can let the other side's packets in while its own never arrive -- a link
+ * one way only, where one game thinks it is connected and the other waits. So the test
+ * is a ROUND TRIP: a link that has not measured one by kRelayFallbackMs, connected or
+ * not, starts again through the server -- from the same socket, to the server alone,
+ * registering with the session's token -- and from there it is a relayed match like
+ * any other (include/relay_proto.h). Both sides of a failed or one-way link have no
+ * round trip, so both move; a link that works both ways has one within a second. */
+static void relay_fallback(P2PLink *l, uint32_t now)
+{
+    char buf[64];
+    if (link_log_on())
+        fprintf(stderr, "[p2p] no round trip direct after %u ms (%s): playing through the "
+                        "server, %s\n", (unsigned)(now - l->openedMs),
+                l->state == P2P_CONNECTED ? "packets get through one way only" : "nothing got through",
+                addr_text(&l->fbServer, buf, sizeof buf));
+    fprintf(stderr, "[p2p] direct connection failed: playing through the server\n");
+    blob_free(l);
+    l->fbUsed        = 1;
+    l->relayToken    = l->fbToken;
+    l->relayPlayer   = l->fbPlayer;
+    l->relayAcked    = 0;
+    l->candidates[0] = l->fbServer;
+    l->numCandidates = 1;
+    l->state         = P2P_JOINING;
+    l->hasPeer       = 0;
+    l->pingMs        = -1;
+    l->pingSamples   = 0;
+    l->jitterMs      = 0;
+    l->delayLocal    = l->delayPeer = -1;
+    l->heardAnything = 0;
+    l->heardSources  = 0;
+    l->peerText[0]   = '\0';
+    memset(&l->peer, 0, sizeof l->peer);
+    l->openedMs = l->lastHeardMs = now;       /* a fresh join timeout for the relay */
+    punch_send(l);
+}
+
 static void link_poll(P2PLink *l, uint32_t now)
 {
     if (l->sock < 0)
@@ -1205,6 +1260,19 @@ static void link_poll(P2PLink *l, uint32_t now)
             if (errno == ECONNRESET || errno == ECONNREFUSED)
                 continue;
             break;
+        }
+        /* SWOS_P2P_TEST_BLOCK_DIRECT=1: a router that lets nothing in from the other
+         * player -- only the server gets through. On both players, a pair that cannot
+         * punch at all; on one, a link that works one way only. How the relay fallback
+         * is tested (relay_fallback; RELAY=0 HOST_ENV=... scripts/relay_test.sh). */
+        {
+            static int32_t block = -1;
+            if (block < 0)
+                block = getenv("SWOS_P2P_TEST_BLOCK_DIRECT") != NULL;
+            if (block && from.sin_family == AF_INET &&
+                !(l->haveServer && from.sin_addr.s_addr == l->server.sin_addr.s_addr &&
+                  from.sin_port == l->server.sin_port))
+                continue;
         }
         /* The matchmaking server's answer to an AskServer: kept for whoever asked. Only
          * from the server's own address, and only a datagram that is not one of ours
@@ -1250,6 +1318,11 @@ static void link_poll(P2PLink *l, uint32_t now)
         if (l->sock < 0)
             break;                      /* the packet ended the link */
     }
+
+    if (l->fbToken && !l->fbUsed && l->pingSamples == 0 &&
+        (l->state == P2P_JOINING || l->state == P2P_CONNECTED) &&
+        now - l->openedMs >= (uint32_t)kRelayFallbackMs)
+        relay_fallback(l, now);
 
     if (l->state == P2P_JOINING) {
         if (now - l->openedMs >= (uint32_t)l->joinTimeoutMs) {
@@ -1470,6 +1543,34 @@ void P2PLink_SetRelay(uint64_t token, int32_t player)
 
 uint64_t P2PLink_RelayToken(void) { return s_link.relayToken; }
 
+void P2PLink_SetRelayFallback(uint64_t token, int32_t player, const char *server)
+{
+    char text[64], *colon;
+    struct in_addr host;
+    uint16_t port = 0;
+
+    s_link.fbToken = 0;
+    s_link.fbUsed  = 0;
+    if (!token || !server || !server[0])
+        return;
+    snprintf(text, sizeof text, "%s", server);
+    colon = strchr(text, ':');
+    if (colon) {
+        *colon = '\0';
+        port = (uint16_t)atoi(colon + 1);
+    }
+    if (!port || inet_pton(AF_INET, text, &host) != 1)
+        return;
+    memset(&s_link.fbServer, 0, sizeof s_link.fbServer);
+    s_link.fbServer.sin_family = AF_INET;
+    s_link.fbServer.sin_addr   = host;
+    s_link.fbServer.sin_port   = htons(port);
+    s_link.fbToken  = token;
+    s_link.fbPlayer = player;
+}
+
+int32_t P2PLink_FellBackToRelay(void) { return s_link.fbUsed; }
+
 void P2PLink_SetServer(const char *address)
 {
     char text[64];
@@ -1527,12 +1628,14 @@ int32_t P2PLink_Host(uint16_t port)
 {
     P2PLink_SetServer(NULL);
     P2PLink_SetRelay(0, 0);
+    P2PLink_SetRelayFallback(0, 0, NULL);
     return link_host(&s_link, port);
 }
 int32_t P2PLink_Join(const char *address, uint16_t port)
 {
     P2PLink_SetServer(NULL);
     P2PLink_SetRelay(0, 0);
+    P2PLink_SetRelayFallback(0, 0, NULL);
     return link_join(&s_link, address, port, NULL);
 }
 void    P2PLink_Poll(void)                             { link_poll(&s_link, now_ms()); }
@@ -2009,6 +2112,9 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
 }
 void           P2PLink_SetRelay(uint64_t token, int32_t player) { (void)token; (void)player; }
 uint64_t       P2PLink_RelayToken(void) { return 0; }
+void           P2PLink_SetRelayFallback(uint64_t token, int32_t player, const char *server)
+               { (void)token; (void)player; (void)server; }
+int32_t        P2PLink_FellBackToRelay(void) { return 0; }
 void           P2PLink_SetServer(const char *address) { (void)address; }
 int32_t        P2PLink_HasServer(void) { return 0; }
 int32_t        P2PLink_AskServer(const uint8_t *data, int32_t len) { (void)data; (void)len; return 1; }

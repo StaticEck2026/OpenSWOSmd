@@ -127,6 +127,7 @@ uint16_t MmClient_DefaultPort(void)
 #define H_USERMESSAGE   "USERMESSAGE:"
 #define H_READY         "READY:"
 #define H_RELAY         "RELAY:"        /* ours, not upstream's: include/relay_proto.h */
+#define H_RELAYFB       "RELAYFB:"      /* ours: the relay if the direct punch fails */
 
 /* How long to wait for the server to complete the ENET connection. The server is
  * usually on this machine; a human needs to see "no answer" rather than a menu
@@ -163,6 +164,10 @@ typedef struct {
     uint64_t    relayToken;
     int32_t     relayPlayer;
     int32_t     haveRelay;
+    /* RELAYFB:, the same for a session to fall back to if punching fails. */
+    uint64_t    relayFbToken;
+    int32_t     relayFbPlayer;
+    int32_t     haveRelayFb;
 } MmClient;
 
 static MmClient s_mm;
@@ -495,13 +500,16 @@ static void parse_start(const char *p, size_t len)
         st.relayToken = s_mm.relayToken;
     }
     s_mm.haveRelay = 0;
+    if (s_mm.haveRelayFb && s_mm.relayFbPlayer == st.playerNumber && !st.relay)
+        st.relayFallbackToken = s_mm.relayFbToken;
+    s_mm.haveRelayFb = 0;
 
     s_mm.start = st;
     s_mm.haveStart = 1;
 }
 
-/* RELAY:<token as 16 hex digits>,<player> */
-static void parse_relay(const char *p, size_t len)
+/* RELAY:<token as 16 hex digits>,<player> -- and RELAYFB:, the same. 0 = parsed. */
+static int32_t parse_token_player(const char *p, size_t len, uint64_t *tokenOut, int32_t *playerOut)
 {
     const char *end = p + len;
     uint64_t token = 0;
@@ -513,14 +521,20 @@ static void parse_relay(const char *p, size_t len)
                   : (c >= 'a' && c <= 'f') ? c - 'a' + 10
                   : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
         if (v < 0 || digits >= 16)
-            return;
+            return 1;
         token = (token << 4) | (uint64_t)v;
     }
     if (p >= end || digits == 0 || token == 0)
-        return;
-    s_mm.relayToken  = token;
-    s_mm.relayPlayer = parse_int(p + 1, end);
-    s_mm.haveRelay   = 1;
+        return 1;
+    *tokenOut  = token;
+    *playerOut = parse_int(p + 1, end);
+    return 0;
+}
+
+static void parse_relay(const char *p, size_t len)
+{
+    if (parse_token_player(p, len, &s_mm.relayToken, &s_mm.relayPlayer) == 0)
+        s_mm.haveRelay = 1;
 }
 
 /* ---- the INFO message: our own candidate addresses ------------------------ */
@@ -599,6 +613,7 @@ static void reset_lobby(void)
     s_mm.removed = 0;
     s_mm.haveStart = 0;
     s_mm.haveRelay = 0;
+    s_mm.haveRelayFb = 0;
 }
 
 static void close_socket(void)
@@ -704,6 +719,11 @@ static void handle_packet(const char *data, size_t len)
     }
     if ((body = match_header(data, len, H_RELAY, &blen)) != NULL) {
         parse_relay(body, blen);
+        return;
+    }
+    if ((body = match_header(data, len, H_RELAYFB, &blen)) != NULL) {
+        if (parse_token_player(body, blen, &s_mm.relayFbToken, &s_mm.relayFbPlayer) == 0)
+            s_mm.haveRelayFb = 1;
         return;
     }
     if ((body = match_header(data, len, H_START, &blen)) != NULL) {

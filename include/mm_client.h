@@ -89,6 +89,9 @@ typedef struct {
     int32_t  relay;
     uint64_t relayToken;
     char     relayAddr[MM_ADDR_TEXT_MAX];
+    /* The relay as a FALLBACK (RELAYFB:): punch direct, and play through the server
+     * (`serverAddr`, below) only if that fails -- P2PLink_SetRelayFallback. 0 = none. */
+    uint64_t relayFallbackToken;
     /* The server itself, as we reached it ("a.b.c.d:port"), relayed or not: where the
      * lobby asks whether the two teams are canonical (include/team_proto.h). */
     char     serverAddr[MM_ADDR_TEXT_MAX];

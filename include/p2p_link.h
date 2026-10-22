@@ -92,6 +92,13 @@ int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16
 void           P2PLink_SetRelay(uint64_t token, int32_t player);
 /* The token of the relayed match in progress, or 0 when it is played direct. */
 uint64_t       P2PLink_RelayToken(void);
+/* The relay as a FALLBACK: the server made a session (`token`, as `player`) in case the
+ * direct punch fails, at `server` ("a.b.c.d:port"). Punching stays direct; a link with no
+ * round trip after a few seconds (none at all, or one way only) starts again through the
+ * server (p2p_link.c, relay_fallback). token 0 = none. Set before P2PLink_Punch. */
+void           P2PLink_SetRelayFallback(uint64_t token, int32_t player, const char *server);
+/* 1 once the link has moved to the fallback relay. */
+int32_t        P2PLink_FellBackToRelay(void);
 /* The matchmaking server that arranged this match ("a.b.c.d:port"; "" or NULL = none,
  * which the direct-IP entry points also set). The lobby asks it whether the two teams
  * are canonical (include/team_proto.h): AskServer sends one datagram to it from the

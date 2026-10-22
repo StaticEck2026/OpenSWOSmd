@@ -51,9 +51,12 @@ int main(int argc, char** argv)
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
                      "       [--reports DIR] [--websocket [--tls-cert FILE --tls-key FILE]]\n"
-                     "       [--teams FILE]\n"
+                     "       [--teams FILE] [--relay-fallback]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
+                     "  --relay-fallback  a pair whose direct connection fails plays through\n"
+                     "              this server (off by default: it costs the server their\n"
+                     "              traffic both ways)\n"
                      "  --netem     a misbehaving network in the middle of every relayed\n"
                      "              match: a profile (";
         int32_t count = 0;
@@ -81,7 +84,9 @@ int main(int argc, char** argv)
     };
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
-        if (a == "--relay") {
+        if (a == "--relay-fallback") {
+            relayOptions.fallback = true;
+        } else if (a == "--relay") {
             relayOptions.enabled = true;
         } else if (a == "--netem" && i + 1 < argc) {
             relayOptions.netem = argv[++i];

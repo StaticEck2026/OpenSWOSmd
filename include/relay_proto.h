@@ -56,6 +56,10 @@
  * and only to OpenSWOS clients (a stock SWOS 2020 client's parser throws on a
  * header it does not know). */
 #define RELAY_MM_HEADER    "RELAY:"
+/* The same for a session to FALL BACK to: the players punch direct and move to the
+ * relay only if that gets no round trip (p2p_link.c, relay_fallback). A header of its
+ * own, so a game that predates it skips it as unknown and plays as it always did. */
+#define RELAY_FALLBACK_MM_HEADER "RELAYFB:"
 
 typedef struct {
     uint8_t  type;

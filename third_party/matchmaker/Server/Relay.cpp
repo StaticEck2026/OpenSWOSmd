@@ -44,12 +44,15 @@ Relay::Relay(ENetHost* host, const RelayOptions& options, Ledger& ledger) :
     m_rng = (uint64_t(rd()) << 32) ^ rd() ^
             (uint64_t)std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
-    if (!m_options.enabled && !m_options.web)
+    if (!m_options.enabled && !m_options.web && !m_options.fallback)
         return;
     s_instance = this;
     m_host->intercept = &Relay::Intercept;
     std::cout << (m_options.enabled ? "[relay] on: OpenSWOS pairs play through this server"
-                                    : "[relay] on for browsers: a match with one in it plays through this server");
+                  : m_options.web ? "[relay] on for browsers: a match with one in it plays through this server"
+                                  : "[relay] on as a fallback only");
+    if (!m_options.enabled && m_options.fallback)
+        std::cout << "; a pair that cannot punch to each other plays through it";
     if (!m_options.netem.empty())
         std::cout << ", network emulation " << m_options.netem;
     std::cout << "\n";
@@ -78,9 +81,10 @@ std::string Relay::PickNetem()
 }
 
 uint64_t Relay::CreateSession(const std::string& name1, const ENetAddress& seen1,
-                              const std::string& name2, const ENetAddress& seen2, bool web)
+                              const std::string& name2, const ENetAddress& seen2, bool web,
+                              bool fallback)
 {
-    if (!m_options.enabled && !(web && m_options.web))
+    if (!m_options.enabled && !(web && m_options.web) && !(fallback && m_options.fallback))
         return 0;
 
     // xorshift64*, seeded from the device: a token is what stands between the
@@ -100,6 +104,7 @@ uint64_t Relay::CreateSession(const std::string& name1, const ENetAddress& seen1
     s->seen[1] = seen2;
     s->createdMs = s->lastMs = ServerTime::NowMs();
     s->createdAt = ServerTime::WallClock();
+    s->fallback = fallback;
 
     s->netemName = PickNetem();
     const NetemProfile* profile = NetemCore_FindProfile(s->netemName.c_str());
@@ -115,7 +120,9 @@ uint64_t Relay::CreateSession(const std::string& name1, const ENetAddress& seen1
     m_created++;
 
     std::cout << Tag() << Hex64(token) << " " << name1 << " vs " << name2
-              << ": session created, " << s->netemDesc << "\n";
+              << (fallback ? ": fallback session created (used only if they cannot punch), "
+                           : ": session created, ")
+              << s->netemDesc << "\n";
     m_sessions[token] = std::move(s);
     return token;
 }
@@ -226,7 +233,9 @@ void Relay::SendRaw(const ENetAddress& to, const uint8_t* data, size_t len)
 
 void Relay::Update()
 {
-    if (!m_options.enabled)
+    // Not "if relaying": a server that only relays browsers, or only as a fallback,
+    // has sessions too, and they have to be closed (they never were, before 2026-10-22).
+    if (m_sessions.empty())
         return;
     uint32_t now = ServerTime::NowMs();
     for (auto& entry : m_sessions)
@@ -251,6 +260,19 @@ void Relay::Update()
 
 void Relay::Close(Session& s, const char* why)
 {
+    // A fallback session nobody registered with: the players punched to each other, as
+    // most do. One line, and nothing in the ledger, which is for sessions that carried
+    // a match.
+    if (s.fallback && !s.ep[0].registered && !s.ep[1].registered)
+    {
+        std::cout << Tag() << Hex64(s.token) << " closed: not needed, "
+                  << s.names[0] << " and " << s.names[1] << " played direct\n";
+        for (int i = 0; i < 2; i++)
+            NetemCore_Free(&s.netem[i]);
+        m_sessions.erase(s.token);
+        return;
+    }
+
     uint32_t playedMs = s.linkedMs ? s.lastMs - s.linkedMs : 0;
     char summary[2][256];
     for (int i = 0; i < 2; i++)

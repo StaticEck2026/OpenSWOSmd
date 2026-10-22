@@ -26,6 +26,10 @@ struct RelayOptions
     bool enabled = false;       // --relay: OpenSWOS pairs play through the server
     bool web = false;           // --websocket: any match with a BROWSER in it does
                                 // (it can reach nothing but this server; WebGate.h)
+    bool fallback = false;      // --relay-fallback: a session for every other OpenSWOS pair
+                                // too, used only if their direct punch fails (RELAYFB:).
+                                // OFF by default: every such match costs the server its
+                                // bandwidth both ways (the owner's call, 2026-10-22)
     std::string netem;          // --netem: "", a profile name, or "cycle"
     uint32_t netemSeed = 0;     // --netem-seed: 0 = from the clock
 };
@@ -39,11 +43,15 @@ public:
 
     bool Enabled() const { return m_options.enabled; }
     bool ServesWeb() const { return m_options.web; }
+    bool Fallback() const { return m_options.fallback; }
 
     // At START. Returns the session's token, or 0 when this match is not relayed.
     // `web`: a browser is in it, which is relayed whenever the server serves browsers.
+    // `fallback`: a session the players move to only if they cannot punch to each other
+    // (RELAYFB:); one nobody used closes quietly, with no ledger line.
     uint64_t CreateSession(const std::string& name1, const ENetAddress& seen1,
-                           const std::string& name2, const ENetAddress& seen2, bool web = false);
+                           const std::string& name2, const ENetAddress& seen2, bool web = false,
+                           bool fallback = false);
 
     // Once per main-loop pass: send what the emulator has made due, and close
     // sessions nobody is using any more.
@@ -74,6 +82,7 @@ private:
         uint32_t linkedMs = 0;  // when both had registered
         uint64_t early = 0;     // arrived before the other side had registered
         std::string createdAt;  // wall clock, for the ledger
+        bool fallback = false;  // RELAYFB: only if the players' direct punch fails
     };
 
     int OnDatagram(const ENetAddress& from, const uint8_t* data, size_t len);

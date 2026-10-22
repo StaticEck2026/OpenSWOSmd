@@ -102,7 +102,10 @@ GAME"), half time and the final whistle each save the match so far to `LATEST.SR
 frames of a stream that was cut (docs/NETPLAY.md §7, "A match that does not end properly").
 The matchmaking server can also play a match THROUGH itself (`--relay`, docs/NETPLAY.md §7
 "The relay"): for testing, the browser build and NATs that will not punch — players stay peer
-to peer. `--netem <profile|cycle>` puts the game's own emulator (`src/netem_core.c`, shared) in
+to peer. `--relay-fallback` (OFF by default -- the bandwidth is the server's; the owner
+keeps the relay for browsers) gives every desktop pair a session (`RELAYFB:`), and a link
+with no round trip after 5 s moves to it (`p2p_link.c`, `relay_fallback`;
+`BLOCK=both|host|join RELAY=0 RECORD=1 scripts/relay_test.sh`). `--netem <profile|cycle>` puts the game's own emulator (`src/netem_core.c`, shared) in
 the middle, where it disturbs the lobby's link too, which the client-side one never does.
 `scripts/relay_test.sh` (`NETEM=wifi|awful|...`) plays two local players through it via the real
 menus; run it after touching `p2p_link`, the lobby's start, or the relay. `--record` makes the

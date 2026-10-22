@@ -17,6 +17,12 @@
 #   MM_HOST=us.swos.eu scripts/relay_test.sh  # through an EXISTING server, not one of ours
 #   REPORTS=1 RELAY=0 scripts/relay_test.sh   # the match reports (include/match_report.h):
 #                                             # each player zips both logs and sends it here
+#   RECORD=1 RELAY=0 BLOCK=both ...           # the RELAY FALLBACK: neither player lets the
+#                                             # other's packets in (SWOS_P2P_TEST_BLOCK_DIRECT),
+#                                             # so the direct punch fails and both must move to
+#                                             # the server's fallback session (RELAYFB:,
+#                                             # p2p_link.c relay_fallback); BLOCK=join or host:
+#                                             # one side only, a link that works one way
 #
 # MM_HOST=<name> [MM_PORT=19602] plays through a server someone else runs, so it tests a
 # DEPLOYMENT: the round trip to it and its relay. No server is started. What cannot be
@@ -71,6 +77,7 @@ FRAMES="${FRAMES:-300}"
 WAIT="${WAIT:-$((120 + MATCHES * 60))}"
 OUT="${OUT:-${TMPDIR:-/tmp}/swos-relay.$$}"
 RELAY="${RELAY:-1}"
+BLOCK="${BLOCK:-}"                      # both|host|join: the relay fallback (below)
 RECORD="${RECORD:-0}"
 REPORTS="${REPORTS:-0}"
 RECORD_MODE="${RECORD_MODE:-full}"
@@ -111,6 +118,7 @@ else
 
     SERVER_ARGS=()
     [ "$RELAY" = 1 ] && SERVER_ARGS+=(--relay ${NETEM:+--netem "$NETEM"} --netem-seed 7)
+    [ -n "$BLOCK" ] && SERVER_ARGS+=(--relay-fallback)     # off by default on a server
     [ "$RECORD" = 1 ] && SERVER_ARGS+=(--record --recordings "$OUT/recordings")
     [ "$REPORTS" = 1 ] && SERVER_ARGS+=(--reports "$OUT/reports")
     "$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
@@ -133,6 +141,16 @@ mkdir -p "$OUT/home-host/.swos" "$OUT/home-join/.swos"
 [ -n "${HOST_RES:-}" ] && printf '[video]\nresolution=%s\n' "$HOST_RES" > "$OUT/home-host/.swos/SWOS.ini"
 [ -n "${JOIN_RES:-}" ] && printf '[video]\nresolution=%s\n' "$JOIN_RES" > "$OUT/home-join/.swos/SWOS.ini"
 [ -n "$DESYNC_FRAME" ] && JOIN_ENV="${JOIN_ENV:-} SWOS_LIVE_DESYNC_FRAME=$DESYNC_FRAME"
+# BLOCK=both|host|join: those players let nothing in from the other, only from the server,
+# so the match must end up relayed through the fallback session however RELAY is set.
+case "$BLOCK" in
+    both) HOST_ENV="${HOST_ENV:-} SWOS_P2P_TEST_BLOCK_DIRECT=1"; JOIN_ENV="${JOIN_ENV:-} SWOS_P2P_TEST_BLOCK_DIRECT=1" ;;
+    host) HOST_ENV="${HOST_ENV:-} SWOS_P2P_TEST_BLOCK_DIRECT=1" ;;
+    join) JOIN_ENV="${JOIN_ENV:-} SWOS_P2P_TEST_BLOCK_DIRECT=1" ;;
+    "")   ;;
+    *)    echo "relay-test: BLOCK is both, host or join" >&2; exit 2 ;;
+esac
+RELAYED="$RELAY"; [ -n "$BLOCK" ] && RELAYED=1     # what the matches must have been
 
 # HOST_START=0: the host does not press START by itself, so a key script can use the
 # lobby first (the team screen, docs/NETPLAY.md "The lobby"); the run then ends at WAIT.
@@ -197,7 +215,7 @@ fi
 fail=0
 for side in host join; do
     echo "================ $side ================"
-    grep -E "^\[p2p\] (relay|link (failed|closed))|^\[netplay\] (p2p match|live match|desync|the peer|network)|^\[live\] final sim|^\[record\]|^\[relay-test\]" \
+    grep -E "^\[p2p\] (relay|direct connection|link (failed|closed))|^\[netplay\] (p2p match|live match|desync|the peer|network)|^\[live\] final sim|^\[record\]|^\[relay-test\]" \
         "$OUT/$side.log"
     grep -q '^\[relay-test\] exit 0$' "$OUT/$side.log" || { echo "!! $side did not exit 0"; fail=1; }
     # The team check (include/team_proto.h): each game asked the server about both
@@ -209,7 +227,10 @@ for side in host join; do
         done
     fi
     # Relayed: the match's peer must be the server itself.
-    if [ "$RELAY" = 1 ]; then
+    if [ -n "$BLOCK" ] && ! grep -q "^\[p2p\] direct connection failed: playing through the server" "$OUT/$side.log"; then
+        echo "!! $side: blocked direct, but never fell back to the server"; fail=1
+    fi
+    if [ "$RELAYED" = 1 ]; then
         if grep -q "^\[netplay\] p2p match:" "$OUT/$side.log" &&
            ! grep "^\[netplay\] p2p match:" "$OUT/$side.log" | grep -qv "peer $RELAY_PEER,"; then
             :
@@ -254,7 +275,7 @@ done < <(grep -hoE "clock: tick [0-9]+ at frame [0-9]+" "$OUT/host.log" "$OUT/jo
 ledger_ok=0
 if [ "$REMOTE" = 1 ]; then
     ledger_ok=1     # it is on the server's machine
-elif [ -s "$OUT/ledger.jsonl" ] && RELAY=$RELAY RECORD=$RECORD MATCHES=$MATCHES \
+elif [ -s "$OUT/ledger.jsonl" ] && RELAY=$RELAYED RECORD=$RECORD MATCHES=$MATCHES \
    DESYNC_FRAME=$DESYNC_FRAME python3 - "$OUT/ledger.jsonl" <<'PYEOF'
 import json, os, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
@@ -390,7 +411,7 @@ PYEOF
     then reports_ok=1; else echo "!! the match reports are not all there"; fi
 fi
 
-what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")$([ "$REPORTS" = 1 ] && echo ", reported")"
+what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || { [ -n "$BLOCK" ] && echo "through the fallback relay (direct blocked: $BLOCK)"; } || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")$([ "$REPORTS" = 1 ] && echo ", reported")"
 [ "$REMOTE" = 1 ] && what="$MATCHES matches through $MM_HOST, $HOW$([ "$RECORD" = 1 ] && echo ", recorded")"
 if [ -n "$DESYNC_FRAME" ]; then
     # A desync on purpose: the match ends early on both sides, and the recorder named the frame.

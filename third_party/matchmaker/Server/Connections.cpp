@@ -272,6 +272,26 @@ bool Connections::StartGame(User* owner)
                 SendTo(p2->Peer())(std::string(RELAY_MM_HEADER) + hex + ",2");
             }
         }
+        // OpenSWOS, --relay-fallback only (off by default: the bandwidth is the
+        // server's): not relayed, but a session in case the two cannot punch to each
+        // other -- a VPN, or a router that gives every destination its own port. The
+        // game punches direct and moves to it only when no round trip works after a few
+        // seconds (p2p_link.c, relay_fallback). A different header, RELAYFB:, so a game
+        // from before it ignores it (an unknown header is skipped) and plays as it did.
+        else if (m_relay && m_relay->Fallback() &&
+                 owner->Version().compare(0, ours.size(), ours) == 0 &&
+                 p2->Version().compare(0, ours.size(), ours) == 0)
+        {
+            uint64_t token = m_relay->CreateSession(owner->Name(), owner->Peer()->address,
+                                                    p2->Name(), p2->Peer()->address, false, true);
+            if (token)
+            {
+                char hex[17];
+                snprintf(hex, sizeof hex, "%016llx", (unsigned long long)token);
+                SendTo(owner->Peer())(std::string(RELAY_FALLBACK_MM_HEADER) + hex + ",1");
+                SendTo(p2->Peer())(std::string(RELAY_FALLBACK_MM_HEADER) + hex + ",2");
+            }
+        }
         auto m1 = Message::Make(MessageType::Start, gameInfo1); 
         m1.OnData(SendTo(owner->Peer()));
         m1.OnData([&](const std::string& s) {std::cout << "To " << owner->Name() << " send " << s << "\n"; });

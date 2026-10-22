@@ -1279,6 +1279,22 @@ not touched at all. A rematch punches the same address and registers again, so o
 session carries every match two players play in a row; it closes after a minute with no
 traffic.
 
+**As a fallback** (2026-10-22), with `--relay-fallback` -- OFF by default: every pair
+that falls back costs the server its traffic both ways (about 2.5 KB/s in and out a pair,
+measured), and the owner keeps the relay for browsers. With it, a server without `--relay`
+makes a session for every pair of desktop OpenSWOS players and sends `RELAYFB:<token>,<n>` (not `RELAY:`, so
+a game from before it skips it as unknown and plays as it did). The players punch direct
+as always; a link that has measured no ROUND TRIP after 5 s (`kRelayFallbackMs`) starts
+again from the same socket to the server alone, registering with that token -- from there
+a relayed match like any other (`p2p_link.c`, `relay_fallback`). A round trip, not
+"connected": a router that gives every destination its own port can let the other side's
+packets in while its own never arrive, and then one game thinks it is connected while the
+other waits -- neither has a round trip, so both move. A link that works both ways has one
+within a second, and the fallback is disarmed. A session nobody registered with closes
+with one line ("not needed ... played direct") and no ledger line. Found by two players (one through a VPN, one behind a port-changing router)
+stuck on "CONNECTING TO ... (8 ROUTES)". Tested by `RECORD=1 RELAY=0 BLOCK=both|host|join
+scripts/relay_test.sh`, where `SWOS_P2P_TEST_BLOCK_DIRECT=1` lets nothing in but the server.
+
 It shares UDP **19602** with the matchmaker through ENet's `intercept` hook, so a server
 needs no second port forwarded. A datagram is the relay's only if it is a well-formed
 `SWRL` control packet or comes from a registered address; everything else is ENet's. It
