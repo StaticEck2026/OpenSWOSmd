@@ -60,6 +60,58 @@
     #imp:hover { opacity: 1; }
     #imp svg { width: 17px; height: 17px; display: block; }
     #impFile { display: none; }
+    /* --- On-screen controls toggle, and the controls (a phone has no keyboard) --- */
+    #padBtn {
+      position: fixed; top: 108px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #padBtn:hover, #padBtn.on { opacity: 1; }
+    #padBtn.on { color: #6c6; border-color: #6c6; }
+    #padBtn svg { width: 19px; height: 19px; display: block; }
+    #touch { display: none; }
+    #touch.on { display: block; }
+    #touch .zone {
+      position: fixed; bottom: 0; height: 60vh; z-index: 5;
+      touch-action: none; -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #stickZone { left: 0; width: 50vw; }
+    #fireZone  { right: 0; width: 50vw; }
+    #stick {
+      position: absolute; left: 28px; bottom: 28px;
+      width: 150px; height: 150px; border-radius: 50%; box-sizing: border-box;
+      background: rgba(255,255,255,0.10); border: 2px solid rgba(255,255,255,0.35);
+      pointer-events: none;
+    }
+    #knob {
+      position: absolute; left: 50%; top: 50%; width: 62px; height: 62px;
+      margin: -31px 0 0 -31px; border-radius: 50%;
+      background: rgba(255,255,255,0.35); border: 2px solid rgba(255,255,255,0.55);
+      box-sizing: border-box;
+    }
+    #fire {
+      position: absolute; right: 32px; bottom: 44px;
+      width: 112px; height: 112px; border-radius: 50%; box-sizing: border-box;
+      background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.45);
+      color: rgba(255,255,255,0.75); font: bold 18px/108px monospace; text-align: center;
+      pointer-events: none;
+    }
+    #fire.down { background: rgba(255,255,255,0.40); }
+    #touch .key {
+      position: fixed; z-index: 6; bottom: 172px;
+      padding: 0 12px; height: 32px; border-radius: 16px; box-sizing: border-box;
+      background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.40);
+      color: rgba(255,255,255,0.75); font: bold 12px/28px monospace;
+      touch-action: none; -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent; cursor: pointer;
+    }
+    #touch .key.down { background: rgba(255,255,255,0.40); }
+    #kPause { right: 104px; }
+    #kEsc   { right: 32px; }
     #impMsg {
       position: fixed; top: 74px; right: 44px; z-index: 10;
       max-width: 60vw; padding: 4px 8px; border-radius: 4px;
@@ -113,6 +165,19 @@
       <path d="M12 16V4M12 4L8 8M12 4l4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
     </svg>
   </div>
+  <div id="padBtn" title="On-screen controls">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 15h-4l-1 1.6A4 4 0 0 1 2 14v-1a4 4 0 0 1 4-4z"/>
+      <path d="M7 11.5v3M5.5 13h3"/><circle cx="16.5" cy="12" r=".6"/><circle cx="18" cy="14" r=".6"/>
+    </svg>
+  </div>
+  <div id="touch">
+    <div class="zone" id="stickZone"><div id="stick"><div id="knob"></div></div></div>
+    <div class="zone" id="fireZone"><div id="fire">FIRE</div></div>
+    <div class="key" id="kPause">PAUSE</div>
+    <div class="key" id="kEsc">ESC</div>
+  </div>
   <input id="impFile" type="file" multiple
          accept=".CAR,.SEA,.PRE,.DIY,.TAC,.HIL,.EDT,.CFG,.car,.sea,.pre,.diy,.tac,.hil,.edt,.cfg">
   <div id="impMsg"></div>
@@ -123,7 +188,8 @@
       <p>Edit and Save &amp; Reload. Stored in your browser (localStorage), not a file.
          <code>resolution=WxH</code> or <code>auto</code>; <code>scale</code> 1&ndash;4;
          <code>[audio] mode</code> mono|stereo; <code>[general] language</code> en/fr/de/it/es/nl.
-         Fullscreen: tap the &#9974; button below the gear (or F11 on desktop).</p>
+         Fullscreen: tap the &#9974; button below the gear (or F11 on desktop).
+         On-screen controls (stick, FIRE, PAUSE, ESC): the gamepad button.</p>
       <textarea id="ini" spellcheck="false"></textarea>
       <div class="row">
         <button id="iniCancel">Cancel</button>
@@ -141,6 +207,9 @@
         statusEl.textContent = text;
         statusEl.style.display = text ? 'block' : 'none';   // hide once running
       },
+      // The page's controls may call into the game from here on (calling an export
+      // before the runtime is up aborts it).
+      onRuntimeInitialized: function () { Module.swosReady = true; },
       print:    function (t) { console.log(t); },
       printErr: function (t) { console.error(t); },
     };
@@ -250,6 +319,126 @@
           fsBtn.title = on ? 'Exit fullscreen' : 'Toggle fullscreen';
         });
       });
+    })();
+
+    // --- On-screen controls --------------------------------------------------
+    // A stick (left half of the screen), FIRE (right half), PAUSE and ESC, for a phone
+    // or tablet. They are player 1's, as the keyboard is: the page tells the game through
+    // InputSDL_TouchControls(directions, fire) and InputSDL_TouchKey(Amiga scancode)
+    // (src/input_sdl.c). Pointer events, so the stick and FIRE can be held at once and a
+    // mouse can try them on a desktop. On by default on a touch screen; the gamepad button
+    // switches them, and the choice is remembered.
+    (function () {
+      var btn = document.getElementById('padBtn');
+      var ui  = document.getElementById('touch');
+      var stickZone = document.getElementById('stickZone');
+      var fireZone  = document.getElementById('fireZone');
+      var stick = document.getElementById('stick');
+      var knob  = document.getElementById('knob');
+      var fire  = document.getElementById('fire');
+      var KEY_P = 0x19, KEY_ESC = 0x45;           // raw Amiga scancodes
+      var DEADZONE = 0.28;                        // of the stick's radius
+      var stickId = null, fireIds = {}, dirs = 0, fireDown = 0, sent = -1;
+
+      // Only once the runtime is up (Module.swosReady, above): the export is there from
+      // the start, but calling it before then aborts the game.
+      function game(fn) {
+        return (typeof Module !== 'undefined' && Module.swosReady && Module[fn]) ? Module[fn] : null;
+      }
+      function send() {
+        var v = dirs | (fireDown << 4);
+        if (v === sent) return;
+        var f = game('_InputSDL_TouchControls');
+        if (!f) return;                           // still loading: sent once it is
+        f(dirs, fireDown); sent = v;
+      }
+      setInterval(send, 250);                     // catches the game coming up mid-press
+
+      // 8-way, 45 degrees each, nothing inside the dead zone: SWOS's stick is digital.
+      function setStick(cx, cy, x, y) {
+        var r = stick.offsetWidth / 2, dx = x - cx, dy = y - cy;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        var k = d > r ? r / d : 1;
+        knob.style.transform = 'translate(' + (dx * k) + 'px,' + (dy * k) + 'px)';
+        dirs = 0;
+        if (d > r * DEADZONE) {
+          var oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));   // -4..4, 0 = right
+          oct = (oct + 8) % 8;                                        // 0 right, 2 down, 4 left, 6 up
+          if (oct === 7 || oct === 0 || oct === 1) dirs |= 8;
+          if (oct >= 1 && oct <= 3) dirs |= 2;
+          if (oct >= 3 && oct <= 5) dirs |= 4;
+          if (oct >= 5 && oct <= 7) dirs |= 1;
+        }
+        send();
+      }
+      function stickCentre() {
+        var b = stick.getBoundingClientRect();
+        return [b.left + b.width / 2, b.top + b.height / 2];
+      }
+      stickZone.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        if (stickId !== null) return;
+        stickId = e.pointerId;
+        stickZone.setPointerCapture(e.pointerId);
+        var c = stickCentre(); setStick(c[0], c[1], e.clientX, e.clientY);
+      });
+      stickZone.addEventListener('pointermove', function (e) {
+        if (e.pointerId !== stickId) return;
+        var c = stickCentre(); setStick(c[0], c[1], e.clientX, e.clientY);
+      });
+      function stickUp(e) {
+        if (e.pointerId !== stickId) return;
+        stickId = null; dirs = 0; knob.style.transform = ''; send();
+      }
+      stickZone.addEventListener('pointerup', stickUp);
+      stickZone.addEventListener('pointercancel', stickUp);
+
+      function fireCount() { var n = 0; for (var k in fireIds) n++; return n; }
+      fireZone.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        fireZone.setPointerCapture(e.pointerId);
+        fireIds[e.pointerId] = 1; fireDown = 1; fire.classList.add('down'); send();
+      });
+      function fireUp(e) {
+        if (!fireIds[e.pointerId]) return;
+        delete fireIds[e.pointerId];
+        if (!fireCount()) { fireDown = 0; fire.classList.remove('down'); send(); }
+      }
+      fireZone.addEventListener('pointerup', fireUp);
+      fireZone.addEventListener('pointercancel', fireUp);
+
+      [['kPause', KEY_P], ['kEsc', KEY_ESC]].forEach(function (k) {
+        var el = document.getElementById(k[0]);
+        el.addEventListener('pointerdown', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          el.classList.add('down');
+          var f = game('_InputSDL_TouchKey'); if (f) f(k[1]);
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+          el.addEventListener(ev, function () { el.classList.remove('down'); });
+        });
+      });
+
+      function show(on) {
+        ui.classList.toggle('on', on);
+        btn.classList.toggle('on', on);
+        btn.title = on ? 'Hide the on-screen controls' : 'On-screen controls';
+        if (!on) {                                  // nothing stays held when they go
+          stickId = null; fireIds = {}; dirs = 0; fireDown = 0;
+          knob.style.transform = ''; fire.classList.remove('down'); send();
+        }
+        try { localStorage.setItem('swos.touchControls', on ? '1' : '0'); } catch (e) {}
+      }
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        show(!ui.classList.contains('on'));
+        document.getElementById('canvas').focus();
+      });
+      var saved = null;
+      try { saved = localStorage.getItem('swos.touchControls'); } catch (e) {}
+      var touchScreen = ('ontouchstart' in window) ||
+                        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+      show(saved === null ? !!touchScreen : saved === '1');
     })();
 
     // --- Import saves from the local disk -------------------------------

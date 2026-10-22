@@ -30,6 +30,11 @@
 #include <string.h>
 #include "match_step.h"   /* MatchStep_LocalBenchButton: the DOS second button */
 #include "dos_mode.h"     /* _gDosGameplay */
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>     /* EMSCRIPTEN_KEEPALIVE: the page's on-screen controls */
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
 
 /* ---- Game-side globals (defined in swos_globals.c) ---- */
 extern uint8_t  _keyState[128];
@@ -431,6 +436,40 @@ static void push_amiga_key(uint8_t akey)
         _keyBuffer[_keyCount] = akey;
         _keyCount++;
     }
+}
+
+/* ---- The web page's on-screen controls (wasm/shell.html) ----
+ * A phone has no keyboard and usually no pad, so the page draws a stick, FIRE, PAUSE and
+ * ESC over the game and reports them here. They are PLAYER 1's, as the keyboard is:
+ * combined with it every frame (InputSDL_PostFrame) and sent as this player's in an
+ * online match (InputSDL_LocalMatchControls). A press of FIRE is a fire event, as a
+ * key's is, so a tap shorter than a frame is still read; PAUSE and ESC go into the key
+ * FIFO, as the pad's START and stick click do (k_padKeys). */
+static int s_touch_dirs;        /* 1 up, 2 down, 4 left, 8 right */
+static int s_touch_fire;
+
+EMSCRIPTEN_KEEPALIVE void InputSDL_TouchControls(int32_t dirs, int32_t fire)
+{
+    if (fire && !s_touch_fire)
+        s_fire_event = 1;
+    s_touch_dirs = (int)(dirs & 0x0F);
+    s_touch_fire = fire != 0;
+}
+
+/* `akey`: a raw Amiga scancode, 0x19 P (pause) or 0x45 ESC. */
+EMSCRIPTEN_KEEPALIVE void InputSDL_TouchKey(int32_t akey)
+{
+    if (akey >= 0 && akey < 0x68)
+        push_amiga_key((uint8_t)akey);
+}
+
+static void touch_controls(int *_up, int *_down, int *left, int *right, int *_fire)
+{
+    if (s_touch_dirs & 1) *_up    = 1;
+    if (s_touch_dirs & 2) *_down  = 1;
+    if (s_touch_dirs & 4) *left   = 1;
+    if (s_touch_dirs & 8) *right  = 1;
+    if (s_touch_fire)     *_fire  = 1;
 }
 
 /* Open a device and give it a player if one is free. Returns the player (0 or 1),
@@ -1060,6 +1099,7 @@ void InputSDL_ClearKeyState(void)
     s_kbd_fire_keys = 0;
     s_fire_event = s_fire_event_pad = 0;    /* a press from before is not one in what comes next */
     s_kbd_skip = 0;
+    s_touch_dirs = s_touch_fire = 0;
     _pauseSkipRequested = 0;
     /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
      * InputSDL_PostFrame from the cleared s_kbd_* + read_pad_state, so
@@ -1121,6 +1161,7 @@ uint8_t InputSDL_LocalMatchControls(void)
     int fire = s_kbd_fire, skip = 0;
     uint8_t bits = 0;
 
+    touch_controls(&up, &down, &left, &right, &fire);
     read_pad_state(0, &up, &down, &left, &right, &fire, &skip);
     fire = sample_fire(fire, 1, &s_fire_evidence);
 
@@ -1290,10 +1331,12 @@ void InputSDL_PostFrame(void)
         }
     }
 
-    /* Player 1: keyboard + pad 0 (combined), or the keyboard alone when split. */
+    /* Player 1: keyboard + pad 0 (combined), or the keyboard alone when split. The page's
+     * on-screen controls count as the keyboard. */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
     int p1_fire = s_kbd_fire;
     int skip = s_kbd_skip;
+    touch_controls(&p1_up, &p1_down, &p1_left, &p1_right, &p1_fire);
     if (!split)
         read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire, &skip);
     p1_fire = sample_fire(p1_fire, !split, NULL);       /* a press is never lost between two reads */
