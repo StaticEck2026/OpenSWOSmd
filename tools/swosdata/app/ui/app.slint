@@ -231,6 +231,8 @@ component SourceLine inherits VerticalLayout {
 // An output for the Amiga: a tile to pick, with its picture.
 component Choice inherits Rectangle {
     in property <image> picture;
+    // Optional: the picture while it is the one chosen (the drawer, open).
+    in property <image> picture-selected;
     in property <length> picture-width: 48px;
     in property <string> title;
     in property <string> text;
@@ -255,7 +257,7 @@ component Choice inherits Rectangle {
             alignment: center;
             width: root.picture-width;
             Image {
-                source: root.picture;
+                source: root.selected && root.picture-selected.width > 0 ? root.picture-selected : root.picture;
                 width: root.picture-width;
                 image-fit: contain;
             }
@@ -579,7 +581,9 @@ export component MainWindow inherits Window {
             HorizontalLayout {
                 spacing: 10px;
                 Choice {
-                    picture: @image-url("images/boing-ball.svg");
+                    picture: @image-url("images/amiga-drawer.svg");
+                    picture-selected: @image-url("images/amiga-drawer-open.svg");
+                    picture-width: 65px;   // its own size: pixel art, kept crisp
                     title: "SWOS drawer";
                     text: "A drawer to copy to your Amiga's hard drive, or to use as a folder in WinUAE or FS-UAE. Double-click SWOS to play.";
                     selected: root.amiga-kind == 0;
