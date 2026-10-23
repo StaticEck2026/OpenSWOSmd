@@ -112,8 +112,9 @@
 <p class="lead">From nothing to playing, one step at a time. It takes about five minutes.</p>
 
 <div class="summary">
-  <strong>In short:</strong> download OpenSWOS, then run <strong>OpenSWOS Setup</strong> once
-  and show it where your copy of <em>Sensible World of Soccer</em> is. That's it.
+  <strong>In short:</strong> download OpenSWOS, then run <strong>OpenSWOS Setup</strong> once. It
+  shows you where to get the game, finds what you download, and makes the game's data from it.
+  That's it.
   <nav class="toc" aria-label="Contents">
     <ol>
       <li><a href="#need">What you need</a></li>
@@ -127,18 +128,22 @@
 </div>
 
 <h2 id="need"><span class="n">1</span>What you need</h2>
-<p><strong>Your own copy of <em>Sensible World of Soccer 96/97</em>.</strong> OpenSWOS is a new
-engine for the game, but the game's graphics, music, sound and teams are still owned by their
-makers, so they can't come with OpenSWOS. The setup makes them from your copy instead. Nothing
-is downloaded.</p>
-<p>Any <strong>one</strong> of these is enough to play:</p>
+<p><strong>Your own copy of <em>Sensible World of Soccer</em>.</strong> OpenSWOS is a new engine
+for the game, but the game's graphics, music, sound and teams are still owned by their makers,
+so they can't come with OpenSWOS. The setup makes them from your copy instead.</p>
 <div class="tablewrap"><table>
   <tr><th>Your copy</th><th>Where to get it</th></tr>
-  <tr><td><strong>The PC version</strong> (easiest)</td><td>Buy it on <a href="https://www.gog.com/en/game/sensible_world_of_soccer_9697">GOG</a> and install it. The <a href="https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996">PC CD version</a> works too.</td></tr>
-  <tr><td><strong>The Amiga version</strong></td><td>Disk images (<code>.adf</code> files) of your two SWOS 96/97 floppies.</td></tr>
+  <tr><td><strong>The PC version</strong> (easiest)</td><td>Buy <em>Sensible World of Soccer 96/97</em> on <a href="https://www.gog.com/en/game/sensible_world_of_soccer_9697">GOG</a> and install it. The <a href="https://archive.org/details/msdos_Sensible_World_of_Soccer_96-97_1996">PC CD version</a> works too.</td></tr>
+  <tr><td><strong>The Amiga version</strong></td><td>Any of: the two SWOS 96/97 floppies as disk images (<code>.adf</code>); a hard disk image with the game on it (<code>.hdf</code>, e.g. ASWOS's <code>swos.hdf</code>); a WHDLoad install (<code>.lha</code>); or a <code>.zip</code> of any of these. sensiblesoccer.de's <a href="https://www.sensiblesoccer.de/index.php?&amp;view=newsdetails&amp;id=206">24/25 season</a> (<code>swos2425.hdf</code> or the WHDLoad <code>.lha</code>) works too.</td></tr>
 </table></div>
-<p><strong>Have both?</strong> Use both: you get the Amiga's music, sound and loading screens
-as well as the PC's commentary. The real Amiga version of OpenSWOS needs both.</p>
+<ul>
+  <li><strong>For the PC, Mac and Linux game,</strong> one of the two is enough. With both, you get
+    the Amiga's music, sound and loading screens as well.</li>
+  <li><strong>For the Amiga version of OpenSWOS,</strong> you need both: the Amiga version for the
+    game's own files, the PC version for its AGA pitches and pictures.</li>
+</ul>
+<p>You don't have to remember any of this: the setup lists what you need, with the links, and
+says what each one gives.</p>
 <p class="note">Two extras are optional, for players who have them: the <strong>Atari Jaguar</strong>
 cartridge image (for the Jaguar's sprites) and a <strong>SWOS 2020</strong> install (for its pitches).</p>
 
@@ -151,7 +156,7 @@ free, and never asks you to pay or sign up anywhere else. Pick the file for your
   <tr><td><strong>Windows</strong> (10 or later)</td><td><code>SWOS-Setup.exe</code>, the installer</td></tr>
   <tr><td><strong>Mac</strong> (Apple silicon or Intel)</td><td><code>SWOS-macOS-app.zip</code></td></tr>
   <tr><td><strong>Linux</strong> (PC or Raspberry Pi)</td><td><code>SWOS-portable.zip</code>, and <code>OpenSWOS-Setup.zip</code> for the setup window</td></tr>
-  <tr><td><strong>Amiga</strong> (A1200/A4000 or an emulator)</td><td><code>SWOS-Amiga.zip</code>, and <code>OpenSWOS-Setup.zip</code> to run on a PC or Mac</td></tr>
+  <tr><td><strong>Amiga</strong> (A1200/A4000 or an emulator)</td><td><code>OpenSWOS-Setup.zip</code>, to run on a PC or Mac: it has the Amiga program in it</td></tr>
 </table></div>
 <p class="center"><a class="button" href="https://baker76.itch.io/openswos">Go to the downloads</a></p>
 
@@ -201,51 +206,75 @@ free, and never asks you to pay or sign up anywhere else. Pick the file for your
 <h3 id="amiga">Amiga</h3>
 <p>The setup can't run on the Amiga itself, so you do this part on a PC or a Mac:</p>
 <ol>
-  <li>Unzip <strong><code>SWOS-Amiga.zip</code></strong>. You get a <strong>SWOS</strong> drawer
-    (and its icon, <code>SWOS.info</code>).</li>
   <li>Unzip <strong><code>OpenSWOS-Setup.zip</code></strong> and run the setup for your computer:
     <code>Windows\openswos-setup.exe</code>, <code>macOS/OpenSWOS Setup.app</code> or
     <code>Linux/openswos-setup</code>.</li>
-  <li>Do <a href="#setup">step 4</a> below. <strong>You need both Amiga disk images</strong> for
-    the Amiga version.</li>
-  <li>Then, at the bottom of the setup window under <strong>Amiga version</strong>, click
-    <strong>Browse…</strong>, pick the <strong>SWOS</strong> drawer from step 1, and click
-    <strong>Add the game data</strong>.</li>
-  <li>Copy the <strong>SWOS</strong> drawer (with <code>SWOS.info</code>) to your Amiga's hard
-    drive, or to the hard drive of FS-UAE / WinUAE. Open the drawer and double-click
-    <strong>SWOS</strong>.</li>
+  <li>Click the <strong>Amiga</strong> tab, and do <a href="#setup">step 4</a> there.</li>
 </ol>
 <p class="note">You need an AGA Amiga with a 68020 or better (an A1200 or A4000, or an emulator
-set up as one), with a hard drive and Workbench.</p>
+set up as one), with a hard drive, Workbench and 8 MB of fast memory.</p>
 
 <h2 id="setup"><span class="n">4</span>Run OpenSWOS Setup</h2>
-<p>This is the one step that matters. When the setup opens, it looks like this:</p>
+<p>This is the one step that matters. The setup has two tabs: <strong>PC · Mac · Linux</strong> for
+the game on your computer, <strong>Amiga</strong> for an Amiga. When it opens, it looks like this:</p>
 <figure>
-  <img src="setup-1-start.png" alt="OpenSWOS Setup when it opens: empty boxes for your copy of the game, and a Choose a folder button" width="820" height="900" loading="lazy">
+  <img src="setup-1-start.png" alt="OpenSWOS Setup when it opens: a row for each part of the game, with links to get it" width="860" height="860" loading="lazy">
   <figcaption>OpenSWOS Setup when it opens</figcaption>
 </figure>
-<p><strong>1. Click "Choose a folder…"</strong> and pick a folder your game is in. The setup
-looks through that folder <strong>and every folder inside it</strong>, so you don't have to be
-exact: choosing the folder that holds your GOG game, your <code>.adf</code> files, or both, is
-enough.</p>
-<p>Each part it finds gets a green tick. Here it found the PC version and both Amiga disks:</p>
+<p><strong>1. Get the game.</strong> Each thing the game can use has a row: what it is, whether
+it's <strong>needed</strong> or <strong>optional</strong>, what it gives, and on the right the
+<strong>links to get it</strong>. You don't have to find the files afterwards:</p>
+<ul>
+  <li><strong>What you download is found by itself.</strong> The setup watches your
+    <strong>Downloads</strong> folder: a disk image, hard disk image, WHDLoad <code>.lha</code> or
+    <code>.zip</code> you download from those links turns up in its row a moment after the
+    download finishes.</li>
+  <li><strong>The GOG game is found by itself</strong> once it's installed. If GOG's installer is
+    still in your Downloads, the setup reminds you to run it.</li>
+  <li><strong>Already have the game somewhere?</strong> Click <strong>Search a folder…</strong> and
+    pick a folder it's in. The setup looks through that folder <strong>and every folder inside
+    it</strong>. Or click the <strong>…</strong> beside a row and pick the file or folder yourself,
+    or paste its path into the box.</li>
+</ul>
+<p>Each part it finds gets a green tick. Here it found the PC version and the Amiga floppies:</p>
 <figure>
-  <img src="setup-2-found.png" alt="OpenSWOS Setup after finding the PC game and both Amiga disks, each with a green tick" width="820" height="900" loading="lazy">
-  <figcaption>After "Choose a folder…": everything found is ticked</figcaption>
+  <img src="setup-2-found.png" alt="OpenSWOS Setup after finding the PC game and the Amiga floppies, each with a green tick" width="860" height="860" loading="lazy">
+  <figcaption>Everything found is ticked</figcaption>
+</figure>
+<p>Under the Amiga row it says which <strong>season</strong> your copy is. The 96/97 release is the
+one the game was made from; a later season (like sensiblesoccer.de's 24/25) works too, but online
+OpenSWOS plays 96/97's teams, so with the PC game there those come from it. A copy that can't be
+used (a damaged download, or a different release) gets a red mark and says why.</p>
+<p><strong>2. Install.</strong> On the <strong>PC · Mac · Linux</strong> tab, click
+<strong>Install</strong>. It takes a few seconds. When it says <strong>Done</strong>, you're
+finished:</p>
+<figure>
+  <img src="setup-3-done.png" alt="OpenSWOS Setup after installing: Done, with what was made and the log" width="860" height="972" loading="lazy">
+  <figcaption>Done: the game's data is installed</figcaption>
 </figure>
 <ul>
-  <li>Under <strong>What will be made</strong>, everything marked <strong>ready</strong> will be
-    installed. Parts marked <strong>skipped</strong> need something you don't have; that's fine,
-    the game plays without them.</li>
-  <li>Something not found? Click the <strong>…</strong> button beside it and pick the file or
-    folder yourself, or paste its path into the box.</li>
-  <li><strong>Install to</strong> is where the game reads its data from. Leave it as it is.</li>
+  <li><strong>Into</strong> is where the game reads its data from. Leave it as it is.</li>
+  <li><strong>Details</strong> shows what will be made, and the log. Parts marked
+    <strong>skipped</strong> need something you don't have; that's fine, the game plays without them.</li>
 </ul>
-<p><strong>2. Click Install.</strong> It takes a few seconds. When it says <strong>Done</strong>,
-you're finished:</p>
+<p><strong>On the Amiga tab,</strong> choose what to make for your Amiga, then click the button below:</p>
 <figure>
-  <img src="setup-3-done.png" alt="OpenSWOS Setup after installing: Done, and a list of the files made" width="820" height="900" loading="lazy">
-  <figcaption>Done: the game's data is installed</figcaption>
+  <img src="setup-4-amiga.png" alt="OpenSWOS Setup's Amiga tab: the SWOS drawer or the WHDLoad package" width="860" height="860" loading="lazy">
+  <figcaption>The Amiga tab</figcaption>
+</figure>
+<ul>
+  <li><strong>SWOS drawer:</strong> a drawer to copy to your Amiga's hard drive (or to a folder
+    FS-UAE or WinUAE uses as a hard drive). Double-click <strong>SWOS</strong> in it to play.</li>
+  <li><strong>WHDLoad package:</strong> <code>OpenSWOSAGA-WHDL.lha</code>, for an Amiga with
+    <a href="https://whdload.de/">WHDLoad</a> installed. Unpack it on the Amiga, open the
+    <strong>OpenSWOSAGA-NE</strong> drawer and double-click <strong>OpenSWOS</strong>. No
+    Kickstart image is needed.</li>
+</ul>
+<p>Both go to your <strong>Downloads</strong> folder unless you click <strong>Change…</strong>.
+<strong>Show it</strong> opens the folder when it's done:</p>
+<figure>
+  <img src="setup-5-whdload.png" alt="OpenSWOS Setup after making the WHDLoad package: Done" width="860" height="860" loading="lazy">
+  <figcaption>The WHDLoad package, made</figcaption>
 </figure>
 <p>You only need to do this once. OpenSWOS Setup remembers where your copy of the game is. If a
 new version of OpenSWOS makes some of the data differently, the game tells you when it starts: open
@@ -258,7 +287,9 @@ OpenSWOS Setup, where those parts say <strong>update needed</strong>, and click 
     desktop, if you ticked that in the installer).</li>
   <li><strong>Mac:</strong> open <strong>SWOS.app</strong> (right-click → <strong>Open</strong> the first time).</li>
   <li><strong>Linux:</strong> run <code>SWOS.x86_64</code> (or the one for your Pi) from the folder you unzipped.</li>
-  <li><strong>Amiga:</strong> double-click <strong>SWOS</strong> in its drawer.</li>
+  <li><strong>Amiga:</strong> double-click <strong>SWOS</strong> in its drawer, or with WHDLoad,
+    <strong>OpenSWOS</strong> in the <strong>OpenSWOSAGA-NE</strong> drawer. Under WHDLoad,
+    <strong>Del</strong> quits back to Workbench.</li>
 </ul>
 <p>Menus use the <strong>arrow keys</strong> and <strong>Enter</strong> (or a gamepad). In a
 match, the arrow keys move and <strong>Ctrl</strong>, <strong>Space</strong> or
@@ -270,13 +301,27 @@ players need the same version of OpenSWOS.</p>
 <h2 id="help">If something goes wrong</h2>
 <div class="faq">
   <h3>The setup doesn't find my game.</h3>
-  <p>Click the <strong>…</strong> beside the missing part and pick it by hand:</p>
+  <p>Click <strong>Search a folder…</strong> and pick the folder it's in, or click the
+  <strong>…</strong> beside the missing part and pick it by hand:</p>
   <ul>
-    <li><em>PC game folder</em>: the folder with <code>SPRITE.DAT</code> and a <code>DATA</code>
+    <li><em>PC game</em>: the folder with <code>SPRITE.DAT</code> and a <code>DATA</code>
       folder in it. GOG puts it where you chose when installing, usually under
       <code>C:\GOG Games</code> or under <code>GOG Galaxy\Games</code> in Program Files.</li>
-    <li><em>Amiga disk 1 / 2</em>: the <code>.adf</code> files themselves.</li>
+    <li><em>Amiga version</em>: the <code>.adf</code>, <code>.hdf</code>, <code>.lha</code> or
+      <code>.zip</code> file itself. For floppies, add both disks: the setup tells them apart by
+      what's on them, not by their names.</li>
   </ul>
+
+  <h3>The Amiga row has a red mark.</h3>
+  <p>It says why. <em>"…its blocks on the disk are damaged"</em>: that download is broken, try
+  another (sensiblesoccer.de's <code>swos2425.hdf</code> and WHDLoad <code>.lha</code> are both
+  good). <em>"…is not the 96/97 release or an update of it"</em>: it's an older SWOS (for example
+  the original 1994 floppies), which OpenSWOS can't use.</p>
+
+  <h3>"Make the drawer" / "Make the package" stays grey.</h3>
+  <p>The line under it says what's missing: usually the PC version (the Amiga version of OpenSWOS
+  needs both), or the Amiga program, <code>SWOS-Amiga.zip</code>, if you're not running the setup
+  from <code>OpenSWOS-Setup.zip</code>. Click <strong>Choose…</strong> and pick that zip.</p>
 
   <h3>The game won't start, or starts without graphics or sound.</h3>
   <p>The game data usually isn't installed. Run OpenSWOS Setup again and check it says
@@ -295,7 +340,7 @@ players need the same version of OpenSWOS.</p>
     <tr><td>Windows</td><td><code>Documents\SWOS</code></td></tr>
     <tr><td>Mac</td><td><code>~/Library/Application Support/SWOS</code> (in Finder: <strong>Go → Go to Folder…</strong>)</td></tr>
     <tr><td>Linux</td><td><code>~/.swos</code></td></tr>
-    <tr><td>Amiga</td><td>the <code>save</code> folder inside the SWOS drawer</td></tr>
+    <tr><td>Amiga</td><td>the <code>save</code> folder inside the SWOS drawer (with WHDLoad: <code>OpenSWOSAGA-NE/data/save</code>)</td></tr>
   </table></div>
   <p>Saves are in <code>save</code>, the settings in <code>SWOS.ini</code>
   (<a href="https://github.com/benbaker76/OpenSWOS/blob/main/docs/SETTINGS.md">settings guide</a>),

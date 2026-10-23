@@ -279,6 +279,43 @@ component Choice inherits Rectangle {
     }
 }
 
+// The log, made only while Details is open: a ListView kept in the window at 0 px tall
+// works out its rows again for every line added, more than Slint allows in one update
+// ("long callback/instantiation chain detected", once a line). Each line is one
+// fixed-height row, so "scrolled to the bottom" is arithmetic rather than a measurement
+// that lags a frame behind; it is where the log opens, and where each new line keeps it.
+component LogView inherits Rectangle {
+    in property <[string]> lines;
+    property <length> line-height: 16px;
+    property <int> count: root.lines.length;
+    background: Theme.field;
+    border-width: 1px;
+    border-color: Theme.line;
+    border-radius: 4px;
+    min-height: 80px;
+    vertical-stretch: 1;
+    function to-bottom() {
+        view.viewport-y = min(0px, view.visible-height - root.count * root.line-height);
+    }
+    changed count => { root.to-bottom(); }
+    init => { root.to-bottom(); }
+    view := ListView {
+        x: 4px;
+        y: 2px;
+        width: parent.width - 8px;
+        height: parent.height - 4px;
+        for line in root.lines: Text {
+            text: line;
+            height: root.line-height;
+            font-family: "monospace";
+            font-size: 11px;
+            color: Theme.text-dim;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+    }
+}
+
 export component MainWindow inherits Window {
     title: "OpenSWOS Setup";
     icon: @image-url("../../../../packaging/linux/hicolor/256x256/apps/openswos.png");
@@ -347,11 +384,6 @@ export component MainWindow inherits Window {
         Palette.color-scheme = ColorScheme.dark;
     }
 
-    property <length> log-row: 16px;
-    property <int> log-count: root.log.length;
-    changed log-count => {
-        log-view.viewport-y = min(0px, log-view.visible-height - root.log-count * root.log-row);
-    }
 
     VerticalLayout {
         padding: 16px;
@@ -557,7 +589,7 @@ export component MainWindow inherits Window {
                     picture: @image-url("images/whdload.png");
                     picture-width: 96px;
                     title: "WHDLoad package";
-                    text: "OpenSWOSAGA-WHDL.lha, to unpack on an Amiga with WHDLoad (it needs a Kickstart 3.1 ROM in Devs:Kickstarts).";
+                    text: "OpenSWOSAGA-WHDL.lha, to unpack on an Amiga with WHDLoad installed. No Kickstart image needed.";
                     selected: root.amiga-kind == 1;
                     clicked => { root.amiga-kind = 1; root.amiga-kind-changed(); }
                 }
@@ -674,31 +706,7 @@ export component MainWindow inherits Window {
                 PlanColumn { steps: root.plan-left; }
                 PlanColumn { steps: root.plan-right; }
             }
-            Rectangle {
-                visible: root.show-details;
-                max-height: root.show-details ? 100000px : 0px;
-                background: Theme.field;
-                border-width: 1px;
-                border-color: Theme.line;
-                border-radius: 4px;
-                min-height: root.show-details ? 80px : 0px;
-                vertical-stretch: 1;
-                log-view := ListView {
-                    x: 4px;
-                    y: 2px;
-                    width: parent.width - 8px;
-                    height: parent.height - 4px;
-                    for line in root.log: Text {
-                        text: line;
-                        height: root.log-row;
-                        font-family: "monospace";
-                        font-size: 11px;
-                        color: Theme.text-dim;
-                        overflow: elide;
-                        vertical-alignment: center;
-                    }
-                }
-            }
+            if root.show-details: LogView { lines: root.log; }
         }
     }
 }

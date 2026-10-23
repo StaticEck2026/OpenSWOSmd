@@ -14,11 +14,12 @@
 //   openswos-setup [--res DIR] [--scan DIR]... [--out DIR] [--amiga]
 //                  [--program DIR] [--drawer-to DIR | --whdload-to FILE]
 //   testing:       [--auto] [--snapshot PREFIX] [--snapshot-at MS] [--quit] [--play]
-//                  [--no-watch] [--details]
+//                  [--no-watch] [--details] [--downloads DIR] [--no-gog]
 //
 // --auto presses the open tab's button once the window is up; --snapshot writes
 // PREFIX-start.ppm and, with --auto, PREFIX-done.ppm; --quit closes the window
-// when it has finished (exit status 0 on success); --play presses Play OpenSWOS
+// when it has finished (exit status 0 on success), or after the -start snapshot
+// without --auto; --play presses Play OpenSWOS
 // when the install is done. --no-watch leaves the Downloads folder alone.
 #include <atomic>
 #include <chrono>
@@ -327,7 +328,7 @@ struct App {
   }
 
   SourceRow MakeRow(int r) {
-    SourceRow row;
+    SourceRow row{};   // value-initialised: the generated struct leaves its bools as they fall
     std::string path;
     switch (r) {
       case ROW_PC:
@@ -894,7 +895,7 @@ struct App {
     }
     std::string best;
     int64_t newest = 0;
-    const std::string dl = sd::DownloadsDir();
+    const std::string dl = !watchDir.empty() ? watchDir : sd::DownloadsDir();
     if (!dl.empty())
       for (const sd::DirEntry& e : sd::ListDir(dl))
         if (!e.dir && ProgramZip(e.path) && (best.empty() || e.mtime > newest)) {
@@ -961,7 +962,14 @@ struct App {
 
   // The install (what the sources allow), then the drawer or the package, on the worker.
   void MakeAmiga() {
-    if (busy || !w().get_can_make_amiga()) return;
+    if (busy) return;
+    if (!w().get_can_make_amiga()) {
+      if (autoRun) {   // testing: nothing to make, say so and finish
+        exitCode = 1;
+        AutoFinished();
+      }
+      return;
+    }
     if (worker.joinable()) worker.join();
     const bool kindDrawer = w().get_amiga_kind() == 0;
     SetBusy(true);
@@ -1012,7 +1020,7 @@ struct App {
         if (rc == 0)
           w().set_amiga_status(Str(kindDrawer
               ? "Done: the SWOS drawer is in " + Shown(dest) + ". Copy it, with SWOS.info, to your Amiga and double-click SWOS."
-              : "Done: " + Shown(dest) + ". Unpack it on your Amiga (lha x OpenSWOSAGA-WHDL.lha) and double-click OpenSWOSAGA-NE."));
+              : "Done: " + Shown(dest) + ". Unpack it on your Amiga (lha x OpenSWOSAGA-WHDL.lha), open the OpenSWOSAGA-NE drawer and double-click OpenSWOS."));
         else {
           w().set_amiga_status(Str("Failed: " + msg));
           Log("failed: " + msg);
@@ -1040,6 +1048,8 @@ struct App {
   std::string downloads;
   std::map<std::string, std::pair<uint64_t, int64_t>> seen, growing;
   bool gogInstaller = false;   // GOG's installer for the PC game is in Downloads
+  std::string watchDir;         // testing: watch this folder instead of Downloads
+  bool lookForGog = true;       // testing: --no-gog
   slint::Timer watchTimer;
 
   static bool Candidate(const sd::DirEntry& e) {
@@ -1111,7 +1121,7 @@ struct App {
     auto note = [&found](const std::string& what, const std::string& where) {
       if (!what.empty()) found = "Found " + what + " in " + Shown(where) + ".";
     };
-    if (!src.dosDir[0])
+    if (!src.dosDir[0] && lookForGog)
       for (const std::string& dir : sd::GogInstallDirs()) {
         const std::string key = "gog:" + dir;
         if (seen.count(key)) continue;
@@ -1157,7 +1167,7 @@ struct App {
   }
 
   void StartWatching() {
-    downloads = sd::DownloadsDir();
+    downloads = !watchDir.empty() ? watchDir : sd::DownloadsDir();
     w().set_watching(Str(downloads.empty()
         ? "What you download is not looked for (no Downloads folder): search the folder you saved it in."
         : "Watching " + Shown(downloads) + ": what you download from the links above is found by itself."));
@@ -1212,7 +1222,8 @@ int Usage() {
       "  --whdload-to FILE make the WHDLoad package FILE (the Amiga tab)\n"
       "testing: --auto (press the tab's button)  --snapshot PREFIX  --quit  --play\n"
       "         --snapshot-at MS (when the -start snapshot is taken; 1200)\n"
-      "         --no-watch (leave the Downloads folder alone)  --details\n",
+      "         --no-watch (leave the Downloads folder alone)  --details\n"
+      "         --downloads DIR (watch DIR instead)  --no-gog (no GOG install lookup)\n",
       SD_VERSION);
   std::fflush(stdout);
   return 2;
@@ -1243,12 +1254,16 @@ int main(int argc, char** argv) {
       watch = false;
     } else if (a == "--details") {
       details = true;
+    } else if (a == "--no-gog") {
+      app.lookForGog = false;
     } else if (a == "--help" || a == "-h") {
       Usage();
       return 0;
     } else if ((a == "--res" || a == "--scan" || a == "--out" || a == "--snapshot" || a == "--program" ||
-                a == "--drawer-to" || a == "--whdload-to" || a == "--snapshot-at") && v) {
+                a == "--drawer-to" || a == "--whdload-to" || a == "--snapshot-at" ||
+                a == "--downloads") && v) {
       if (a == "--res") resArg = v;
+      else if (a == "--downloads") app.watchDir = v;
       else if (a == "--snapshot-at") snapshotAt = std::atoi(v);
       else if (a == "--program") programArg = v;
       else if (a == "--drawer-to") drawerArg = v;
@@ -1270,7 +1285,7 @@ int main(int argc, char** argv) {
 
   // The Amiga outputs go to the Downloads folder unless told otherwise: the player
   // copies them to the Amiga from there.
-  const std::string dl = sd::DownloadsDir();
+  const std::string dl = !app.watchDir.empty() ? app.watchDir : sd::DownloadsDir();
   const std::string base = !dl.empty() ? dl : app.exeDir;
   app.drawerTo = !drawerArg.empty() ? drawerArg : Join(base, "OpenSWOS-Amiga");
   app.whdloadTo = !whdloadArg.empty() ? whdloadArg : Join(base, "OpenSWOSAGA-WHDL.lha");
@@ -1344,8 +1359,10 @@ int main(int argc, char** argv) {
                    });
 
   if (!app.snapshot.empty())
-    slint::Timer::single_shot(std::chrono::milliseconds(snapshotAt),
-                              [&app] { app.Snapshot(app.snapshot + "-start.ppm"); });
+    slint::Timer::single_shot(std::chrono::milliseconds(snapshotAt), [&app] {
+      app.Snapshot(app.snapshot + "-start.ppm");
+      if (app.quitAfter && !app.autoRun) slint::quit_event_loop();   // nothing else to wait for
+    });
   if (app.autoRun)
     slint::Timer::single_shot(std::chrono::milliseconds(1500), [&app] {
       if (app.w().get_tab() == 1) app.MakeAmiga();
