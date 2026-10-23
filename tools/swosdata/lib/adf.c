@@ -27,13 +27,21 @@
  * block, only bigger, so a floppy is just the smallest case. WinUAE can also make a
  * whole disk with a Rigid Disk Block ("RDSK" in one of its first 16 blocks), whose
  * PART blocks say where each partition starts and how big it is; each is read as a
- * volume of its own (Adf_OpenPartition). An image is read block by block from the
+ * volume of its own (Adf_OpenVolume). An image is read block by block from the
  * file, never loaded whole: a hard disk can be hundreds of megabytes.
  *
  * Michael Steil's extract-adf (pagetable.com) was the reference; this reads a
  * healthy disk by its directory tree rather than scanning sectors for
  * survivors, which is all a game disk needs.
  */
+/* fseeko/ftello and off_t for a hard disk image over 2 GB: POSIX, which a strict
+ * -std=c99 build (the plain Makefile, macOS) hides unless asked for. */
+#ifndef _WIN32
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#define _FILE_OFFSET_BITS 64
+#endif
 #include "adf.h"
 
 #include <ctype.h>

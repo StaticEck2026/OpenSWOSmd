@@ -9,22 +9,28 @@
 
 ROOT    := ../..
 SG      := $(ROOT)/third_party/swosgfx
+# miniz (the game's too): the setup reads .zip downloads of the Amiga version.
+MZ      := $(ROOT)/third_party/miniz
 OUT     := build
 CC      ?= gcc
 CFLAGS  ?= -O2 -g
 # ARCHFLAGS: e.g. "-arch x86_64" for one slice of a macOS universal build.
 ARCHFLAGS ?=
-CFLAGS  += $(ARCHFLAGS) -std=c99 -Wall -Wextra -Wno-unused-parameter -Ilib -I$(SG)/lib
+CFLAGS  += $(ARCHFLAGS) -std=c99 -Wall -Wextra -Wno-unused-parameter -Ilib -I$(SG)/lib -I$(MZ)
 
-LIB_SRCS := $(wildcard lib/*.c) $(wildcard $(SG)/lib/*.c)
+LIB_SRCS := $(wildcard lib/*.c) $(wildcard $(SG)/lib/*.c) $(MZ)/miniz.c
 LIB_OBJS := $(patsubst %.c,$(OUT)/obj/%.o,$(notdir $(LIB_SRCS)))
 
-vpath %.c lib $(SG)/lib cli test
+vpath %.c lib $(SG)/lib $(MZ) cli test
 
 all: $(OUT)/swosdata
 
 $(OUT)/obj/%.o: %.c | $(OUT)/obj
 	$(CC) $(CFLAGS) -MMD -c $< -o $@
+
+# Third-party: its own warnings are not ours to fix.
+$(OUT)/obj/miniz.o: $(MZ)/miniz.c | $(OUT)/obj
+	$(CC) $(CFLAGS) -w -MMD -c $< -o $@
 
 $(OUT)/obj:
 	mkdir -p $@
