@@ -101,7 +101,17 @@ $(GENDIR)/md_romdata.ld: scripts/md/rom_tables.txt scripts/md/gen_romdata_ld.py
 # The game data (scripts/md/make_md_data.py): from MD_EXPORT, the directory the SDL
 # build's `--md-export` writes from the player's SWOS data; stand-in art without one.
 MD_EXPORT ?= build/md/export
-$(GENDIR)/md_data.c: scripts/md/make_md_data.py src/sprite_data.c $(wildcard $(MD_EXPORT)/*.bin)
+# which source the data came from: a change of MD_EXPORT (or the export appearing or going)
+# makes it again, as a changed flag rebuilds the objects
+MD_DATA_SRC := $(if $(wildcard $(MD_EXPORT)/sprites.bin),$(abspath $(MD_EXPORT)),stand-in)
+MD_DATA_STAMP := $(GENDIR)/.md-data-source
+ifneq ($(MD_DATA_SRC),$(strip $(shell cat $(MD_DATA_STAMP) 2>/dev/null)))
+$(shell mkdir -p $(GENDIR) && printf '%s\n' '$(MD_DATA_SRC)' > $(MD_DATA_STAMP))
+endif
+$(MD_DATA_STAMP):
+	@mkdir -p $(GENDIR)
+	@printf '%s\n' '$(MD_DATA_SRC)' > $@
+$(GENDIR)/md_data.c: scripts/md/make_md_data.py src/sprite_data.c $(MD_DATA_STAMP) $(wildcard $(MD_EXPORT)/*.bin)
 	@mkdir -p $(GENDIR)
 	$(PYTHON) scripts/md/make_md_data.py --out $@ $(if $(wildcard $(MD_EXPORT)/sprites.bin),--export $(MD_EXPORT))
 
