@@ -19,8 +19,13 @@ typedef int int32_t;
  * depth — 4bpp sprite/menu/charset banks + 8bpp backgrounds/pitches,
  * auto-detected per bank at load (DetectBankPlanes). Comment out for
  * OCS (4 bitplanes, 16 colors) loading from grafs/.
+ *
+ * The Mega Drive build is OCS: its VDP shows 16-colour tiles and sprites, which is what
+ * the OCS game's 4-bitplane graphics are (docs/MEGADRIVE.md).
  * ================================================================== */
+#ifndef SWOS_MD_BUILD
 #define AGA
+#endif
 
 /* ---- Graphics folder path ---- */
 #ifdef AGA

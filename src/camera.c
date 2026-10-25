@@ -246,6 +246,14 @@ void ScrollToCurrent(void)
      * (game_loop.c:693). Menus don't come through here, so they never get a
      * sub-pixel shift. */
     Render_PublishScrollSubpixel();
+#elif defined(SWOS_MD_BUILD)
+    /* The Mega Drive's pitch is a VDP plane (src/md/md_render.c) and needs no blits;
+     * what the two scroll routines leave for the match is kept: the camera "moved since
+     * this buffer was last scrolled" flag the break timers read, and the buffer's own
+     * last camera position they measure it against. */
+    extern int16_t _oldCameraX, _oldCameraY;
+    if (_cameraX.s.i != _oldCameraX) { _oldCameraX = _cameraX.s.i; _cameraCoordinatesValid = 0; }
+    if (_cameraY.s.i != _oldCameraY) { _oldCameraY = _cameraY.s.i; _cameraCoordinatesValid = 0; }
 #else
     /* The FMODE left-verge "column strip" fix used to force a full-screen ScrollY refill here
      * (expensive: ~284k cycles/frame at the left edge, and it clobbered _oldCameraX/_oldCameraY).

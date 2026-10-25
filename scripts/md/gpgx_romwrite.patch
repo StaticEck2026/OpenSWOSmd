@@ -1,0 +1,59 @@
+diff --git a/core/mem68k.c b/core/mem68k.c
+index 37be6dc..418e37f 100644
+--- a/core/mem68k.c
++++ b/core/mem68k.c
+@@ -62,8 +62,25 @@ unsigned int m68k_read_bus_16(unsigned int address)
+ }
+ 
+ 
++/* OpenSWOS harness (scripts/md/gpgx_romwrite.patch): count writes into cartridge ROM. */
++unsigned int mdrun_rom_writes;
++unsigned int mdrun_rom_write_log[64][2];
++static void mdrun_note_rom_write(unsigned int address)
++{
++  if (address < 0x400000)
++  {
++    if (mdrun_rom_writes < 64)
++    {
++      mdrun_rom_write_log[mdrun_rom_writes][0] = address;
++      mdrun_rom_write_log[mdrun_rom_writes][1] = m68k_get_reg(M68K_REG_PC);
++    }
++    mdrun_rom_writes++;
++  }
++}
++
+ void m68k_unused_8_w(unsigned int address, unsigned int data)
+ {
++  mdrun_note_rom_write(address);
+ #ifdef LOGERROR
+   error("Unused write8 %08X = %02X (%08X)\n", address, data, m68k_get_reg(M68K_REG_PC));
+ #endif
+@@ -71,6 +88,7 @@ void m68k_unused_8_w(unsigned int address, unsigned int data)
+ 
+ void m68k_unused_16_w(unsigned int address, unsigned int data)
+ {
++  mdrun_note_rom_write(address);
+ #ifdef LOGERROR
+   error("Unused write16 %08X = %04X (%08X)\n", address, data, m68k_get_reg(M68K_REG_PC));
+ #endif
+diff --git a/libretro/libretro.c b/libretro/libretro.c
+index 798c6cc..5643a6d 100644
+--- a/libretro/libretro.c
++++ b/libretro/libretro.c
+@@ -3751,6 +3751,16 @@ void *retro_get_memory_data(unsigned id)
+          return sram.on ? sram.sram : NULL;
+       case RETRO_MEMORY_SYSTEM_RAM:
+          return work_ram;
++      case 0x7F00: /* OpenSWOS harness: ROM write counter + log (core/mem68k.c) */
++      {
++         extern unsigned int mdrun_rom_writes;
++         return &mdrun_rom_writes;
++      }
++      case 0x7F01:
++      {
++         extern unsigned int mdrun_rom_write_log[64][2];
++         return mdrun_rom_write_log;
++      }
+       default:
+          return NULL;
+    }

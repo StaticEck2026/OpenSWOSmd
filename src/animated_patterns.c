@@ -49,7 +49,29 @@ extern uint8_t  _pitchDatBuffer[];
 extern volatile uintptr_t _frontbufferBasePtr;
 extern uint8_t  _frontbufferMaskBuffer[];
 extern uint8_t  _currentMenu[];
-#ifdef SWOS_SDL_BUILD
+#if defined(SWOS_MD_BUILD)
+/* The Mega Drive's pitch slots (swos_globals.c, src/md/md_render.c) hold tile OFFSETS
+ * from 0 -- the tile index times the Amiga's 128-byte tile -- rather than addresses: the
+ * same `(entry - base) / TILE_SIZE` the toggle below recovers the index with. And it keeps
+ * only the slots this file touches: the three crowd rows at each end (1-3 and 51-53, the
+ * two 126-slot runs ResetAnimatedPatternsForBothTeams walks, and every index the random
+ * pick below can make), 252 slots in all. The rest of the map is read from ROM. */
+#define ANIM_TILE_BASE        0u
+#define ANIM_TILE_SIZE        TILE_SIZE
+#define ANIM_TILE_SIZE_SHIFT  TILE_SIZE_SHIFT
+#define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
+#define ANIM_TOP_FIRST        42      /* row 1 */
+#define ANIM_BOTTOM_FIRST     2142    /* row 51 */
+#define ANIM_RUN              126     /* three rows of 42 */
+static uint32_t *animSlot(int16_t pitchIdx)
+{
+    if (pitchIdx >= ANIM_TOP_FIRST && pitchIdx < ANIM_TOP_FIRST + ANIM_RUN)
+        return (uint32_t *)(void *)_pitchDatBuffer + (pitchIdx - ANIM_TOP_FIRST);
+    if (pitchIdx >= ANIM_BOTTOM_FIRST && pitchIdx < ANIM_BOTTOM_FIRST + ANIM_RUN)
+        return (uint32_t *)(void *)_pitchDatBuffer + ANIM_RUN + (pitchIdx - ANIM_BOTTOM_FIRST);
+    return 0;
+}
+#elif defined(SWOS_SDL_BUILD)
 extern uint8_t  _pitchChunkyBuffer[];
 /* On SDL the pitch tile pointers live in pitchChunkyBuffer with a fixed
  * 256-byte chunky stride per tile, whatever the source bitplane depth
@@ -167,6 +189,11 @@ static void drawPatternFromIndex(uint16_t patternIndex)
             if (tile) spr->sprData = tile;
         }
     }
+#elif defined(SWOS_MD_BUILD)
+    /* The cell's slot has just been toggled: the renderer redraws it from the slot
+     * (src/md/md_pitch.c). Nothing is blitted. */
+    { extern void md_pitch_cell_changed(uint16_t cell); md_pitch_cell_changed(patternIndex); }
+    return;
 #else
     {
         uint32_t *sprGfx     = (uint32_t *)(void *)_spriteGraphicsPtr;
@@ -324,11 +351,16 @@ ResetAnimatedPatternsForBothTeams(void)
     if (_trainingGame != 0)
         return;
 
+#ifdef SWOS_MD_BUILD
+    resetAnimatedPatterns(animSlot(ANIM_TOP_FIRST), 125);
+    resetAnimatedPatterns(animSlot(ANIM_BOTTOM_FIRST), 125);
+#else
     /* top fans section: offset 0xA8 bytes = 42 longs, 126 entries */
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0xA8), 125);
 
     /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries */
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0x2178), 125);
+#endif
 }
 
 #ifdef SWOS_SDL_BUILD
@@ -676,9 +708,14 @@ pattern_loop:
              * linker happens to place currentMenu *before*
              * pitchDatBuffer, making the original check fail
              * unconditionally. */
+#ifdef SWOS_MD_BUILD
+            tileEntryPtr = animSlot(pitchIdx);
+            if (!tileEntryPtr) {
+#else
             tileEntryPtr = ((uint32_t *)(void *)_pitchDatBuffer) + pitchIdx;
             if ((uintptr_t)tileEntryPtr < (uintptr_t)_pitchDatBuffer ||
                 (uintptr_t)tileEntryPtr >= (uintptr_t)_pitchDatBuffer + 2310u * 4) {
+#endif
                 _panicReasonCode = 0x2772;
                 PanicHaltLoop();
             }

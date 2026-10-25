@@ -632,6 +632,12 @@ void FadeAndSaveHighlightScene(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void SaveHighlightScene(void)
 {
+#ifdef SWOS_MD_BUILD
+    /* No room for saved scenes on the Mega Drive (swos_globals.c _hilFileBuffer): the
+     * goal still gets its instant replay, from the ring, but is not kept for the
+     * post-match highlights. */
+    return;
+#endif
     /* Asm: move.w #10,d0; beq locret — the beq is dead (10 != 0). Omitted. */
 
     if (_numScenesInHilFile == HIL_MAX_SCENES) {

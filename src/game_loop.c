@@ -178,10 +178,12 @@ extern void DrawSprites(void);
  */
 static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t present)
 {
+#ifndef SWOS_MD_BUILD
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
     while (BLIT_BUSY()) {}
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+#endif
 
     /* Anti-tamper cookie check — always passes in normal execution */
     {
@@ -213,6 +215,12 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
         if (present)
             Platform_VBlank();
     }
+#elif defined(SWOS_MD_BUILD)
+    /* The Mega Drive: the frame is handed to the renderer, then waits for the VBlank
+     * interrupt to show it -- which does the Amiga ISR's swap and camera (src/md/md_isr.c),
+     * so the loop sees exactly the original's frame boundary. */
+    (void)present;
+    { extern void MD_FrameDone(void); MD_FrameDone(); }
 #else
     (void)present;
 #if defined(AGA)

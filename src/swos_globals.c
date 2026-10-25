@@ -728,7 +728,14 @@ __asm__(
     ".text\n"
 );
 #else
+#ifdef SWOS_MD_BUILD
+/* The Mega Drive's 64 KB cannot hold ten saved scenes: it keeps the header only, and
+ * SaveHighlightScene (highlight.c) saves no scenes there. The instant replay's own ring
+ * (_goalBase) is the original's 19000 bytes. */
+uint8_t _hilFileBuffer[2254] __attribute__((used, aligned(4)));
+#else
 uint8_t _hilFileBuffer[192254] __attribute__((used, aligned(4)));
+#endif
 __asm__(
     ".globl " _ASM_PFX "_hilGameName\n"
     ".equ   " _ASM_PFX "_hilGameName, "          _ASM_PFX "_hilFileBuffer + 2044\n"
@@ -1046,6 +1053,10 @@ _Static_assert(PITCHFILE_MAX_SIZE >= 2u * 64u * 1024u, "menu music bank at the p
 __asm__(".globl " _ASM_PFX "_menuInsBank\n"
         ".equ   " _ASM_PFX "_menuInsBank, " _ASM_PFX "_pitchDatBuffer + (544 * 1024 - 64 * 1024)\n");
 _Static_assert(PITCHFILE_MAX_SIZE == 544u * 1024u, "update the _menuInsBank alias");
+#elif defined(SWOS_MD_BUILD)
+/* The Mega Drive keeps only the crowd rows' tile slots, 2 x 126 (animated_patterns.c
+ * animSlot); the tiles and the rest of the map are in ROM (src/md/md_render.c). */
+uint8_t _pitchDatBuffer[252 * 4] __attribute__((aligned(4)));
 #else
 SWOS_CHIP_BSS uint8_t _pitchDatBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 #endif

@@ -9,7 +9,9 @@
  * On the Amiga these point at the live Paula joystick + CIAA fire-button
  * registers. On the SDL build we redirect them to software state that
  * input_sdl.c writes once per SDL_PollEvent pass. */
-#ifdef SWOS_SDL_BUILD
+#if defined(SWOS_SDL_BUILD) || defined(SWOS_MD_BUILD)
+/* SDL and the Mega Drive have no Amiga ports: their input layers (input_sdl.c,
+ * src/md/md_isr.c) write the same register values into these. */
 extern uint16_t _joy0Dat;
 extern uint16_t _joy1Dat;
 extern uint8_t  _ciaa_pra;
