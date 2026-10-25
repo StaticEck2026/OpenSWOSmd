@@ -100,16 +100,16 @@ static void dma_raw(uint32_t ctrl, const void *src, uint16_t bytes)
 {
     uint32_t s = (uint32_t)src >> 1;
     uint16_t words = bytes >> 1;
-    md_vdp_set_reg(19, words & 0xFF);
-    md_vdp_set_reg(20, words >> 8);
-    md_vdp_set_reg(21, s & 0xFF);
-    md_vdp_set_reg(22, (s >> 8) & 0xFF);
-    md_vdp_set_reg(23, (s >> 16) & 0x7F);
+    volatile uint32_t *c32 = &MD_VDP_CTRL32;
+    /* registers 19-23 (length, source) two to a longword write */
+    *c32 = 0x93009400u | ((uint32_t)(words & 0xFF) << 16) | (words >> 8);
+    *c32 = 0x95009600u | ((s & 0xFF) << 16) | ((s >> 8) & 0xFF);
+    MD_VDP_CTRL = (uint16_t)(0x9700 | ((s >> 16) & 0x7F));
     /* The command that starts a 68000->VDP DMA is written from a RAM copy: on hardware
      * the bus is taken as the second word lands, and the next instruction fetch must not
      * be from ROM (a known Mega Drive DMA hazard; SGDK does the same). */
     s_dmaCmd = ctrl | 0x80;
-    MD_VDP_CTRL32 = s_dmaCmd;
+    *c32 = s_dmaCmd;
 }
 
 void md_vram_dma(uint16_t addr, const void *src, uint16_t bytes)
@@ -166,6 +166,14 @@ void md_dma_flush(void)
 {
     for (uint16_t i = 0; i < s_qn; i++) {
         DmaJob *j = &s_q[i];
+        if (j->bytes <= 8) {            /* a few words: the CPU is quicker than a DMA set-up */
+            const uint16_t *w = j->src;
+            if (j->inc != 2) md_vdp_set_reg(15, j->inc);
+            MD_VDP_CTRL32 = ctrl_for(j->target, j->addr);
+            for (uint16_t n = j->bytes >> 1; n; n--) MD_VDP_DATA = *w++;
+            if (j->inc != 2) md_vdp_set_reg(15, 2);
+            continue;
+        }
         if (j->inc != 2) md_vdp_set_reg(15, j->inc);
         {
             const uint8_t *src = j->src;

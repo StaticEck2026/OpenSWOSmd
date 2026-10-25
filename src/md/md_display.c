@@ -174,21 +174,25 @@ extern uint8_t *_spriteGraphicsPtr;
 const Sprite *g_spriteAnimVisible[SPRITE_ANIMVIS_MAX];
 int16_t g_spriteAnimVisibleCount;
 
-/* SortSprites (sprites.c, SWOS2.s line 7434): the original's bubble sort, unchanged --
- * equal-y sprites keep the order it leaves them in, and that order is the draw order. */
+/* SortSprites (sprites.c, SWOS2.s line 7434) sorts by y with repeated bubble passes. Both
+ * that and this insertion sort are stable -- sprites of equal y keep their order -- so they
+ * leave exactly the same order, and that order is all anything reads (the draw order).
+ * The list is nearly sorted from one frame to the next, where insertion sort does one pass;
+ * the bubble passes were a tenth of a Mega Drive frame. */
 void SortSprites(void)
 {
-    int16_t n = (int16_t)_numSpritesToRender - 2;
-    if (n < 0) return;
-    for (;;) {
-        int16_t swapped = 0;
-        Sprite **p = _sortedSprites;
-        for (int16_t i = n; i >= 0; i--) {
-            Sprite *s1 = p[0], *s2 = p[1];
-            if (s1->y.s.i > s2->y.s.i) { p[0] = s2; p[1] = s1; swapped = 1; }
-            p++;
-        }
-        if (!swapped) return;
+    int16_t n = (int16_t)_numSpritesToRender;
+    Sprite **base = _sortedSprites;
+    for (int16_t i = 1; i < n; i++) {
+        Sprite *key = base[i];
+        int16_t y = key->y.s.i;
+        int16_t j = i - 1;
+        if (base[j]->y.s.i <= y) continue;
+        do {
+            base[j + 1] = base[j];
+            j--;
+        } while (j >= 0 && base[j]->y.s.i > y);
+        base[j + 1] = key;
     }
 }
 
@@ -230,31 +234,33 @@ void DrawSprites(void)
 {
     SortSprites();
     g_spriteAnimVisibleCount = 0;
-    md_sprCount = 0;
 
-    int16_t n = (int16_t)_numSpritesToRender;
-    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
-    Sprite **a2 = _sortedSprites + n;
+    SpriteGraphics *const *table = (SpriteGraphics *const *)_spriteGraphicsPtr;
+    const int16_t camX = _cameraX.s.i, camY = _cameraY.s.i;
+    MdSprCmd *out = md_sprList, *outEnd = md_sprList + MD_SPRLIST_MAX;
+    Sprite **a2 = _sortedSprites + _numSpritesToRender;
     while (a2 != _sortedSprites) {
         Sprite *a1 = *--a2;
         int16_t idx = a1->imageIndex;
         if (idx < 0) continue;
-        SpriteGraphics *a0 = table[(uint16_t)idx];
-        int16_t d1 = a1->x.s.i - a0->centerX - _cameraX.s.i;
-        int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i - a1->z.s.i;
-        int16_t negW = -a0->pixWidth, negH = -a0->nlines;
-        int onScreen = !(d1 >= SCREEN_WIDTH || d2 >= _sim_view_height || d1 <= negW || d2 <= negH);
-        a1->onScreen = (int16_t)onScreen;
-        if (!onScreen) continue;
+        const SpriteGraphics *a0 = table[(uint16_t)idx];
+        int16_t d1 = (int16_t)(a1->x.s.i - a0->centerX - camX);
+        int16_t d2 = (int16_t)(a1->y.s.i - a0->centerY - camY - a1->z.s.i);
+        if (d1 >= SCREEN_WIDTH || d2 >= _sim_view_height || d1 <= -a0->pixWidth || d2 <= -a0->nlines) {
+            a1->onScreen = 0;
+            continue;
+        }
+        a1->onScreen = 1;
         a1->field_56 = 0;
-        if (md_sprCount < MD_SPRLIST_MAX) {
-            MdSprCmd *c = &md_sprList[md_sprCount++];
-            c->spr = a1;
-            c->image = (uint16_t)idx;
-            c->x = d1;
-            c->y = d2;
+        if (out < outEnd) {
+            out->spr = a1;
+            out->image = (uint16_t)idx;
+            out->x = d1;
+            out->y = d2;
+            out++;
         }
     }
+    md_sprCount = (uint16_t)(out - md_sprList);
 }
 
 /* LoadOverlayToFrontbuffer (src/file_io.c): a full-screen picture straight into the frame.

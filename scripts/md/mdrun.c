@@ -10,7 +10,7 @@
  *
  *   mdrun --core build/md/harness/genesis_plus_gx_libretro.so --rom dist/SWOS-MD.bin
  *         --frames 600 [--pal] [--shot 120,300 --shotdir out/] [--input script.txt]
- *         [--log ADDR] [--peek ADDR:N ...] [--wav out.wav]
+ *         [--log ADDR] [--peek ADDR:N ...] [--wav out.wav] [--profile FRAME:out.bin]
  *
  * Input script: one line per event, "<frame> <port> <buttons>", buttons a string of
  * U D L R A B C S X Y Z M ('-' for none); it holds until the next event for that port.
@@ -186,6 +186,7 @@ int main(int argc, char **argv)
 {
     const char *corep = NULL, *rom = NULL, *shots = NULL, *shotdir = ".", *inputp = NULL, *wavp = NULL;
     const char *peeks[32]; int npeek = 0;
+    long profFrom = -1; const char *profOut = NULL;
     long frames = 300, logaddr = -1, shotEvery = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--core") && i + 1 < argc) corep = argv[++i];
@@ -199,6 +200,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--log") && i + 1 < argc) logaddr = strtol(argv[++i], 0, 0);
         else if (!strcmp(argv[i], "--peek") && i + 1 < argc && npeek < 32) peeks[npeek++] = argv[++i];
         else if (!strcmp(argv[i], "--wav") && i + 1 < argc) wavp = argv[++i];
+        else if (!strcmp(argv[i], "--profile") && i + 1 < argc) {
+            char *colon; profFrom = strtol(argv[++i], &colon, 0);
+            profOut = *colon == ':' ? colon + 1 : "profile.bin";
+        }
         else { fprintf(stderr, "unknown argument %s\n", argv[i]); return 2; }
     }
     if (!corep || !rom) { fprintf(stderr, "usage: mdrun --core core.so --rom rom.bin [options]\n"); return 2; }
@@ -248,7 +253,9 @@ int main(int argc, char **argv)
     }
 
     int ev = 0;
+    unsigned *profOn = p_retro_get_memory_data(0x7F03);
     for (long f = 0; f < frames; f++) {
+        if (profOn && profFrom >= 0 && f == profFrom) *profOn = 1;
         while (ev < g_nev && g_ev[ev].frame <= f) { g_pad[g_ev[ev].port & 1] = g_ev[ev].mask; ev++; }
         p_retro_run();
         if (logaddr >= 0) drain_log((uint32_t)logaddr);
@@ -259,6 +266,11 @@ int main(int argc, char **argv)
         }
         if (want) { char p[512]; snprintf(p, sizeof p, "%s/shot_%05ld.png", shotdir, f); write_png(p); }
     }
+    if (profOut && profOn) {
+        /* cycles by PC/4 below 1 MB, little-endian u32; scripts/md/profile.py reads it */
+        FILE *pf = fopen(profOut, "wb");
+        if (pf) { fwrite(p_retro_get_memory_data(0x7F02), 4, 0x40000, pf); fclose(pf); }
+    }
     for (int i = 0; i < npeek; i++) {
         char *colon; uint32_t a = strtoul(peeks[i], &colon, 0); int n = *colon == ':' ? atoi(colon + 1) : 1;
         printf("peek %06X:", a);
@@ -267,7 +279,7 @@ int main(int argc, char **argv)
     }
     (void)ram32;
     {
-        /* writes into cartridge ROM (scripts/md/gpgx_romwrite.patch): a table placed in
+        /* writes into cartridge ROM (scripts/md/gpgx_harness.patch): a table placed in
          * ROM that the game writes to -- a bug on hardware, where the write is lost */
         unsigned *n = p_retro_get_memory_data(0x7F00);
         unsigned (*log)[2] = p_retro_get_memory_data(0x7F01);

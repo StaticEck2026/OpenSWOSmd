@@ -67,7 +67,7 @@ TYPEFIX = -U__SIZE_TYPE__ '-D__SIZE_TYPE__=long unsigned int' -U__PTRDIFF_TYPE__
 # access at an odd address, and a gcc built for Linux (68020+, which allows it) still merges
 # adjacent byte loads and stores into word ones at odd offsets even with -mstrict-align --
 # BE_READ_U16(p + 1) became `move.w 1(a0)`. The A1200 never noticed; the Mega Drive does.
-CFLAGS  = -m68000 -mstrict-align -fno-store-merging -fdisable-tree-bswap -O2 -fomit-frame-pointer -ffreestanding -fno-builtin-printf -fno-strict-aliasing \
+CFLAGS  = -m68000 -mstrict-align -fno-store-merging -fdisable-tree-bswap -O3 -fomit-frame-pointer -ffreestanding -fno-builtin-printf -fno-strict-aliasing \
           -fno-tree-loop-distribution -ffunction-sections -fdata-sections -fno-common \
           -fno-pic -fno-pie \
           -Wall -Wno-unused-function -MMD -MP \

@@ -216,9 +216,9 @@ static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t 
             Platform_VBlank();
     }
 #elif defined(SWOS_MD_BUILD)
-    /* The Mega Drive: the frame is handed to the renderer, then waits for the VBlank
-     * interrupt to show it -- which does the Amiga ISR's swap and camera (src/md/md_isr.c),
-     * so the loop sees exactly the original's frame boundary. */
+    /* The Mega Drive: the frame is handed to the renderer's queue and the frame does the
+     * Amiga ISR's swap, camera and tick itself (src/md/md_isr.c), as an Amiga at full
+     * speed sees them; the VBlank shows it. */
     (void)present;
     { extern void MD_FrameDone(void); MD_FrameDone(); }
 #else
@@ -269,6 +269,10 @@ static void pauseSpinWaitOneTick(void)
 {
 #ifdef SWOS_SDL_BUILD
     Platform_VBlank();
+#elif defined(SWOS_MD_BUILD)
+    /* a match's frames own the clock on the Mega Drive (src/md/md_isr.c): this waits a
+     * tick and counts it, as the Amiga's interrupt does while the game is paused */
+    { extern void MD_WaitTick(void); MD_WaitTick(); }
 #else
     uint16_t d0;
     /* dbf d1 with d1=0 means 1 iteration */

@@ -12,9 +12,11 @@ if [ ! -d "$H/gpgx/.git" ]; then
     git clone --filter=blob:none "$GPGX_URL" "$H/gpgx"
 fi
 ( cd "$H/gpgx" && git fetch -q origin "$GPGX_REV" 2>/dev/null || true; git checkout -q "$GPGX_REV" )
-# Our one change to the core: count the game's writes into ROM (mdrun prints them).
-if ! grep -q mdrun_rom_writes "$H/gpgx/core/mem68k.c"; then
-    ( cd "$H/gpgx" && git apply "$OLDPWD/scripts/md/gpgx_romwrite.patch" )
+# Our changes to the core (scripts/md/gpgx_harness.patch): count the game's writes into
+# ROM, and a cycle-weighted profile of the 68000's PC (mdrun --profile).
+if ! grep -q mdrun_prof_on "$H/gpgx/core/m68k/m68kcpu.c"; then
+    ( cd "$H/gpgx" && git checkout -q -- . )
+    ( cd "$H/gpgx" && git apply "$OLDPWD/scripts/md/gpgx_harness.patch" )
     rm -f "$H/genesis_plus_gx_libretro.so"
 fi
 if [ ! -f "$H/genesis_plus_gx_libretro.so" ]; then

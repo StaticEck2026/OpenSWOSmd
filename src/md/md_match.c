@@ -114,5 +114,6 @@ void md_match_enter(void)
 
 void md_match_leave(void)
 {
+    md_match_clock_stop();
     md_render_shutdown();
 }

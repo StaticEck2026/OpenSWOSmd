@@ -22,9 +22,12 @@ void md_render_commit(void);      /* VBlank: queue the staged frame's VDP update
 void md_render_shutdown(void);
 
 /* md_isr.c */
-extern volatile uint16_t md_lagTicks, md_gameFrames;
+extern volatile uint16_t md_lagTicks, md_gameFrames, md_matchTicks;
+extern volatile uint8_t md_inMatch;
 extern uint8_t md_clock60;
 void md_input_poll(void);
+void md_match_clock_stop(void);
+extern volatile uint16_t md_ticks;
 
 /* md_sound.c */
 void md_sound_tick(void);         /* one 50 Hz game tick of the engine's audio */

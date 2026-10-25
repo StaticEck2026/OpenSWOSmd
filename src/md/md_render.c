@@ -57,63 +57,68 @@ static int16_t s_screenH;
 static const MdPitch *s_pitch;
 static uint8_t s_kit1, s_kit2;  /* kit sheet (0..2) of each team */
 
-/* ---- staged frame (written by md_render_frame, queued by md_render_commit) ---- */
+/* ---- staged frames (written by md_render_frame, queued by md_render_commit) ----
+ * Two: the game may finish the next frame before this one has been shown (md_isr.c). */
 typedef struct { uint16_t y, sizeLink, attr, x; } VdpSprite;
-static VdpSprite s_sat[80];
-static uint8_t  s_satCount;
-static uint16_t s_hscroll, s_vscroll;
-static uint16_t s_pal[64];
-static uint8_t  s_palStaged;
-
 #define UPLOAD_MAX 40
 typedef struct { const void *src; uint16_t vram, bytes; } Upload;
-static Upload s_up[UPLOAD_MAX];
-static uint8_t s_upCount;
-
 /* plane writes: runs of nametable words, contiguous (inc 2) or a column (inc 128) */
-#define PLANE_JOBS 12
-#define PLANE_WORDS 640
+#define PLANE_JOBS 40
+#define PLANE_WORDS 400
 typedef struct { uint16_t vram; uint8_t count, inc; uint16_t first; } PlaneJob;
-static PlaneJob s_pj[PLANE_JOBS];
-static uint16_t s_pw[PLANE_WORDS];
-static uint8_t  s_pjCount;
-static uint16_t s_pwCount;
-static uint8_t  s_staged;
+typedef struct {
+    VdpSprite sat[80];
+    uint8_t   satCount, upCount, pjCount, palStaged;
+    uint16_t  hscroll, vscroll, pwCount;
+    Upload    up[UPLOAD_MAX];
+    PlaneJob  pj[PLANE_JOBS];
+    uint16_t  pw[PLANE_WORDS];
+    uint16_t  pal[64];
+} Stage;
+static Stage s_stage[2];
+static Stage *s_w;              /* the frame being staged */
+static uint8_t s_wIdx, s_rIdx;  /* next to stage, next to show */
+
+/* crowd tiles the engine toggled this frame (md_pitch_cell_changed), drawn when staged */
+#define FAN_MAX 24
+static uint16_t s_fan[FAN_MAX];
+static uint8_t s_fanCount;
 
 static int plane_job(uint16_t vram, uint8_t inc, const uint16_t *words, uint8_t n)
 {
-    if (s_pjCount >= PLANE_JOBS || s_pwCount + n > PLANE_WORDS) return 0;
-    PlaneJob *j = &s_pj[s_pjCount++];
-    j->vram = vram; j->count = n; j->inc = inc; j->first = s_pwCount;
-    for (uint8_t i = 0; i < n; i++) s_pw[s_pwCount++] = words[i];
+    Stage *st = s_w;
+    if (st->pjCount >= PLANE_JOBS || st->pwCount + n > PLANE_WORDS) return 0;
+    PlaneJob *j = &st->pj[st->pjCount++];
+    j->vram = vram; j->count = n; j->inc = inc; j->first = st->pwCount;
+    for (uint8_t i = 0; i < n; i++) st->pw[st->pwCount++] = words[i];
     return 1;
 }
 
 /* ---- palettes ---- */
 
-/* Amiga 12-bit 0RGB -> VDP 9-bit 0BGR (top three bits of each channel), faded. */
+/* Amiga 12-bit 0RGB -> VDP 9-bit 0BGR (top three bits of each channel), faded the way
+ * the Amiga's ApplyFadeStep does: level/32 steps of a shift (fade.c's shift/mask table). */
 static uint16_t md_color(uint16_t amiga, uint16_t level)
 {
     uint16_t r = (amiga >> 8) & 15, g = (amiga >> 4) & 15, b = amiga & 15;
     if (level < 0x80) {
-        r = (uint16_t)((r * level) >> 7);
-        g = (uint16_t)((g * level) >> 7);
-        b = (uint16_t)((b * level) >> 7);
+        uint16_t sh = (uint16_t)(4 - (level >> 5));
+        r >>= sh; g >>= sh; b >>= sh;
     }
     return (uint16_t)(((b >> 1) << 9) | ((g >> 1) << 5) | ((r >> 1) << 1));
 }
 
-static void build_palettes(void)
+/* Rebuilt at kick-off and on each fade step (ApplyFadeStep sets md_paletteDirty): the
+ * game palette and the colour tables are set before the match's first frame and stay. */
+static void build_palettes(uint16_t *pal)
 {
     uint16_t lvl = md_fadeLevel;
     for (int i = 0; i < 16; i++) {
-        s_pal[i]      = md_color(_gamePalette[i], lvl);
-        s_pal[16 + i] = md_color(_gamePalette[_team1PlayersColorTable[i] & 15], lvl);
-        s_pal[32 + i] = md_color(_gamePalette[_team2PlayersColorTable[i] & 15], lvl);
-        s_pal[48 + i] = md_color(_gamePalette[_colorTableReserves[i] & 15], lvl);
+        pal[i]      = md_color(_gamePalette[i], lvl);
+        pal[16 + i] = md_color(_gamePalette[_team1PlayersColorTable[i] & 15], lvl);
+        pal[32 + i] = md_color(_gamePalette[_team2PlayersColorTable[i] & 15], lvl);
+        pal[48 + i] = md_color(_gamePalette[_colorTableReserves[i] & 15], lvl);
     }
-    s_pal[0] = md_color(_gamePalette[0], lvl);     /* backdrop */
-    s_palStaged = 1;
 }
 
 /* ---- the pitch ---- */
@@ -154,6 +159,29 @@ static inline uint16_t cell_entry(int16_t cx, int16_t cy)
     return s_pitch->cells[t16 * 4 + (cx & 1) + ((cy & 1) << 1)];
 }
 
+/* The nametable words of `n` cells of one cell row (cy) from column cx0, a 16x16 tile at a
+ * time: each tile gives two cells of the row. */
+static void row_cells(uint16_t *w, int16_t cx0, int16_t cy, int16_t n)
+{
+    int16_t cx = cx0, end = (int16_t)(cx0 + n);
+    if (cy < 0 || cy >= PITCH_ROWS * 2) { for (int16_t i = 0; i < n; i++) w[i] = 0; return; }
+    uint16_t rowSlot = (uint16_t)((cy >> 1) * PITCH_COLS);
+    uint16_t half = (uint16_t)((cy & 1) << 1);
+    const uint16_t *cells = s_pitch->cells;
+    uint16_t nt = s_pitch->nTiles16;
+    while (cx < end) {
+        uint16_t e;
+        if (cx < 0 || cx >= PITCH_COLS * 2) e = 0;
+        else {
+            uint16_t t16 = slot_tile((uint16_t)(rowSlot + (cx >> 1)));
+            if (t16 >= nt) t16 = 0;
+            e = cells[t16 * 4 + half + (cx & 1)];
+        }
+        *w++ = e;
+        cx++;
+    }
+}
+
 static void stage_column(int16_t cx)
 {
     uint16_t w[PLANE_H];
@@ -173,27 +201,41 @@ static void stage_row(int16_t cy)
     int16_t prow = cy & (PLANE_H - 1);
     int16_t c0 = s_cx0 & (PLANE_W - 1);
     uint8_t n1 = (uint8_t)(PLANE_W - c0 < LOAD_W ? PLANE_W - c0 : LOAD_W);
-    for (int16_t i = 0; i < LOAD_W; i++) w[i] = cell_entry(s_cx0 + i, cy);
+    row_cells(w, s_cx0, cy, LOAD_W);
     plane_job((uint16_t)(VRAM_PLANE_B + (prow * PLANE_W + c0) * 2), 2, w, n1);
     if (n1 < LOAD_W)
         plane_job((uint16_t)(VRAM_PLANE_B + prow * PLANE_W * 2), 2, w + n1, (uint8_t)(LOAD_W - n1));
 }
 
-/* animated_patterns.c toggled a fan: its four cells, if they are loaded */
+/* animated_patterns.c toggled a fan: noted, and its four cells rewritten when the frame
+ * is staged (stage_fans) */
 void md_pitch_cell_changed(uint16_t cell)
 {
-    if (!s_active) return;
-    int16_t cx = (int16_t)((cell % PITCH_COLS) * 2), cy = (int16_t)((cell / PITCH_COLS) * 2);
-    for (int16_t dy = 0; dy < 2; dy++) {
-        int16_t y = cy + dy;
-        if (y < s_cy0 || y >= s_cy0 + s_loadH) continue;
-        for (int16_t dx = 0; dx < 2; dx++) {
-            int16_t x = cx + dx;
-            if (x < s_cx0 || x >= s_cx0 + LOAD_W) continue;
-            uint16_t e = cell_entry(x, y);
-            plane_job((uint16_t)(VRAM_PLANE_B + ((y & (PLANE_H - 1)) * PLANE_W + (x & (PLANE_W - 1))) * 2), 2, &e, 1);
+    if (!s_active || s_fanCount >= FAN_MAX) return;
+    s_fan[s_fanCount++] = cell;
+}
+
+static void stage_fans(void)
+{
+    for (uint8_t f = 0; f < s_fanCount; f++) {
+        uint16_t cell = s_fan[f];
+        int16_t cx = (int16_t)((cell % PITCH_COLS) * 2), cy = (int16_t)((cell / PITCH_COLS) * 2);
+        if (cx < s_cx0 || cx + 1 >= s_cx0 + LOAD_W) continue;
+        for (int16_t dy = 0; dy < 2; dy++) {
+            int16_t y = cy + dy;
+            if (y < s_cy0 || y >= s_cy0 + s_loadH) continue;
+            uint16_t e[2];
+            e[0] = cell_entry(cx, y);
+            e[1] = cell_entry(cx + 1, y);
+            if ((cx & (PLANE_W - 1)) == PLANE_W - 1) {     /* the pair straddles the ring's edge */
+                plane_job((uint16_t)(VRAM_PLANE_B + ((y & (PLANE_H - 1)) * PLANE_W + PLANE_W - 1) * 2), 2, &e[0], 1);
+                plane_job((uint16_t)(VRAM_PLANE_B + ((y & (PLANE_H - 1)) * PLANE_W) * 2), 2, &e[1], 1);
+            } else {
+                plane_job((uint16_t)(VRAM_PLANE_B + ((y & (PLANE_H - 1)) * PLANE_W + (cx & (PLANE_W - 1))) * 2), 2, e, 2);
+            }
         }
     }
+    s_fanCount = 0;
 }
 
 static void pitch_full_load(int16_t rx, int16_t ry)
@@ -220,93 +262,95 @@ static void pitch_scroll(int16_t rx, int16_t ry)
     while (s_cy0 > ncy) { s_cy0--; stage_row(s_cy0); }
 }
 
-/* ---- the sprite tile cache ---- */
-#define CACHE_SLOTS 64
+/* ---- the sprite tile cache ----
+ * By image index: within a match an index always draws the same image (the kit sheets are
+ * fixed at kick-off), except the advert boards, whose window moves -- an entry remembers
+ * which image it holds, and a different one is uploaded over it. */
+#define CACHE_SLOTS 96
 #define UNIT 4                              /* tiles per allocation unit */
 #define UNITS (TILE_DYN_COUNT / UNIT)       /* 128 */
-typedef struct { const MdImage *img; uint16_t lastFrame; uint8_t unit, units; } CacheEnt;
+typedef struct { const MdImage *img; uint16_t idx, lastFrame; uint8_t unit, units; uint16_t attrBase; } CacheEnt;
 static CacheEnt s_cache[CACHE_SLOTS];
-static uint8_t s_unitUsed[UNITS];           /* cache entry + 1 owning the unit, 0 free */
+static uint8_t s_imgEnt[MD_NUM_IMAGES];     /* cache entry + 1 holding the image, 0 none */
+static uint8_t s_unitUsed[UNITS];           /* 1: the unit is taken */
+static uint8_t s_cacheUsed;                 /* entries in use */
 static uint16_t s_frame;
 static uint16_t s_dmaBudget;
 
 static void cache_reset(void)
 {
     for (int i = 0; i < CACHE_SLOTS; i++) s_cache[i].img = 0;
+    for (int i = 0; i < MD_NUM_IMAGES; i++) s_imgEnt[i] = 0;
     for (int i = 0; i < UNITS; i++) s_unitUsed[i] = 0;
+    s_cacheUsed = 0;
 }
 
-static void cache_free(int e)
+static void cache_free(uint8_t e)
 {
-    for (int u = 0; u < s_cache[e].units; u++) s_unitUsed[s_cache[e].unit + u] = 0;
-    s_cache[e].img = 0;
+    CacheEnt *c = &s_cache[e];
+    for (uint8_t u = 0; u < c->units; u++) s_unitUsed[c->unit + u] = 0;
+    s_imgEnt[c->idx] = 0;
+    c->img = 0;
+    s_cacheUsed--;
 }
 
-/* The image's first VRAM tile, uploading it if it is not resident; -1 if there is no
- * room or no DMA budget left this frame (the sprite is skipped for one frame). */
-static int16_t cache_get(const MdImage *img)
+static int16_t find_units(uint8_t need)
 {
-    uint8_t h = (uint8_t)(((uint32_t)img >> 1) & (CACHE_SLOTS - 1));
-    int free_e = -1;
-    for (int k = 0; k < CACHE_SLOTS; k++) {
-        int e = (h + k) & (CACHE_SLOTS - 1);
-        if (s_cache[e].img == img) {
-            s_cache[e].lastFrame = s_frame;
-            return (int16_t)(TILE_DYN_SPRITES + s_cache[e].unit * UNIT);
-        }
-        if (!s_cache[e].img) { if (free_e < 0) free_e = e; break; }
-    }
-    uint16_t bytes = (uint16_t)(img->nTiles * 32);
-    if (bytes > s_dmaBudget || s_upCount >= UPLOAD_MAX) return -1;
-    uint8_t need = (uint8_t)((img->nTiles + UNIT - 1) / UNIT);
-    for (int pass = 0; pass < 2; pass++) {
-        uint8_t run = 0;
-        for (int u = 0; u < UNITS; u++) {
-            run = s_unitUsed[u] ? 0 : (uint8_t)(run + 1);
-            if (run == need) {
-                int first = u - need + 1;
-                if (free_e < 0) {
-                    for (int k = 0; k < CACHE_SLOTS; k++)
-                        if (!s_cache[(h + k) & (CACHE_SLOTS - 1)].img) { free_e = (h + k) & (CACHE_SLOTS - 1); break; }
-                    if (free_e < 0) return -1;
-                }
-                CacheEnt *c = &s_cache[free_e];
-                c->img = img; c->lastFrame = s_frame; c->unit = (uint8_t)first; c->units = need;
-                for (int v = 0; v < need; v++) s_unitUsed[first + v] = (uint8_t)(free_e + 1);
-                s_up[s_upCount].src = MD_IMAGE_TILES(img);
-                s_up[s_upCount].vram = (uint16_t)((TILE_DYN_SPRITES + first * UNIT) * 32);
-                s_up[s_upCount].bytes = bytes;
-                s_upCount++;
-                s_dmaBudget -= bytes;
-                return (int16_t)(TILE_DYN_SPRITES + first * UNIT);
-            }
-        }
-        /* full: drop everything not drawn this frame, and try again */
-        for (int e = 0; e < CACHE_SLOTS; e++)
-            if (s_cache[e].img && s_cache[e].lastFrame != s_frame) cache_free(e);
-        /* the hash chains are broken by the frees: rebuild by re-inserting survivors */
-        {
-            CacheEnt keep[CACHE_SLOTS]; int n = 0;
-            for (int e = 0; e < CACHE_SLOTS; e++) if (s_cache[e].img) keep[n++] = s_cache[e];
-            for (int e = 0; e < CACHE_SLOTS; e++) s_cache[e].img = 0;
-            for (int i = 0; i < UNITS; i++) s_unitUsed[i] = 0;
-            for (int i = 0; i < n; i++) {
-                uint8_t hh = (uint8_t)(((uint32_t)keep[i].img >> 1) & (CACHE_SLOTS - 1));
-                for (int k = 0; k < CACHE_SLOTS; k++) {
-                    int e = (hh + k) & (CACHE_SLOTS - 1);
-                    if (!s_cache[e].img) {
-                        s_cache[e] = keep[i];
-                        for (int v = 0; v < keep[i].units; v++) s_unitUsed[keep[i].unit + v] = (uint8_t)(e + 1);
-                        break;
-                    }
-                }
-            }
-            free_e = -1;
-            for (int k = 0; k < CACHE_SLOTS; k++)
-                if (!s_cache[(h + k) & (CACHE_SLOTS - 1)].img) { free_e = (h + k) & (CACHE_SLOTS - 1); break; }
-        }
+    uint8_t run = 0;
+    for (int16_t u = 0; u < UNITS; u++) {
+        run = s_unitUsed[u] ? 0 : (uint8_t)(run + 1);
+        if (run == need) return (int16_t)(u - need + 1);
     }
     return -1;
+}
+
+static void upload(const MdImage *img, uint8_t unit)
+{
+    uint16_t bytes = (uint16_t)(img->nTiles * 32);
+    Upload *u = &s_w->up[s_w->upCount++];
+    u->src = MD_IMAGE_TILES(img);
+    u->vram = (uint16_t)((TILE_DYN_SPRITES + unit * UNIT) * 32);
+    u->bytes = bytes;
+    s_dmaBudget -= bytes;
+}
+
+/* Image `idx` (whose current picture is `img`): its first VRAM tile, uploaded if needed;
+ * -1 when there is no room or no DMA left this frame (drawn next frame instead). */
+static int16_t cache_get(uint16_t idx, const MdImage *img)
+{
+    uint8_t e = s_imgEnt[idx];
+    uint16_t bytes = (uint16_t)(img->nTiles * 32);
+    if (e) {
+        CacheEnt *c = &s_cache[e - 1];
+        c->lastFrame = s_frame;
+        if (c->img == img) return (int16_t)(TILE_DYN_SPRITES + c->unit * UNIT);
+        /* the same slot shows another picture now (an advert's window moved) */
+        if ((uint8_t)((img->nTiles + UNIT - 1) / UNIT) == c->units && bytes <= s_dmaBudget && s_w->upCount < UPLOAD_MAX) {
+            c->img = img;
+            upload(img, c->unit);
+            return (int16_t)(TILE_DYN_SPRITES + c->unit * UNIT);
+        }
+        cache_free((uint8_t)(e - 1));
+    }
+    if (bytes > s_dmaBudget || s_w->upCount >= UPLOAD_MAX) return -1;
+    uint8_t need = (uint8_t)((img->nTiles + UNIT - 1) / UNIT);
+    int16_t first = find_units(need);
+    if (first < 0 || s_cacheUsed >= CACHE_SLOTS) {
+        /* full: drop everything not drawn this frame */
+        for (uint8_t k = 0; k < CACHE_SLOTS; k++)
+            if (s_cache[k].img && s_cache[k].lastFrame != s_frame) cache_free(k);
+        first = find_units(need);
+        if (first < 0) return -1;
+    }
+    uint8_t k = 0;
+    while (s_cache[k].img) k++;
+    CacheEnt *c = &s_cache[k];
+    c->img = img; c->idx = idx; c->lastFrame = s_frame; c->unit = (uint8_t)first; c->units = need;
+    for (uint8_t v = 0; v < need; v++) s_unitUsed[first + v] = 1;
+    s_imgEnt[idx] = (uint8_t)(k + 1);
+    s_cacheUsed++;
+    upload(img, (uint8_t)first);
+    return (int16_t)(TILE_DYN_SPRITES + first * UNIT);
 }
 
 /* ---- images ---- */
@@ -369,13 +413,19 @@ static void hud_sprite(const MdSprCmd *c)
     if (img >= 0x8D && img < 0x8D + 32) {               /* a player's name: number + name */
         const TeamGame *t = img < 0x9D ? &_topTeamInGame : &_bottomTeamInGame;
         const PlayerInfo *p = &t->players[(img - 0x8D) & 15];
-        md_snprintf(buf, 6, "%d ", p->shirtNumber);
-        int n = 0; while (buf[n]) n++;
+        int n = 0, num = p->shirtNumber;
+        if (num >= 10) buf[n++] = (char)('0' + num / 10);
+        buf[n++] = (char)('0' + num % 10);
+        buf[n++] = ' ';
         str_copy(buf + n, p->shortName, 15);
         hud_put(row, col, buf);
     } else if (img >= 214 && img <= 216) {              /* the clock (game_state.c UpdateTime) */
-        uint16_t mins = (uint16_t)(_gameTime[1] * 100 + _gameTime[2] * 10 + _gameTime[3]);
-        md_snprintf(buf, sizeof buf, "%d MINS", mins);
+        int n = 0;
+        if (_gameTime[1]) buf[n++] = (char)('0' + _gameTime[1]);
+        if (_gameTime[1] || _gameTime[2]) buf[n++] = (char)('0' + _gameTime[2]);
+        buf[n++] = (char)('0' + _gameTime[3]);
+        buf[n] = 0;
+        str_copy(buf + n, (const int8_t *)" MINS", 5);
         hud_put(row, col, buf);
     } else if (img == 193 || img == 194) {              /* a team's name on the result */
         str_copy(buf, (img == 193 ? _topTeamInGame : _bottomTeamInGame).teamName, 16);
@@ -388,8 +438,14 @@ static void hud_sprite(const MdSprCmd *c)
     }
 }
 
+/* What the HUD showed: the HUD sprites drawn (image, position) and the values their
+ * text is made from. The text is rebuilt only when this changes. */
+static uint32_t s_hudSig, s_hudSigShown = 0xFFFFFFFF;
+
 static void stage_hud(void)
 {
+    if (s_hudSig == s_hudSigShown) return;
+    s_hudSigShown = s_hudSig;
     for (int r = 0; r < HUD_ROWS; r++) {
         int changed = 0;
         for (int i = 0; i < HUD_COLS; i++) if (s_hud[r][i] != s_hudShown[r][i]) { changed = 1; break; }
@@ -442,8 +498,16 @@ static void match_setup(int16_t rx, int16_t ry)
     cache_reset();
     for (int r = 0; r < HUD_ROWS; r++)
         for (int i = 0; i <= HUD_COLS; i++) s_hud[r][i] = s_hudShown[r][i] = 0;
-    build_palettes();
-    md_cram_write(0, s_pal, 64);
+    s_hudSigShown = 0xFFFFFFFF;
+    {
+        uint16_t pal[64];
+        build_palettes(pal);
+        md_cram_write(0, pal, 64);
+    }
+    s_wIdx = s_rIdx = 0;
+    s_w = &s_stage[0];
+    s_w->pjCount = 0; s_w->pwCount = 0; s_w->upCount = 0;
+    s_fanCount = 0;
     md_vdp_display(1);
     md_irq_on();
     s_active = 1;
@@ -458,72 +522,107 @@ void md_render_frame(void)
         match_setup(rx, (int16_t)(_cameraY.s.i + s_offY));
     }
     ry = (int16_t)(_cameraY.s.i + s_offY);
-    if (s_staged) return;           /* the last frame has not been shown yet */
-
+    /* md_isr.c has made sure s_w is free (at most two frames queued) */
+    s_w = &s_stage[s_wIdx];
+    Stage *st = s_w;
     s_frame++;
-    s_pjCount = 0;
-    s_pwCount = 0;
-    s_upCount = 0;
+    st->pjCount = 0;
+    st->pwCount = 0;
+    st->upCount = 0;
+    st->palStaged = 0;
     s_dmaBudget = md_is_pal() ? 9000 : 5200;
 
     pitch_scroll(rx, ry);
-    s_hscroll = (uint16_t)(-rx);
-    s_vscroll = (uint16_t)ry;
+    stage_fans();
+    st->hscroll = (uint16_t)(-rx);
+    st->vscroll = (uint16_t)ry;
 
-    for (int r = 0; r < HUD_ROWS; r++)
-        for (int i = 0; i < HUD_COLS; i++) s_hud[r][i] = ' ';
+    /* the HUD's signature: its sprites and the values behind their text */
+    uint32_t sig = (uint32_t)_gameTime[3] | ((uint32_t)_gameTime[2] << 4) | ((uint32_t)_gameTime[1] << 8);
+    for (uint16_t i = 0; i < md_sprCount; i++) {
+        const MdSprCmd *c = &md_sprList[i];
+        if (c->spr->z.s.i >= HUD_Z_MIN)
+            sig = (sig << 5 | sig >> 27) ^ c->image ^ ((uint32_t)(c->x >> 3) << 11) ^ ((uint32_t)(c->y >> 6) << 20);
+    }
+    s_hudSig = sig;
+    if (sig != s_hudSigShown) {
+        for (int r = 0; r < HUD_ROWS; r++)
+            for (int i = 0; i < HUD_COLS; i++) s_hud[r][i] = ' ';
+        for (uint16_t i = 0; i < md_sprCount; i++)
+            if (md_sprList[i].spr->z.s.i >= HUD_Z_MIN) hud_sprite(&md_sprList[i]);
+    }
 
     /* sprites, front to back; the VDP links them in table order and shows the first on top */
     uint8_t n = 0;
-    for (uint16_t i = 0; i < md_sprCount && n < 80; i++) {
-        const MdSprCmd *c = &md_sprList[i];
-        if (c->spr->z.s.i >= HUD_Z_MIN) { hud_sprite(c); continue; }
-        uint8_t pal;
-        const MdImage *img = image_for(c->image, &pal);
-        if (!img || !img->nPieces) continue;
-        int16_t base = cache_get(img);
-        if (base < 0) continue;
-        int16_t sx = (int16_t)(c->x - 8 + 128), sy = (int16_t)(c->y - s_offY + 128);
-        for (uint8_t p = 0; p < img->nPieces && n < 80; p++) {
-            const MdPiece *pc = &img->pieces[p];
-            int16_t x = sx + pc->dx, y = sy + pc->dy;
-            if (x <= 96 || x >= 128 + 320 || y <= 96 || y >= 128 + s_screenH) continue;
-            VdpSprite *v = &s_sat[n];
-            v->y = (uint16_t)y;
-            v->sizeLink = (uint16_t)((pc->size << 8) | (n + 1));
-            v->attr = TILE_ATTR(pal, 0, 0, 0, base + pc->tile);
-            v->x = (uint16_t)x;
-            n++;
+    {
+        const MdSprCmd *c = md_sprList, *end = md_sprList + md_sprCount;
+        VdpSprite *v = st->sat;
+        int16_t ymax = (int16_t)(128 + s_screenH), offY = (int16_t)(s_offY - 128);
+        for (; c < end; c++) {
+            if (c->spr->z.s.i >= HUD_Z_MIN) continue;
+            uint16_t idx = c->image;
+            uint8_t e = s_imgEnt[idx];
+            const MdImage *img;
+            uint16_t attr;
+            /* an image already resident: one lookup (an index draws one picture for the
+             * whole match -- but an advert board's window moves, so those are re-checked) */
+            if (e && (uint16_t)(idx - MD_ADVERT_FIRST) >= MD_ADVERT_COUNT) {
+                CacheEnt *ce = &s_cache[e - 1];
+                ce->lastFrame = s_frame;
+                img = ce->img;
+                attr = ce->attrBase;
+            } else {
+                uint8_t pal;
+                img = image_for(idx, &pal);
+                if (!img->nPieces) continue;
+                int16_t base = cache_get(idx, img);
+                if (base < 0) continue;
+                attr = TILE_ATTR(pal, 0, 0, 0, base);
+                s_cache[s_imgEnt[idx] - 1].attrBase = attr;
+            }
+            int16_t sx = (int16_t)(c->x + 120), sy = (int16_t)(c->y - offY);
+            const MdPiece *pc = img->pieces, *pend = pc + img->nPieces;
+            for (; pc < pend; pc++) {
+                int16_t x = (int16_t)(sx + pc->dx), y = (int16_t)(sy + pc->dy);
+                if (x <= 96 || x >= 128 + 320 || y <= 96 || y >= ymax) continue;
+                if (n >= 80) goto sat_full;
+                n++;
+                v->y = (uint16_t)y;
+                v->sizeLink = (uint16_t)((pc->size << 8) | n);
+                v->attr = (uint16_t)(attr + pc->tile);
+                v->x = (uint16_t)x;
+                v++;
+            }
         }
     }
+sat_full:
     if (n == 0) {                    /* an empty table is one sprite off screen */
-        s_sat[0].y = 0; s_sat[0].sizeLink = 0; s_sat[0].attr = 0; s_sat[0].x = 0;
+        st->sat[0].y = 0; st->sat[0].sizeLink = 0; st->sat[0].attr = 0; st->sat[0].x = 0;
         n = 1;
     }
-    s_sat[n - 1].sizeLink &= 0xFF00;   /* end of the link chain */
-    s_satCount = n;
+    st->sat[n - 1].sizeLink &= 0xFF00;   /* end of the link chain */
+    st->satCount = n;
 
     stage_hud();
-    build_palettes();
-    s_staged = 1;
+    if (md_paletteDirty) { md_paletteDirty = 0; build_palettes(st->pal); st->palStaged = 1; }
+    s_wIdx ^= 1;
 }
 
-/* At the VBlank that shows the frame (md_isr.c game_tick). */
+/* At the VBlank that shows the frame (md_isr.c game_tick): the oldest staged one. */
 void md_render_commit(void)
 {
-    if (!s_staged) return;
-    md_dma_queue(VRAM_SPRITES, s_sat, (uint16_t)(s_satCount * 8));
-    for (uint8_t i = 0; i < s_upCount; i++) md_dma_queue(s_up[i].vram, s_up[i].src, s_up[i].bytes);
-    for (uint8_t i = 0; i < s_pjCount; i++)
-        md_dma_queue_ex(MD_DMA_VRAM, s_pj[i].vram, &s_pw[s_pj[i].first], (uint16_t)(s_pj[i].count * 2), s_pj[i].inc);
-    md_dma_queue_ex(MD_DMA_VSRAM, 2, &s_vscroll, 2, 2);     /* plane B's; plane A stays at 0 */
-    md_dma_queue(VRAM_HSCROLL + 2, &s_hscroll, 2);
-    if (s_palStaged) { md_dma_queue_ex(MD_DMA_CRAM, 0, s_pal, 128, 2); s_palStaged = 0; }
-    s_staged = 0;
+    Stage *st = &s_stage[s_rIdx];
+    s_rIdx ^= 1;
+    md_dma_queue(VRAM_SPRITES, st->sat, (uint16_t)(st->satCount * 8));
+    for (uint8_t i = 0; i < st->upCount; i++) md_dma_queue(st->up[i].vram, st->up[i].src, st->up[i].bytes);
+    for (uint8_t i = 0; i < st->pjCount; i++)
+        md_dma_queue_ex(MD_DMA_VRAM, st->pj[i].vram, &st->pw[st->pj[i].first], (uint16_t)(st->pj[i].count * 2), st->pj[i].inc);
+    md_dma_queue_ex(MD_DMA_VSRAM, 2, &st->vscroll, 2, 2);     /* plane B's; plane A stays at 0 */
+    md_dma_queue(VRAM_HSCROLL + 2, &st->hscroll, 2);
+    if (st->palStaged) md_dma_queue_ex(MD_DMA_CRAM, 0, st->pal, 128, 2);
 }
 
 void md_render_shutdown(void)
 {
     s_active = 0;
-    s_staged = 0;
 }
