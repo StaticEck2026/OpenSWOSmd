@@ -386,6 +386,7 @@ static const MdImage *image_for(uint16_t idx, uint8_t *pal)
 /* ---- the HUD: the engine's HUD sprites, as text on plane A (md_overlay.c) ---- */
 #define HUD_ROWS 2
 static uint8_t s_hudRowY[HUD_ROWS];
+static uint32_t s_hudSig;       /* the HUD on screen (md_render_frame) */
 
 static void hud_put(int row, int col, const char *t)
 {
@@ -472,6 +473,7 @@ static void match_setup(int16_t rx, int16_t ry)
     md_vsram_write(1, 0);
     cache_reset();
     md_ov_reset(s_offY, s_screenH);
+    s_hudSig = 0xFFFFFFFF;
     {
         uint16_t pal[64];
         build_palettes(pal);
@@ -510,10 +512,25 @@ void md_render_frame(void)
     st->hscroll = (uint16_t)(-rx);
     st->vscroll = (uint16_t)ry;
 
-    /* the HUD's text, then everything else the engine drew into the frame */
-    for (uint16_t i = 0; i < md_sprCount; i++)
-        if (md_sprList[i].spr->z.s.i >= HUD_Z_MIN) hud_sprite(&md_sprList[i]);
-    md_ov_commit();
+    /* The HUD's text, then everything else the engine drew into the frame. A frame whose
+     * HUD is the last one's (its sprites and the values their text is made of), with
+     * nothing else drawn this frame or the one before, leaves plane A as it is. */
+    {
+        uint32_t sig = (uint32_t)_gameTime[3] | ((uint32_t)_gameTime[2] << 4) | ((uint32_t)_gameTime[1] << 8);
+        for (uint16_t i = 0; i < md_sprCount; i++) {
+            const MdSprCmd *c = &md_sprList[i];
+            if (c->spr->z.s.i >= HUD_Z_MIN)
+                sig = (sig << 5 | sig >> 27) ^ c->image ^ ((uint32_t)(c->x >> 3) << 11) ^ ((uint32_t)(c->y >> 6) << 20);
+        }
+        int hudChanged = sig != s_hudSig;
+        if (hudChanged || md_ov_drawn()) {
+            s_hudSig = sig;
+            if (!md_ov_static())
+                for (uint16_t i = 0; i < md_sprCount; i++)
+                    if (md_sprList[i].spr->z.s.i >= HUD_Z_MIN) hud_sprite(&md_sprList[i]);
+            md_ov_commit(hudChanged);
+        }
+    }
 
     /* sprites, front to back; the VDP links them in table order and shows the first on top */
     uint8_t n = 0;

@@ -17,6 +17,8 @@ extern uint16_t md_ovSprCount;
 
 void md_ov_reset(int16_t offY, int16_t screenH);
 void md_ov_put(int16_t col, int16_t row, const char *s, int16_t max);
-void md_ov_commit(void);
+void md_ov_commit(int hudChanged);
+int  md_ov_drawn(void);
+int  md_ov_static(void);   /* the engine's drawing is the last frames': only hashed */
 
 #endif

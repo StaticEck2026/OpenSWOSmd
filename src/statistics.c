@@ -81,6 +81,16 @@ extern void DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
 __attribute__((used, externally_visible))
 void DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
+#ifdef SWOS_MD_BUILD
+    /* The Mega Drive darkens plane A cells, not frontbuffer pixels (src/md/md_overlay.c):
+     * the grid is one rectangle there, not cols x rows calls of 16x16 (182 a frame for the
+     * statistics board, a fifth of a 68000 frame). */
+    {
+        extern void MD_DarkenArea(int16_t x, int16_t y, int16_t w, int16_t h);
+        MD_DarkenArea((int16_t)x, (int16_t)y, (int16_t)(width & ~15), (int16_t)(height & ~15));
+        return;
+    }
+#endif
     uint16_t cols = (width >> 4) - 1;
     uint16_t rows = (height >> 4) - 1;
     uint16_t origX = x;

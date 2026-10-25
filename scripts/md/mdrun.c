@@ -10,7 +10,7 @@
  *
  *   mdrun --core build/md/harness/genesis_plus_gx_libretro.so --rom dist/SWOS-MD.bin
  *         --frames 600 [--pal] [--shot 120,300 --shotdir out/] [--input script.txt]
- *         [--log ADDR] [--peek ADDR:N ...] [--wav out.wav] [--profile FRAME:out.bin]
+ *         [--log ADDR] [--peek ADDR:N ...] [--peek-every N] [--wav out.wav] [--profile FRAME:out.bin]
  *
  * Input script: one line per event, "<frame> <port> <buttons>", buttons a string of
  * U D L R A B C S X Y Z M ('-' for none); it holds until the next event for that port.
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
     const char *corep = NULL, *rom = NULL, *shots = NULL, *shotdir = ".", *inputp = NULL, *wavp = NULL;
     const char *peeks[32]; int npeek = 0;
     long profFrom = -1; const char *profOut = NULL;
-    long frames = 300, logaddr = -1, shotEvery = 0;
+    long frames = 300, logaddr = -1, shotEvery = 0, peekEvery = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--core") && i + 1 < argc) corep = argv[++i];
         else if (!strcmp(argv[i], "--rom") && i + 1 < argc) rom = argv[++i];
@@ -199,6 +199,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--input") && i + 1 < argc) inputp = argv[++i];
         else if (!strcmp(argv[i], "--log") && i + 1 < argc) logaddr = strtol(argv[++i], 0, 0);
         else if (!strcmp(argv[i], "--peek") && i + 1 < argc && npeek < 32) peeks[npeek++] = argv[++i];
+        else if (!strcmp(argv[i], "--peek-every") && i + 1 < argc) peekEvery = strtol(argv[++i], 0, 0);
         else if (!strcmp(argv[i], "--wav") && i + 1 < argc) wavp = argv[++i];
         else if (!strcmp(argv[i], "--profile") && i + 1 < argc) {
             char *colon; profFrom = strtol(argv[++i], &colon, 0);
@@ -265,6 +266,15 @@ int main(int argc, char **argv)
             while (*s) { if (strtol(s, NULL, 10) == f) { want = 1; break; } s = strchr(s, ','); if (!s) break; s++; }
         }
         if (want) { char p[512]; snprintf(p, sizeof p, "%s/shot_%05ld.png", shotdir, f); write_png(p); }
+        if (peekEvery && f % peekEvery == 0 && npeek) {
+            /* one line a sample: the frame, then each --peek's words */
+            printf("at %ld:", f);
+            for (int i = 0; i < npeek; i++) {
+                char *colon; uint32_t a = strtoul(peeks[i], &colon, 0); int n = *colon == ':' ? atoi(colon + 1) : 1;
+                for (int k = 0; k < n; k++) printf(" %04X", ram16(a + 2 * k));
+            }
+            printf("\n");
+        }
     }
     if (profOut && profOn) {
         /* cycles by PC/4 below 1 MB, little-endian u32; scripts/md/profile.py reads it */

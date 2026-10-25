@@ -30,11 +30,23 @@ extern const uint32_t md_font_tiles[96 * 8];
 extern uint8_t *_spriteGraphicsPtr;
 extern FixedPoint _cameraX, _cameraY;
 
-uint16_t md_ov[MD_OV_ROWS][MD_OV_COLS];
-static uint32_t s_rowsDrawn;            /* rows with anything in md_ov this frame */
+/* the grid: a character and a background a cell (two byte planes: the engine's calls
+ * write one or the other, a byte store each) */
+static uint8_t s_ch[MD_OV_ROWS][MD_OV_COLS] __attribute__((aligned(4)));
+static uint8_t s_bg[MD_OV_ROWS][MD_OV_COLS] __attribute__((aligned(4)));
+static const uint32_t kBit[32] = {
+    1u << 0, 1u << 1, 1u << 2, 1u << 3, 1u << 4, 1u << 5, 1u << 6, 1u << 7,
+    1u << 8, 1u << 9, 1u << 10, 1u << 11, 1u << 12, 1u << 13, 1u << 14, 1u << 15,
+    1u << 16, 1u << 17, 1u << 18, 1u << 19, 1u << 20, 1u << 21, 1u << 22, 1u << 23,
+    1u << 24, 1u << 25, 1u << 26, 1u << 27, 1u << 28, 1u << 29, 1u << 30, 1u << 31,
+};
+static uint32_t s_rowsDrawn;            /* rows with anything in the grid this frame */
 static uint32_t s_rowsShown;            /* rows not blank on screen */
 static uint16_t s_rowHash[MD_OV_ROWS];  /* what each row on screen holds */
 static int16_t s_offY = 24, s_rows = 28;
+static uint8_t s_engineDrew, s_engineDrewLast;   /* the engine drew into the grid (not the HUD) */
+static uint32_t s_callHash, s_lastCallHash;      /* the engine's calls this frame, the last */
+static uint8_t s_static, s_sameRun;              /* (see call_hash below) */
 
 MdSprCmd md_ovSpr[MD_OV_SPR_MAX];
 uint16_t md_ovSprCount;
@@ -87,13 +99,36 @@ static uint16_t cell_attr(uint16_t cell)
     return TILE_ATTR(0, 1, 0, 0, cache_tile(s_cacheUsed++));
 }
 
+static void rect_flush(void);
+
+static void clear_drawn(void)
+{
+    uint32_t m = s_rowsDrawn;
+    for (int r = 0; m; r++, m >>= 1)
+        if (m & 1) {
+            uint32_t *a = (uint32_t *)s_ch[r], *b = (uint32_t *)s_bg[r];
+            for (int i = 0; i < MD_OV_COLS / 4; i++) a[i] = b[i] = 0;
+        }
+    s_rowsDrawn = 0;
+}
+
+int md_ov_static(void) { return s_static; }
+
+/* Whether the frame needs the overlay pass: the engine drew this frame or the last one
+ * (whose drawing is still on plane A). */
+int md_ov_drawn(void) { return s_engineDrew | s_engineDrewLast; }
+
 void md_ov_reset(int16_t offY, int16_t screenH)
 {
+    rect_flush();
+    s_engineDrew = s_engineDrewLast = 0;
+    s_static = s_sameRun = 0;
+    s_callHash = s_lastCallHash = 0;
     s_offY = offY;
     s_rows = (int16_t)(screenH / 8);
     if (s_rows > MD_OV_ROWS) s_rows = MD_OV_ROWS;
     for (int r = 0; r < MD_OV_ROWS; r++) {
-        for (int c = 0; c < MD_OV_COLS; c++) md_ov[r][c] = 0;
+        for (int c = 0; c < MD_OV_COLS; c++) s_ch[r][c] = s_bg[r][c] = 0;
         s_rowHash[r] = 0;
     }
     s_rowsDrawn = s_rowsShown = 0;
@@ -101,29 +136,45 @@ void md_ov_reset(int16_t offY, int16_t screenH)
     md_ovSprCount = 0;
 }
 
-static uint16_t row_hash(const uint16_t *row)
+static uint16_t row_hash(int r)
 {
-    uint16_t h = 0;
-    for (int c = 0; c < MD_OV_COLS; c++) h = (uint16_t)((h << 3 | h >> 13) ^ row[c] ^ c);
-    return h;
+    const uint32_t *a = (const uint32_t *)s_ch[r], *b = (const uint32_t *)s_bg[r];
+    uint32_t h = 0;
+    for (int i = 0; i < MD_OV_COLS / 4; i++) h = (h << 5 | h >> 27) ^ a[i] ^ (b[i] << 1) ^ (uint32_t)i;
+    h ^= h >> 16;
+    return (uint16_t)(h ? h : 1);
 }
 
 /* End of frame: the rows that changed go to plane A, then the grid is emptied. The
  * writes are the CPU's, straight away (a few rows at most, and the text need not wait
  * for the frame's sprites). */
-void md_ov_commit(void)
+void md_ov_commit(int hudChanged)
 {
+    if (s_static) {
+        int same = s_callHash == s_lastCallHash && !hudChanged;
+        s_callHash = 0;
+        clear_drawn();
+        s_engineDrewLast = s_engineDrew;
+        s_engineDrew = 0;
+        if (!same) {                    /* something changed: draw in full from the next frame */
+            s_static = 0;
+            s_sameRun = 0;
+            s_lastCallHash = 0;
+            s_engineDrewLast = 1;
+        }
+        return;
+    }
+    rect_flush();
     uint32_t rows = s_rowsDrawn | s_rowsShown;
     for (int pass = 0; pass < 2 && rows; pass++) {
         int full = 0;
         for (int r = 0; r < s_rows; r++) {
-            if (!(rows & (1UL << r))) continue;
-            uint16_t *row = md_ov[r];
-            uint16_t h = (s_rowsDrawn & (1UL << r)) ? row_hash(row) : 0;
+            if (!(rows & kBit[r])) continue;
+            uint16_t h = (s_rowsDrawn & kBit[r]) ? row_hash(r) : 0;
             if (h == s_rowHash[r]) continue;
             uint16_t w[MD_OV_COLS];
             for (int c = 0; c < MD_OV_COLS; c++) {
-                uint16_t v = row[c];
+                uint16_t v = (uint16_t)(s_bg[r][c] << 8 | s_ch[r][c]);
                 w[c] = v ? cell_attr(v) : 0;
                 if (v >> 8 && !w[c]) full = 1;
             }
@@ -133,7 +184,7 @@ void md_ov_commit(void)
             for (int c = 0; c < MD_OV_COLS; c++) MD_VDP_DATA = w[c];
             md_irq_on();
             s_rowHash[r] = h;
-            if (h) s_rowsShown |= 1UL << r; else s_rowsShown &= ~(1UL << r);
+            if (h) s_rowsShown |= kBit[r]; else s_rowsShown &= ~kBit[r];
         }
         if (!full) break;
         /* the cache ran out: empty it and write every row again from it */
@@ -141,10 +192,16 @@ void md_ov_commit(void)
         for (int r = 0; r < MD_OV_ROWS; r++) s_rowHash[r] = 0xFFFF;
         rows = s_rowsDrawn | s_rowsShown;
     }
-    for (int r = 0; r < s_rows; r++)
-        if (s_rowsDrawn & (1UL << r))
-            for (int c = 0; c < MD_OV_COLS; c++) md_ov[r][c] = 0;
-    s_rowsDrawn = 0;
+    clear_drawn();
+    if (s_engineDrew && s_callHash == s_lastCallHash) {
+        if (++s_sameRun >= 2) s_static = 1;
+    } else {
+        s_sameRun = 0;
+    }
+    s_lastCallHash = s_callHash;
+    s_callHash = 0;
+    s_engineDrewLast = s_engineDrew;
+    s_engineDrew = 0;
 }
 
 /* ---- drawing: the engine's window -> cells ---- */
@@ -152,14 +209,15 @@ void md_ov_commit(void)
 void md_ov_put(int16_t col, int16_t row, const char *s, int16_t max)
 {
     if (row < 0 || row >= s_rows) return;
+    uint8_t *d = s_ch[row];
     for (; *s && max-- > 0; s++, col++) {
         if (col < 0) continue;
         if (col >= MD_OV_COLS) break;
         uint8_t ch = (uint8_t)*s;
         if (ch >= 'a' && ch <= 'z') ch = (uint8_t)(ch - 32);
-        md_ov[row][col] = (uint16_t)((md_ov[row][col] & 0xFF00) | (ch == ' ' ? 0 : ch));
+        d[col] = ch == ' ' ? 0 : ch;
     }
-    s_rowsDrawn |= 1UL << row;
+    s_rowsDrawn |= kBit[row];
 }
 
 static int16_t text_row(int16_t y) { return (int16_t)((y - s_offY + 4) >> 3); }
@@ -168,7 +226,7 @@ static int16_t text_col(int16_t x) { return (int16_t)((x - 8 + 4) >> 3); }
 static uint16_t str_len(const uint8_t *s) { uint16_t n = 0; while (s[n]) n++; return n; }
 
 /* The cells a rectangle covers: those whose centre is inside it. */
-static void ov_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t bg)
+static void rect_cells(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t bg)
 {
     int16_t sx = (int16_t)(x - 8), sy = (int16_t)(y - s_offY);
     int16_t c0 = (int16_t)((sx + 3) >> 3), c1 = (int16_t)((sx + w - 5) >> 3);
@@ -177,17 +235,58 @@ static void ov_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t bg)
     if (c1 >= MD_OV_COLS) c1 = MD_OV_COLS - 1;
     if (r0 < 0) r0 = 0;
     if (r1 >= s_rows) r1 = (int16_t)(s_rows - 1);
+    if (c0 > c1) return;
     for (int16_t r = r0; r <= r1; r++) {
-        for (int16_t c = c0; c <= c1; c++) md_ov[r][c] = (uint16_t)((bg << 8) | (md_ov[r][c] & 0xFF));
-        s_rowsDrawn |= 1UL << r;
+        uint8_t *d = &s_bg[r][c0], *e = &s_bg[r][c1];
+        do *d = bg; while (d++ != e);
+        s_rowsDrawn |= kBit[r];
     }
+}
+
+/* DrawGrid lays its squares side by side, nineteen to a row of the statistics board: a
+ * rectangle that continues the last one (same row, same background, starting where it
+ * ended) is merged into it, and the run is written when something else comes along. */
+static int16_t s_px, s_py, s_pw, s_ph;
+static uint8_t s_pbg;               /* 0: nothing pending */
+
+static void rect_flush(void)
+{
+    if (s_pbg) rect_cells(s_px, s_py, s_pw, s_ph, s_pbg);
+    s_pbg = 0;
+}
+
+/* ---- a frame that draws what the last ones drew ----
+ * The statistics board is drawn again every frame it is up, the same each time. Every
+ * call the engine makes is folded into s_callHash; once three frames in a row hash the
+ * same, the overlay is static: the calls only hash, and a frame that hashes the same
+ * again costs nothing more. One that differs ends it, and the next frame draws in full
+ * (a frame later than it would have: the picture on plane A is the last one meanwhile). */
+static inline void call_hash(uint32_t v)
+{
+    s_engineDrew = 1;
+    s_callHash = (s_callHash << 5 | s_callHash >> 27) ^ v;
+}
+
+static void ov_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t bg)
+{
+    call_hash((uint32_t)(uint16_t)x ^ ((uint32_t)(uint16_t)y << 16) ^ ((uint32_t)w << 7) ^ ((uint32_t)h << 21) ^ bg);
+    if (s_static) return;
+    if (s_pbg == bg && y == s_py && h == s_ph && x == s_px + s_pw) { s_pw = (int16_t)(s_pw + w); return; }
+    rect_flush();
+    s_px = x; s_py = y; s_pw = w; s_ph = h; s_pbg = bg;
 }
 
 /* text_render.c: the string's left edge at x; returns where the next character goes */
 uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable)
 {
     (void)color; (void)charsTable;
-    uint16_t n = str_len(text);
+    uint16_t n = 0;
+    {
+        uint32_t h = (uint32_t)x ^ ((uint32_t)y << 16);
+        while (text[n]) { h = (h << 3 | h >> 29) ^ text[n]; n++; }
+        call_hash(h);
+    }
+    if (s_static) return (uint16_t)(x + n * 8);
     md_ov_put(text_col((int16_t)x), text_row((int16_t)y), (const char *)text, (int16_t)n);
     return (uint16_t)(x + n * 8);
 }
@@ -215,6 +314,12 @@ void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     const SpriteGraphics *g = ((SpriteGraphics *const *)_spriteGraphicsPtr)[spriteIndex];
     ov_rect(x, y, g->pixWidth ? g->pixWidth : 16, g->nlines ? g->nlines : 16, MD_OV_DARK);
+}
+
+/* statistics.c DrawGrid: its 16x16 squares as one area */
+void MD_DarkenArea(int16_t x, int16_t y, int16_t w, int16_t h)
+{
+    ov_rect(x, y, w, h, MD_OV_DARK);
 }
 
 /* blitter.c: a box of one colour of the game palette */
