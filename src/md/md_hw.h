@@ -117,7 +117,7 @@ int      md_snprintf(char *buf, int n, const char *fmt, ...);
 /* ---- md_sound.c ---- */
 void     md_sound_init(void);
 void     md_sound_frame(void);
-void     md_sfx(int id);
-void     md_crowd(int level);   /* 0..15 */
+void     md_sound_stop(void);
+extern uint8_t md_soundOn;      /* the OPTIONS screen's SOUND */
 
 #endif

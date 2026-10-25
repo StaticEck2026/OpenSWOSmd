@@ -490,16 +490,16 @@ static int pitch_choice(void)       /* md_options.pitch as an index of kPitch */
 
 static void options_screen(void)
 {
-    enum { O_LENGTH, O_PITCH, O_MONTH, O_REPLAYS, O_SPEED, O_BACK, O_N };
+    enum { O_LENGTH, O_PITCH, O_MONTH, O_REPLAYS, O_SOUND, O_SPEED, O_BACK, O_N };
     static const char *const labels[O_N] = { "GAME LENGTH", "PITCH", "MONTH", "AUTO REPLAYS",
-                                             "GAME SPEED", 0 };
+                                             "SOUND", "GAME SPEED", 0 };
     int sel = 0;
     screen_clear();
     big_c(2, PAL_TEXT, "OPTIONS");
     for (int dirty = 1;;) {
         if (dirty) {
             for (int i = 0; i < O_N; i++) {
-                uint16_t y = (uint16_t)(7 + i * 3);
+                uint16_t y = (uint16_t)(6 + i * 3);
                 const char *v = "";
                 int dim = 0;
                 switch (i) {
@@ -507,6 +507,7 @@ static void options_screen(void)
                 case O_PITCH:   v = kPitch[pitch_choice()]; break;
                 case O_MONTH:   v = kMonth[md_options.month % 12]; dim = md_options.pitch != MD_PITCH_SEASONAL; break;
                 case O_REPLAYS: v = _autoReplays ? "ON" : "OFF"; break;
+                case O_SOUND:   v = md_soundOn ? "ON" : "OFF"; break;
                 case O_SPEED:   v = md_is_pal() ? "50 HZ" : md_clock60 ? "60 HZ (FAST)" : "50 HZ (AMIGA)";
                                 dim = md_is_pal(); break;
                 }
@@ -516,9 +517,9 @@ static void options_screen(void)
                 item(17, y, 21, sel == i, 1, v);
             }
             if (sel == O_SPEED && !md_is_pal())
-                text_c(0, 40, 25, PAL_DIM, "50 HZ PLAYS AT THE AMIGA'S SPEED");
+                text_c(0, 40, 27, PAL_DIM, "50 HZ PLAYS AT THE AMIGA'S SPEED");
             else
-                clear_row(25);
+                clear_row(27);
             dirty = 0;
         }
         uint16_t k = keys();
@@ -539,6 +540,7 @@ static void options_screen(void)
         }
         case O_MONTH:   md_options.month = (uint8_t)((md_options.month + 12 + d) % 12); break;
         case O_REPLAYS: _autoReplays ^= 1; break;
+        case O_SOUND:   md_soundOn ^= 1; break;
         case O_SPEED:   if (!md_is_pal()) md_clock60 ^= 1; break;
         }
     }
