@@ -111,6 +111,12 @@ static FILE *try_open_ci(const char *path, const char *mode)
     return NULL;
 }
 
+#ifdef SWOS_SDL_BUILD
+/* The Amiga's own OCS art only, grafs/ and never grafs_aga/ or grafs_jag/: the Mega
+ * Drive export (md_export.c) wants the 16-colour files the A500 game draws with. */
+int32_t g_grafsOcsOnly;
+#endif
+
 static FILE *open_case_insensitive(const char *path, const char *mode)
 {
 #ifdef AGA
@@ -137,6 +143,13 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
     const char *base = NULL;
     if (strncmp(rel, "grafs_aga/", 10) == 0)  base = rel + 10;
     else if (strncmp(rel, "grafs/", 6) == 0)  base = rel + 6;
+#ifdef SWOS_SDL_BUILD
+    if (base && g_grafsOcsOnly) {
+        char cand[1024], anchored[1024];
+        snprintf(cand, sizeof(cand), "grafs/%s", base);
+        return try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
+    }
+#endif
     if (base) {
         char cand[1024], anchored[1024];
         FILE *f;

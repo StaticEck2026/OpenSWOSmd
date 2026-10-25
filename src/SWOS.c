@@ -365,6 +365,12 @@ skip_title_screens: ;
         if (NetplayLiveTest_Armed())
             NetplayLiveTest_Run();   /* plays a live match, then exits */
         {
+            extern int32_t MdExport_Armed(void);
+            extern void    MdExport_Run(void);
+            if (MdExport_Armed())
+                MdExport_Run();       /* writes the Mega Drive's data, then exits */
+        }
+        {
             extern int32_t SrpResim_Armed(void);
             extern void    SrpResim_Run(void);
             if (SrpResim_Armed())

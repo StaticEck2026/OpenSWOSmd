@@ -74,7 +74,9 @@ globals), `src/game_loop.c` (the frame's end is `MD_FrameDone`, a pause tick `MD
 compact slot table), `src/swos_globals.c` (smaller `_pitchDatBuffer`, header-only
 `_hilFileBuffer`), `src/highlight.c` (goals are not archived as highlights: the replay
 ring is kept), `src/statistics.c` (`DrawGrid` darkens one area), `src/build_info.c`
-(the platform name).
+(the platform name). On the SDL side the export adds `src/md_export.c` (in `Makefile.amiga`'s
+`SDL_ONLY_SRCS`), its option in `src/main.c`, its call in `mainC`'s Phase 9 (`src/SWOS.c`)
+and `g_grafsOcsOnly` in `src/resload.c`.
 
 ### The clock
 
@@ -142,12 +144,20 @@ The original game's data is not in the repo (CLAUDE.md "Data"). `scripts/md/make
 builds `build/md/md_data.c` -- the sprite table, the kit sheets, the pitches and the teams,
 already in the VDP's format -- from one of two sources:
 
-- **The player's own data**: `make -f Makefile.md MD_EXPORT=DIR` with `DIR` written by the
-  SDL build's `--md-export=DIR` (`src/md_export.c`, SDL only) from the player's assets.
+- **The player's own data**: run OpenSWOS Setup with the Amiga disks (the export wants the
+  Amiga's 16-colour `grafs/` set), then `bin/SWOS.x86_64 --md-export=DIR` (the SDL build;
+  `src/md_export.c`, SDL only: it loads the match's image script once per kit sheet, the
+  six pitch files and every database team, writes them and exits), then
+  `make -f Makefile.md MD_EXPORT=DIR`. The run turns off the SDL build's preference for
+  `grafs_aga/` (`g_grafsOcsOnly`, `src/resload.c`), and takes the sprites before
+  `ConvertColorsAndTextSprites` recolours them and the pitches before
+  `FixupAndColorPitchFile` colours the crowd -- the cartridge does both with palettes.
   Format: `sprites.bin` and `kit1..3.bin` ("MDSP": u16 count, then per image u16 index,
   i16 w, h, centreX, centreY and w*h palette indices), `pitch1..6.bin` ("MDPT": u16 tile
   count, the 16x16 tiles as 256 palette indices each, the 42x55 map of tile numbers, all
   big-endian) and `teams.bin` (684-byte `TeamFileEx` records as on the Amiga disk).
+  `scripts/md/fake_export.py DIR` writes this format from the stand-in art (with the
+  teams over three countries), which tests the `--export` path without anyone's data.
 - **Stand-in art** otherwise: footballers drawn for every pose and direction the engine's
   animation tables name, a pitch drawn to the engine's line coordinates, sixteen made-up
   teams. The ROM builds and plays without anyone's data.

@@ -285,6 +285,9 @@ static void print_usage(const char *argv0)
         "                            through the team file's text. Exits.\n"
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
+        "  --md-export=DIR           Write the game's Amiga graphics, pitches and teams,\n"
+        "                            decoded, for the Mega Drive ROM\n"
+        "                            (make -f Makefile.md MD_EXPORT=DIR). Exits.\n"
         "  --version                 Print the build (commit and date) and exit.\n"
         "  --matchmaker-selftest[=host[:port]]\n"
         "                            Talk to a matchmaking server: log in, list the\n"
@@ -636,6 +639,14 @@ int main(int argc, char **argv)
                 fprintf(stderr, "--contest-log: cannot write %s\n", v);
                 return 1;
             }
+        } else if ((v = match_kv(a, "md-export")) != NULL) {
+            /* The player's data, decoded, for the Mega Drive ROM (src/md_export.c). */
+            extern int32_t MdExport_Arm(const char *dir);
+            if (MdExport_Arm(v) != 0) {
+                fprintf(stderr, "--md-export needs a directory\n");
+                return 1;
+            }
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "srp-resim")) != NULL) {
             /* Play a recorded match again and check every frame (src/srp_resim.c). */
             if (SrpResim_Arm(v) != 0) {
