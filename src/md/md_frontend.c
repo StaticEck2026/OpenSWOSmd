@@ -32,6 +32,8 @@ extern uint16_t _gameLength, _autoReplays;
 extern uint16_t _team1TotalGoals, _team2TotalGoals, _team1PenaltyGoals, _team2PenaltyGoals;
 extern uint16_t _gameCanceled;
 extern TeamStatisticsData _team1StatsData, _team2StatsData;
+extern ScorerInfo _team1Scorers[8], _team2Scorers[8];
+extern TeamGame *_topTeamPtr, *_bottomTeamPtr;
 
 #define TILE_BIG   1
 #define TILE_BG    400
@@ -547,6 +549,30 @@ static void options_screen(void)
     fade_out();
 }
 
+/* A scorer's line, as the result's scorer list has it (goal_scored.c): the surname, then
+ * the minute of each goal, P for a penalty, OG for an own goal. The team the player is
+ * from: team 1's goals are its own players' but for an own goal, and so for team 2. */
+static void scorer_line(char *out, int len, const ScorerInfo *sc, int team)
+{
+    int og = sc->shirtNum >= 100, n = 0;
+    const TeamGame *t = (team == 1) != og ? _topTeamPtr : _bottomTeamPtr;
+    const int8_t *name = (const int8_t *)"?";
+    for (int i = 0; i < 16; i++)
+        if (t->players[i].shirtNumber == sc->shirtNum % 100) { name = t->players[i].shortName; break; }
+    if (name[0] && name[1] == '.' && name[2] == ' ') name += 3;
+    for (; *name && n < len - 1; name++) out[n++] = (char)*name;
+    for (int g = 0; g < sc->numGoals && n < len - 5; g++) {
+        const int8_t *tm = sc->goals[g].time;
+        int k = 1;
+        out[n++] = ' ';
+        while (k < 3 && tm[k] == '0') k++;
+        for (; k < 4; k++) out[n++] = (char)tm[k];
+        if (sc->goals[g].goalType == GT_PENALTY) out[n++] = 'P';
+    }
+    if (og && n < len - 3) { out[n++] = ' '; out[n++] = 'O'; out[n++] = 'G'; }
+    out[n] = 0;
+}
+
 /* The match result and its statistics, as the Amiga's MATCH STATS board lists them. */
 static void result_screen(const MdFriendly *f)
 {
@@ -568,6 +594,16 @@ static void result_screen(const MdFriendly *f)
     kit_draw(1, f->teamB);
     kit_place(0, 8, 9);
     kit_place(1, 30, 9);
+    for (int team = 1; team <= 2; team++) {
+        const ScorerInfo *sc = team == 1 ? _team1Scorers : _team2Scorers;
+        uint16_t y = 13;
+        for (int i = 0; i < 8 && y < 17; i++) {
+            char line[20];
+            if (!sc[i].shirtNum || !sc[i].numGoals) continue;
+            scorer_line(line, sizeof line, &sc[i], team);
+            text_c(team == 1 ? 0 : 21, 19, y++, PAL_TEXT, line);
+        }
+    }
     {
         static const char *const rows[] = { "POSSESSION", "GOAL ATTEMPTS", "ON TARGET",
                                             "CORNERS WON", "FOULS CONCEDED", "BOOKINGS",
@@ -579,7 +615,7 @@ static void result_screen(const MdFriendly *f)
         int16_t v2[7] = { (int16_t)(tot ? 100 - p1 : 0), s2->goalAttempts, s2->onTarget,
                           s2->cornersWon, s2->foulsConceded, s2->bookings, s2->sendingsOff };
         for (int i = 0; i < 7; i++) {
-            uint16_t y = (uint16_t)(14 + i);
+            uint16_t y = (uint16_t)(18 + i);
             text_c(10, 20, y, PAL_LBL, rows[i]);
             if (i == 0 && !tot) { text_c(0, 10, y, PAL_TEXT, "-"); text_c(30, 10, y, PAL_TEXT, "-"); continue; }
             md_snprintf(s, sizeof s, i == 0 ? "%d%%" : "%d", v1[i]);
@@ -588,7 +624,7 @@ static void result_screen(const MdFriendly *f)
             text_c(30, 10, y, PAL_TEXT, s);
         }
     }
-    item(12, 24, 16, 1, 0, "CONTINUE");
+    item(12, 26, 16, 1, 0, "CONTINUE");
     fade_in();
     for (;;) if (keys() & (K_OK | K_BACK)) break;
     fade_out();
