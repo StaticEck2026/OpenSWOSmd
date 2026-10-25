@@ -135,6 +135,7 @@ docs drift: search by function name.
 | [WASM.md](WASM.md) | The Emscripten/ASYNCIFY web target's design, and the asm-storage-to-C log. Now live, online, plus the player build. | historical | the web build's pacing, threading, IDBFS saves, preload list |
 | [MACOS_BUILD.md](MACOS_BUILD.md) | Building on a Mac: universal binary, `make macos-app`, Gatekeeper; releases go through `scripts/build_macos.sh`. | current | building on the Mac itself |
 | [SWITCH.md](SWITCH.md) | Building, packaging and debugging the Switch flavour; the filesystem/logging differences. No SDK content (NDA). | current — but it says "builds, links and packages" where CLAUDE.md says "not yet linked or run": the owner knows which | `Makefile.switch`, `scripts/build_switch.*` |
+| [MEGADRIVE.md](MEGADRIVE.md) | The Sega Mega Drive / Genesis cartridge: building, the clock (frames own it in a match), the VDP renderer and the overlay, RAM and the ROM-placed tables, PSG sound, the front end, the data converter, the headless harness. | current | `Makefile.md`, anything in `src/md/` or `scripts/md/`, a shared-file `#ifdef SWOS_MD_BUILD` |
 
 ## The Amiga target (AGA resumed 2026-10-10: a whole match plays)
 
@@ -189,6 +190,7 @@ referenced but do not exist on the owner's PC; they are on another machine, or g
 | `.claude/CLAUDE.md` | the project's orientation and rules — read first |
 | `src/`, `include/` | the one C source tree for every target |
 | `asm/`, `Resload.s`, `support/` | the live m68k assembly (the Amiga target) |
+| `src/md/`, `scripts/md/`, `Makefile.md` | the Mega Drive target's platform layer, its generators and headless harness ([MEGADRIVE.md](MEGADRIVE.md)); `build/md/` its objects, generated data and harness, `dist/SWOS-MD.bin` the ROM |
 | `data/` | reference only, never compiled: `SWOS2.s` (the disassembly), `Data.c`, `SWOS2_IDA.h`, `SWOS2.h` |
 | `bin/` | the runtime tree every target reads and links into: `data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound data_json save`, `c`/`s` (AmigaDOS boot files), the binaries, the Cygwin DLLs |
 | `bin/data_json/` | editable JSON baked into C / loaded at run time ([DATA_PIPELINE.md](DATA_PIPELINE.md)) |
