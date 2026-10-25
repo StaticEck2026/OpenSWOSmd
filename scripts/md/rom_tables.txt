@@ -266,3 +266,9 @@ _teamTacticsAttack
 _teamTacticsDefend
 _teamTacticsSweepDos
 _kitsSimilarityLookupTable
+
+# Country names (strings_data.c): pointers to constant strings; the FRIENDLY screen reads
+# them, nothing writes them.
+_countriesTable
+# The menu background's image command stream: ProcessImageCommandStream is a no-op here.
+_menuBGImageCmdStream

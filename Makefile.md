@@ -49,7 +49,11 @@ ENGINE_SRCS := \
     sprite_data.c tactics_data.c simulation_data.c player_data.c render_data.c \
     palette_data.c general_data.c strings_data.c swos_globals.c swos_amiga_data_stubs.c \
     swos_data_typed_stubs.c swos_data_bulk_imports.c swos_amiga_data_imports.c \
-    swos_amiga_ptr_imports.c swos_amiga_strings.c
+    swos_amiga_ptr_imports.c swos_amiga_strings.c build_info.c
+
+# The build stamp (include/swos_build.h), as the other two makefiles write it: rewritten
+# only when the commit changes, so it costs no rebuild otherwise.
+BUILD_STAMP_UNUSED := $(shell sh scripts/gen_build_info.sh)
 
 MD_C_SRCS := $(wildcard src/md/*.c)
 MD_S_SRCS := $(wildcard src/md/*.s)

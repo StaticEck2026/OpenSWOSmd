@@ -149,21 +149,8 @@ uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex, uint
     return w;
 }
 
-/* The overlays drawn into the frame (statistics, the bench, the result panel) go
- * through these; md_render.c draws its own panels from the same state. */
-void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y) { (void)spriteIndex; (void)x; (void)y; }
-void DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y) { (void)spriteIndex; (void)x; (void)y; }
-void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y) { (void)spriteIndex; (void)x; (void)y; }
-void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y) { (void)spriteIndex; (void)x; (void)y; }
-void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
-{
-    (void)x; (void)y; (void)w; (void)h; (void)color;
-}
-uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable)
-{
-    (void)x; (void)y; (void)color; (void)text; (void)charsTable;
-    return 0;
-}
+/* The overlays the engine draws into the frame (text, the statistics' grid, the bench's
+ * boxes and faces) are md_overlay.c's. */
 
 /* ---- sprites (src/sprites.c) ---- */
 extern Sprite *_sortedSprites[];

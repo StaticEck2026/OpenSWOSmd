@@ -216,19 +216,34 @@ void md_input_poll(void)
 }
 
 /* The keys a match listens for (game_loop.c MainKeysCheck), from the pads:
- *   START        space: pause / resume
+ *   START        P: pause / resume
  *   X            R: the instant replay
- *   Y            S: the statistics (at a stoppage)
- *   Z            Q/W: call your bench (pad 1 the top team's bench key, pad 2 the other)
- *   MODE, or START+A   ESC: leave the match */
+ *   Y            S: the statistics (and S again, or fire, closes them)
+ *   MODE, or START+A   ESC: leave the match
+ * In the attract mode (md_demo) START or any fire button leaves. */
+extern volatile uint16_t _playGame;
+extern uint16_t _gameState, _gameStatePl, _replayState;
+uint8_t md_abandoned;           /* the match was left before its end (the result screen says so) */
+
+static uint16_t quit_key(void)
+{
+    /* game_loop.c MainKeysCheck's ESC: once the result is up, leaving is the way out */
+    if (_playGame && !_replayState &&
+        !(_gameStatePl != ST_GAME_IN_PROGRESS &&
+          (_gameState == ST_PLAYERS_GOING_TO_SHOWER || _gameState == ST_RESULT_AFTER_THE_GAME)))
+        md_abandoned = 1;
+    return 0x1B;
+}
+
 static uint16_t pad_key(int port)
 {
     uint16_t e = md_pad_edge[port], held = md_pad[port];
-    if ((e & PAD_MODE) || ((e & PAD_START) && (held & PAD_A))) return 0x1B;
-    if (e & PAD_START) return 0x20;
+    if (md_demo) return (e & (PAD_START | PAD_A | PAD_B | PAD_C | PAD_MODE)) ? 0x1B : 0;
+    if ((e & PAD_MODE) || ((e & PAD_START) && (held & PAD_A))) return quit_key();
+    if ((e & PAD_A) && (held & PAD_START)) return quit_key();
+    if (e & PAD_START) return 0x50;
     if (e & PAD_X) return 0x52;
     if (e & PAD_Y) return 0x53;
-    if (e & PAD_Z) return port == 0 ? 0x11 : 0x10;
     return 0;
 }
 

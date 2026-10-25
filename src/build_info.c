@@ -24,7 +24,9 @@
  * The Amiga target is the one that defines no OS macro at all (-nostdlib m68k),
  * so it is recognised by the absence of SWOS_SDL_BUILD rather than by a macro
  * of its own. */
-#if !defined(SWOS_SDL_BUILD)
+#if defined(SWOS_MD_BUILD)
+#  define SWOS_PLATFORM "mega drive"
+#elif !defined(SWOS_SDL_BUILD)
 #  if defined(AGA)
 #    define SWOS_PLATFORM "amiga 68k aga"
 #  else

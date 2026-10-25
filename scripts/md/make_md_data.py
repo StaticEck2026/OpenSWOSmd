@@ -250,7 +250,7 @@ def standin_images():
     bot.rect(0, 0, 1, 27, C_WHITE); bot.rect(71, 0, 72, 27, C_WHITE)
     images[1092] = bot
     # the corner flags (138, 1090 and around: small pennants)
-    for i in (138, 1090, 1093, 1094):
+    for i in (138, 1090, 1094):
         f = Img(6, 12, 0, 11)
         f.rect(0, 0, 0, 11, C_WHITE)
         f.rect(1, 0, 4, 3, C_DKRED if i % 2 else C_SOCKS)
@@ -267,6 +267,39 @@ def standin_images():
             a.rect(x, 4 + (k % 3), x + 1, 10 + (k % 3), C_WHITE)
         images[ADVERT_FIRST + k] = a
     images[137] = Img(16, 16, 0, 0)
+    # the bench (bench_subs.c): the coaches (1182.., 7 a team), the substitutes sitting
+    # (1196.., 12 a team), the faces of the substitutes menu (1179..1181), its cards
+    # (139/140), the injury cross (1176) and the SUBSTITUTES / FORMATION icons (1174/1175)
+    for i in range(1182, 1196):
+        images[i] = draw_player("stand", 4, i % 2, "ref")
+    for i in range(1196, 1226):
+        sit = Img(10, 11, 4, 9)
+        sit.rect(2, 0, 6, 2, C_SKIN)
+        sit.rect(1, 3, 7, 7, C_SHIRT)
+        sit.rect(1, 8, 8, 9, C_SHORTS)
+        sit.rect(7, 9, 9, 10, C_SOCKS)
+        images[i] = sit
+    for k, i in enumerate(range(1179, 1182)):
+        f = Img(8, 8, 0, 0)
+        f.rect(1, 0, 6, 1, [C_BROWN, C_BLACK, C_TAN][k])
+        f.rect(1, 2, 6, 7, [C_SKIN, C_BROWN, C_SKIN][k])
+        f.put(2, 4, C_BLACK); f.put(5, 4, C_BLACK)
+        images[i] = f
+    for i, c in ((139, C_DKRED), (140, C_SOCKS)):
+        card = Img(5, 7, 0, 0)
+        card.rect(0, 0, 4, 6, c)
+        images[i] = card
+    cross = Img(7, 7, 0, 0)
+    cross.rect(2, 0, 4, 6, C_DKRED); cross.rect(0, 2, 6, 4, C_DKRED)
+    images[1176] = cross
+    for i in (1174, 1175):
+        icon = Img(16, 16, 0, 0)
+        icon.rect(0, 0, 15, 15, C_GREY)
+        icon.rect(2, 2, 13, 13, C_WHITE if i == 1174 else C_GREEN)
+        images[i] = icon
+    # the statistics' grid square: DarkenRectangle reads its size (md_overlay.c darkens
+    # the cells under it), the pixels are never drawn
+    images[1093] = Img(16, 16, 0, 0)
     # everything else the table has a slot for: an empty 8x8 (HUD sprites the cartridge
     # draws itself, menu art)
     for i in range(NUM_IMAGES):

@@ -28,7 +28,8 @@ extern uint16_t _gameCanceled;
 #define TEAM_COMPUTER 1
 
 static TeamFileEx s_team1, s_team2;
-static uint8_t s_pad1Team;      /* which side pad 1 plays: 1, 2, or 0 = watching */
+static uint8_t s_pad[2];        /* the pad (1, 2) that plays team 1 / team 2; 0 the computer */
+uint8_t md_demo;
 
 /* mainC (src/SWOS.c) up to the menus, without the display, loaders and intro. */
 extern char _goalBase[];
@@ -69,38 +70,40 @@ TeamFileEx *md_team_by_id(uint16_t teamId)
 }
 
 /* SetupPlayers' "which player is this team" (play_match_menu.c ShowPlayMatchMenu): on
- * the Amiga a menu where each human picks a joystick. Here the front end has already
- * chosen: pad 1 plays the side it picked, pad 2 the other human side. `controlFlags` is
- * 3 for the first team asked and the player number still free for the second. */
+ * the Amiga a menu where each human picks a joystick. Here the FRIENDLY screen has
+ * already chosen. Player 1 is pad 1 (md_isr.c md_input_poll feeds it to joy1, the
+ * Amiga's joystick port), player 2 pad 2. `team1` is the team being asked about. */
 int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubs, int16_t excludeFlags,
                           int16_t isFirstPlayer, int16_t squadChanges,
                           TeamFileEx *team1, TeamFileEx *team2)
 {
-    (void)maxSubs; (void)excludeFlags; (void)squadChanges; (void)team2;
-    if (isFirstPlayer)
-        return (team1 == &s_team1) == (s_pad1Team != 2) ? 1 : 2;
-    return controlFlags == 1 || controlFlags == 2 ? controlFlags : 2;
+    (void)controlFlags; (void)maxSubs; (void)excludeFlags; (void)isFirstPlayer;
+    (void)squadChanges; (void)team2;
+    return s_pad[team1 == &s_team1 ? 0 : 1];
 }
 
 /* The FRIENDLY menu (src/menus.c ShowFriendlyMenu) and its PLAY button: the two teams,
- * who controls each, the pitch, then the match. `human1`/`human2`: a pad plays that side.
- * Returns 0 when the match was played, 1 when it was abandoned before kick-off. */
-int md_play_friendly(uint16_t teamA, uint16_t teamB, int human1, int human2, uint8_t pad1Team)
+ * who controls each, the pitch, then the match. Returns 0 when the match was played, 1
+ * when it was abandoned (_gameCanceled). */
+int md_play_friendly(const MdFriendly *f)
 {
-    memcpy(&s_team1, md_rom_team(teamA), sizeof s_team1);
-    memcpy(&s_team2, md_rom_team(teamB), sizeof s_team2);
-    if (teamA == teamB) s_team2.team.teamOrdinal ^= 0x80;   /* a team against itself: two ids */
-    s_team1.team.teamControls = human1 ? 0 : TEAM_COMPUTER;
-    s_team2.team.teamControls = human2 ? 0 : TEAM_COMPUTER;
-    s_pad1Team = pad1Team;
+    memcpy(&s_team1, md_rom_team(f->teamA), sizeof s_team1);
+    memcpy(&s_team2, md_rom_team(f->teamB), sizeof s_team2);
+    if (f->teamA == f->teamB) s_team2.team.teamOrdinal ^= 0x80;   /* a team against itself: two ids */
+    s_team1.team.teamControls = f->ctrlA ? 0 : TEAM_COMPUTER;
+    s_team2.team.teamControls = f->ctrlB ? 0 : TEAM_COMPUTER;
+    s_pad[0] = f->ctrlA;
+    s_pad[1] = f->ctrlB;
 
     _gameType = 0;                  /* GAME_TYPE_NONE: a friendly */
-    _pitchTypeOrSeason[0] = 0;
-    _friendlyPitchType[0] = 0xFFFF; /* RANDOM_PITCH */
-    _friendlySeason[0] = 7;         /* SEASON_SEP */
+    /* the pitch: a type, random, or the month's (FriendlyPitchTypeProc's two modes) */
+    _pitchTypeOrSeason[0] = md_options.pitch == MD_PITCH_SEASONAL;
+    _friendlyPitchType[0] = md_options.pitch == MD_PITCH_SEASONAL ? MD_PITCH_RANDOM : md_options.pitch;
+    _friendlySeason[0] = md_options.month;
     _minSubstitutes[0] = 2;
     _maxSubstitutes[0] = 5;
     _gameCanceled = 0;
+    md_abandoned = 0;
     InitAndPlayGame(&s_team1, &s_team2);
     return _gameCanceled != 0;
 }

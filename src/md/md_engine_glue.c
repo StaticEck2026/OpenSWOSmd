@@ -1,6 +1,6 @@
 /* md_engine_glue.c -- what the shared match engine calls that the Mega Drive does its own way.
  *
- * The engine (the src/*.c files in Makefile.md's ENGINE_SRCS) is the Amiga game's match:
+ * The engine (the src/ files in Makefile.md's ENGINE_SRCS) is the Amiga game's match:
  * it reaches out to the menu system, the music player, the career's team cache and the
  * Amiga display at a handful of points. Those points are here. Each one says what the
  * original did and what the cartridge does instead; none of them changes the match.
@@ -18,7 +18,6 @@ extern void ViewMatchSequence(void);
 /* ---- menus: the cartridge's front end is md_frontend.c, not SWOS's menu system ---- */
 void ShowMenu(uint8_t *packedMenu) { (void)packedMenu; md_stadium_screen(); }
 void DrawMenu(void) {}
-void DrawMenuTextCentered(void) {}
 
 /* highlights_menu.c's ShowMatchSequence saves the menu, plays the match and restores the
  * menu; there is no menu to save here. */

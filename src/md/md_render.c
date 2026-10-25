@@ -31,6 +31,7 @@
 #include "md_data.h"
 #include "game_types.h"
 #include "display.h"
+#include "md_overlay.h"
 
 extern FixedPoint _cameraX, _cameraY;
 extern uint8_t _pitchDatBuffer[];
@@ -382,17 +383,13 @@ static const MdImage *image_for(uint16_t idx, uint8_t *pal)
     return img;
 }
 
-/* ---- the HUD: the engine's HUD sprites, as text on plane A ---- */
+/* ---- the HUD: the engine's HUD sprites, as text on plane A (md_overlay.c) ---- */
 #define HUD_ROWS 2
-#define HUD_COLS 40
-static char s_hud[HUD_ROWS][HUD_COLS + 1], s_hudShown[HUD_ROWS][HUD_COLS + 1];
 static uint8_t s_hudRowY[HUD_ROWS];
 
 static void hud_put(int row, int col, const char *t)
 {
-    if (row < 0 || row >= HUD_ROWS) return;
-    for (; *t && col < HUD_COLS; t++, col++)
-        if (col >= 0) s_hud[row][col] = *t;
+    md_ov_put((int16_t)col, s_hudRowY[row], t, 40);
 }
 
 static int str_copy(char *d, const int8_t *s, int max)
@@ -438,28 +435,6 @@ static void hud_sprite(const MdSprCmd *c)
     }
 }
 
-/* What the HUD showed: the HUD sprites drawn (image, position) and the values their
- * text is made from. The text is rebuilt only when this changes. */
-static uint32_t s_hudSig, s_hudSigShown = 0xFFFFFFFF;
-
-static void stage_hud(void)
-{
-    if (s_hudSig == s_hudSigShown) return;
-    s_hudSigShown = s_hudSig;
-    for (int r = 0; r < HUD_ROWS; r++) {
-        int changed = 0;
-        for (int i = 0; i < HUD_COLS; i++) if (s_hud[r][i] != s_hudShown[r][i]) { changed = 1; break; }
-        if (!changed) continue;
-        uint16_t w[HUD_COLS];
-        for (int i = 0; i < HUD_COLS; i++) {
-            char ch = s_hud[r][i];
-            w[i] = ch > ' ' && ch < 127 ? TILE_ATTR(0, 1, 0, 0, TILE_FONT + ch - 32) : 0;
-            s_hudShown[r][i] = ch;
-        }
-        plane_job((uint16_t)(VRAM_PLANE_A + s_hudRowY[r] * PLANE_W * 2), 2, w, HUD_COLS);
-    }
-}
-
 /* ---- per match ---- */
 
 void md_render_init_match(void)
@@ -496,9 +471,7 @@ static void match_setup(int16_t rx, int16_t ry)
     md_vsram_write(0, 0);
     md_vsram_write(1, 0);
     cache_reset();
-    for (int r = 0; r < HUD_ROWS; r++)
-        for (int i = 0; i <= HUD_COLS; i++) s_hud[r][i] = s_hudShown[r][i] = 0;
-    s_hudSigShown = 0xFFFFFFFF;
+    md_ov_reset(s_offY, s_screenH);
     {
         uint16_t pal[64];
         build_palettes(pal);
@@ -537,28 +510,25 @@ void md_render_frame(void)
     st->hscroll = (uint16_t)(-rx);
     st->vscroll = (uint16_t)ry;
 
-    /* the HUD's signature: its sprites and the values behind their text */
-    uint32_t sig = (uint32_t)_gameTime[3] | ((uint32_t)_gameTime[2] << 4) | ((uint32_t)_gameTime[1] << 8);
-    for (uint16_t i = 0; i < md_sprCount; i++) {
-        const MdSprCmd *c = &md_sprList[i];
-        if (c->spr->z.s.i >= HUD_Z_MIN)
-            sig = (sig << 5 | sig >> 27) ^ c->image ^ ((uint32_t)(c->x >> 3) << 11) ^ ((uint32_t)(c->y >> 6) << 20);
-    }
-    s_hudSig = sig;
-    if (sig != s_hudSigShown) {
-        for (int r = 0; r < HUD_ROWS; r++)
-            for (int i = 0; i < HUD_COLS; i++) s_hud[r][i] = ' ';
-        for (uint16_t i = 0; i < md_sprCount; i++)
-            if (md_sprList[i].spr->z.s.i >= HUD_Z_MIN) hud_sprite(&md_sprList[i]);
-    }
+    /* the HUD's text, then everything else the engine drew into the frame */
+    for (uint16_t i = 0; i < md_sprCount; i++)
+        if (md_sprList[i].spr->z.s.i >= HUD_Z_MIN) hud_sprite(&md_sprList[i]);
+    md_ov_commit();
 
     /* sprites, front to back; the VDP links them in table order and shows the first on top */
     uint8_t n = 0;
     {
-        const MdSprCmd *c = md_sprList, *end = md_sprList + md_sprCount;
+        const MdSprCmd *c = md_ovSprCount ? md_ovSpr : md_sprList;
+        const MdSprCmd *end = md_ovSprCount ? md_ovSpr + md_ovSprCount : md_sprList + md_sprCount;
         VdpSprite *v = st->sat;
         int16_t ymax = (int16_t)(128 + s_screenH), offY = (int16_t)(s_offY - 128);
-        for (; c < end; c++) {
+        uint16_t prio = md_ovSprCount ? 0x8000 : 0;   /* the overlay's over plane A's boxes */
+        for (;; c++) {
+            if (c == end) {
+                if (end != md_ovSpr + md_ovSprCount || !md_ovSprCount) break;
+                c = md_sprList; end = md_sprList + md_sprCount; prio = 0;
+                if (c == end) break;
+            }
             if (c->spr->z.s.i >= HUD_Z_MIN) continue;
             uint16_t idx = c->image;
             uint8_t e = s_imgEnt[idx];
@@ -589,7 +559,7 @@ void md_render_frame(void)
                 n++;
                 v->y = (uint16_t)y;
                 v->sizeLink = (uint16_t)((pc->size << 8) | n);
-                v->attr = (uint16_t)(attr + pc->tile);
+                v->attr = (uint16_t)((attr + pc->tile) | prio);
                 v->x = (uint16_t)x;
                 v++;
             }
@@ -603,7 +573,7 @@ sat_full:
     st->sat[n - 1].sizeLink &= 0xFF00;   /* end of the link chain */
     st->satCount = n;
 
-    stage_hud();
+    md_ovSprCount = 0;
     if (md_paletteDirty) { md_paletteDirty = 0; build_palettes(st->pal); st->palStaged = 1; }
     s_wIdx ^= 1;
 }
